@@ -44,11 +44,13 @@ export interface TileData {
 export class IsometricMap {
     private scene: Phaser.Scene;
     private tiles: Map<string, Phaser.GameObjects.Image>;
+    private solidTiles: Map<string, Phaser.Physics.Arcade.Sprite>;
     private mapData: number[][];
     
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.tiles = new Map();
+        this.solidTiles = new Map();
         this.mapData = [];
     }
 
@@ -66,7 +68,7 @@ export class IsometricMap {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY);
+                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4); // 4 = mur solide
                 }
             }
         }
@@ -75,19 +77,34 @@ export class IsometricMap {
     /**
      * Crée un tile individuel
      */
-    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0): Phaser.GameObjects.Image {
+    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0, isSolid: boolean = false): Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const key = `${gridX},${gridY}`;
         
-        // Appliquer l'offset directement lors de la création
-        const tile = this.scene.add.image(screenPos.x + offsetX, screenPos.y + offsetY, texture);
-        tile.setOrigin(0.5, 0.5);
+        let tile: Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite;
+        
+        if (isSolid) {
+            // Créer un sprite avec physique pour les tiles solides
+            tile = this.scene.physics.add.sprite(screenPos.x + offsetX, screenPos.y + offsetY, texture);
+            tile.setOrigin(0.5, 0.5);
+            
+            // Configurer le body comme immobile
+            const body = (tile as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
+            body.setImmovable(true);
+            body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+            
+            this.solidTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
+        } else {
+            // Créer une image normale pour les tiles traversables
+            tile = this.scene.add.image(screenPos.x + offsetX, screenPos.y + offsetY, texture);
+            tile.setOrigin(0.5, 0.5);
+            this.tiles.set(key, tile as Phaser.GameObjects.Image);
+        }
+        
         // La profondeur est basée sur le bas du tile (pour cohérence avec le joueur)
-        // Avec origin(0.5, 0.5), le bas est à tile.y + height/2
         const tileBottom = tile.y + tile.height * (1 - tile.originY);
         tile.setDepth(tileBottom);
         
-        this.tiles.set(key, tile);
         return tile;
     }
 
@@ -125,6 +142,16 @@ export class IsometricMap {
     destroy() {
         this.tiles.forEach(tile => tile.destroy());
         this.tiles.clear();
+        
+        this.solidTiles.forEach(tile => tile.destroy());
+        this.solidTiles.clear();
+    }
+
+    /**
+     * Récupère tous les tiles solides pour les collisions
+     */
+    getSolidTiles(): Phaser.Physics.Arcade.Sprite[] {
+        return Array.from(this.solidTiles.values());
     }
 }
 

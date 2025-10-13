@@ -48,24 +48,25 @@ export default class Game extends Phaser.Scene {
 		this.isoMap = new IsometricMap(this);
 		
 		// Exemple de carte (10x10)
-		// 1 = herbe, 2 = terre, 3 = eau, 0 = vide
+		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur (impassable), 0 = vide
 		const mapData = [
-			[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-			[1, 2, 2, 2, 1, 1, 1, 3, 3, 1],
-			[1, 2, 2, 2, 1, 1, 1, 3, 3, 1],
-			[1, 2, 2, 2, 1, 1, 1, 1, 1, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-			[1, 1, 1, 1, 1, 2, 2, 1, 1, 1],
-			[1, 3, 3, 1, 1, 2, 2, 1, 1, 1],
-			[1, 3, 3, 1, 1, 1, 1, 1, 1, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 2, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 2, 1],
+			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+			[4, 1, 2, 2, 1, 1, 1, 3, 3, 4],
+			[4, 1, 2, 2, 1, 1, 1, 3, 3, 4],
+			[4, 1, 2, 2, 1, 4, 4, 1, 1, 4],
+			[4, 1, 1, 1, 1, 4, 4, 1, 1, 4],
+			[4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
+			[4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
+			[4, 3, 3, 1, 1, 1, 1, 1, 1, 4],
+			[4, 1, 1, 1, 1, 1, 1, 1, 2, 4],
+			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 		];
 
 		const tileTextures = {
 			1: 'iso-grass',
 			2: 'iso-dirt',
-			3: 'iso-water'
+			3: 'iso-water',
+			4: 'iso-wall'
 		};
 
 		// Créer la carte directement avec l'offset
@@ -76,6 +77,14 @@ export default class Game extends Phaser.Scene {
 
 		// Créer les murs invisibles autour de la carte
 		this.createMapBoundaries();
+
+		// Activer les collisions entre le joueur et les tiles solides
+		if (this.player && this.isoMap) {
+			const solidTiles = this.isoMap.getSolidTiles();
+			if (solidTiles.length > 0) {
+				this.physics.add.collider(this.player, solidTiles);
+			}
+		}
 
 		// Configurer les contrôles
 		this.cursors = this.input.keyboard?.createCursorKeys();
@@ -109,6 +118,7 @@ export default class Game extends Phaser.Scene {
 			{ key: 'iso-grass', color: 0x5CB85C, darkColor: 0x4A9D4A }, // Vert herbe
 			{ key: 'iso-dirt', color: 0x8B7355, darkColor: 0x6D5A43 },  // Marron terre
 			{ key: 'iso-water', color: 0x4A90E2, darkColor: 0x3A75C4 }, // Bleu eau
+			{ key: 'iso-wall', color: 0x666666, darkColor: 0x444444 },  // Gris mur
 		];
 
 		tiles.forEach(({ key, color, darkColor }) => {
