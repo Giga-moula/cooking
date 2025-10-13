@@ -20,6 +20,14 @@ export default class Game extends Phaser.Scene {
 	private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
 	private lastPlayerY: number = 0;
 	private walls?: Phaser.Physics.Arcade.StaticGroup;
+	private playerGridX: number = 2; // Position en grille du joueur
+	private playerGridY: number = 2;
+	private debugText?: Phaser.GameObjects.Text;
+	private inventoryText?: Phaser.GameObjects.Text;
+	private inventory: string[] = []; // Inventaire du joueur
+	private itemsOnCounters: Map<string, Phaser.GameObjects.Image> = new Map(); // Objets posés sur les plans de travail
+	private carriedItem?: Phaser.GameObjects.Image; // Objet porté visible au-dessus du joueur
+	private lastDirection: { x: number, y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
 
 	constructor() {
 		super("Game");
@@ -36,7 +44,7 @@ export default class Game extends Phaser.Scene {
 	/* START-USER-CODE */
 
 	create() {
-		this.editorCreate();
+        this.editorCreate();
 
 		// Fond de couleur
 		this.cameras.main.setBackgroundColor(0x87CEEB); // Bleu ciel
@@ -48,16 +56,16 @@ export default class Game extends Phaser.Scene {
 		this.isoMap = new IsometricMap(this);
 		
 		// Exemple de carte (10x10)
-		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur (impassable), 0 = vide
+		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 0 = vide
 		const mapData = [
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 			[4, 1, 2, 2, 1, 1, 1, 3, 3, 4],
-			[4, 1, 2, 2, 1, 1, 1, 3, 3, 4],
-			[4, 1, 2, 2, 1, 4, 4, 1, 1, 4],
-			[4, 1, 1, 1, 1, 4, 4, 1, 1, 4],
+			[4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
+			[4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
+			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
 			[4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
 			[4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
-			[4, 3, 3, 1, 1, 1, 1, 1, 1, 4],
+			[4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
 			[4, 1, 1, 1, 1, 1, 1, 1, 2, 4],
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 		];
@@ -66,7 +74,8 @@ export default class Game extends Phaser.Scene {
 			1: 'iso-grass',
 			2: 'iso-dirt',
 			3: 'iso-water',
-			4: 'iso-wall'
+			4: 'iso-wall',
+			5: 'iso-counter'
 		};
 
 		// Créer la carte directement avec l'offset
@@ -86,12 +95,15 @@ export default class Game extends Phaser.Scene {
 			}
 		}
 
+		// Placer un cookie sur un plan de travail
+		this.placeItemOnCounter(5, 2, 'cookie'); // Placer un cookie sur le plan de travail (5,2)
+
 		// Configurer les contrôles
 		this.cursors = this.input.keyboard?.createCursorKeys();
 
 		// Texte d'aide
 		const helpText = this.add.text(10, 10, 
-			'Utilise les flèches pour te déplacer librement\nEspace pour revenir au menu', 
+			'Utilise les flèches pour te déplacer librement\nE pour interagir avec les plans de travail\nEspace pour revenir au menu', 
 			{
 				fontFamily: 'Arial',
 				fontSize: '16px',
@@ -103,12 +115,39 @@ export default class Game extends Phaser.Scene {
 		helpText.setScrollFactor(0);
 		helpText.setDepth(1000);
 
+		// Texte de debug pour la position
+		this.debugText = this.add.text(10, 120, '', {
+			fontFamily: 'Arial',
+			fontSize: '14px',
+			color: '#ffffff',
+			backgroundColor: '#000000',
+			padding: { x: 5, y: 5 }
+		});
+		this.debugText.setScrollFactor(0);
+		this.debugText.setDepth(1000);
+
+		// Texte d'inventaire
+		this.inventoryText = this.add.text(10, 220, '', {
+			fontFamily: 'Arial',
+			fontSize: '14px',
+			color: '#ffffff',
+			backgroundColor: '#000000',
+			padding: { x: 5, y: 5 }
+		});
+		this.inventoryText.setScrollFactor(0);
+		this.inventoryText.setDepth(1000);
+
 		// Touche espace pour retourner au menu
 		this.input.keyboard?.on('keydown-SPACE', () => {
 			this.changeScene();
 		});
 
-		EventBus.emit('current-scene-ready', this);
+		// Touche E pour interagir avec les plans de travail
+		this.input.keyboard?.on('keydown-E', () => {
+			this.interactWithCounter();
+		});
+
+        EventBus.emit('current-scene-ready', this);
 	}
 
 	createIsometricTiles() {
@@ -119,6 +158,7 @@ export default class Game extends Phaser.Scene {
 			{ key: 'iso-dirt', color: 0x8B7355, darkColor: 0x6D5A43 },  // Marron terre
 			{ key: 'iso-water', color: 0x4A90E2, darkColor: 0x3A75C4 }, // Bleu eau
 			{ key: 'iso-wall', color: 0x666666, darkColor: 0x444444 },  // Gris mur
+			{ key: 'iso-counter', color: 0xD2691E, darkColor: 0xB8860B }, // Marron bois
 		];
 
 		tiles.forEach(({ key, color, darkColor }) => {
@@ -162,9 +202,9 @@ export default class Game extends Phaser.Scene {
 	}
 
 	createPlayer() {
-		// Positionner le joueur au centre de la carte (case 5,5)
-		const startX = this.mapOffsetX + 5 * IsometricUtils.TILE_WIDTH + IsometricUtils.TILE_WIDTH / 2;
-		const startY = this.mapOffsetY + 5 * IsometricUtils.TILE_HEIGHT + IsometricUtils.TILE_HEIGHT / 2;
+		// Positionner le joueur sur un tile d'herbe (case 2,2) pour éviter les bordures
+		const startX = this.mapOffsetX + 2 * IsometricUtils.TILE_WIDTH + IsometricUtils.TILE_WIDTH / 2;
+		const startY = this.mapOffsetY + 2 * IsometricUtils.TILE_HEIGHT + IsometricUtils.TILE_HEIGHT / 2;
 		
 		// Créer un sprite avec physique
 		this.player = this.physics.add.sprite(startX, startY, 'iso-player');
@@ -199,9 +239,9 @@ export default class Game extends Phaser.Scene {
 		
 		// Limites réelles de la carte (bords extérieurs des tiles)
 		const mapLeft = this.mapOffsetX - tileHalfWidth;
-		const mapRight = this.mapOffsetX + this.mapWidth * IsometricUtils.TILE_WIDTH - tileHalfWidth;
+		const mapRight = this.mapOffsetX + (this.mapWidth - 1) * IsometricUtils.TILE_WIDTH + tileHalfWidth;
 		const mapTop = this.mapOffsetY - tileHalfHeight;
-		const mapBottom = this.mapOffsetY + this.mapHeight * IsometricUtils.TILE_HEIGHT - tileHalfHeight;
+		const mapBottom = this.mapOffsetY + (this.mapHeight - 1) * IsometricUtils.TILE_HEIGHT + tileHalfHeight;
 
 		// Mur du haut
 		const topWall = this.add.rectangle(
@@ -272,14 +312,18 @@ export default class Game extends Phaser.Scene {
 		// Déplacement fluide avec les flèches
 		if (this.cursors.up!.isDown) {
 			velocityY = -this.playerSpeed;
+			this.lastDirection = { x: 0, y: -1 }; // Haut
 		} else if (this.cursors.down!.isDown) {
 			velocityY = this.playerSpeed;
+			this.lastDirection = { x: 0, y: 1 }; // Bas
 		}
 
 		if (this.cursors.left!.isDown) {
 			velocityX = -this.playerSpeed;
+			this.lastDirection = { x: -1, y: 0 }; // Gauche
 		} else if (this.cursors.right!.isDown) {
 			velocityX = this.playerSpeed;
+			this.lastDirection = { x: 1, y: 0 }; // Droite
 		}
 
 		// Normaliser la vitesse en diagonale (utilise la constante précalculée)
@@ -291,15 +335,280 @@ export default class Game extends Phaser.Scene {
 		// Appliquer la vélocité (la physique gère les collisions)
 		this.player.setVelocity(velocityX, velocityY);
 
+		// Mettre à jour la position en grille du joueur
+		this.updatePlayerGridPosition();
+
+		// Mettre à jour le texte de debug
+		this.updateDebugText();
+
+		// Mettre à jour l'affichage de l'inventaire
+		this.updateInventoryDisplay();
+
+		// Mettre à jour la position de l'objet porté
+		this.updateCarriedItemPosition();
+
 		// Mettre à jour la profondeur seulement si Y a changé
 		if (this.player.y !== this.lastPlayerY) {
 			this.updatePlayerDepth();
 		}
 	}
 
-	changeScene() {
-		this.scene.start('GameOver');
+	updatePlayerGridPosition() {
+		if (!this.player || !this.isoMap) return;
+
+		// Calculer les limites du sprite du joueur
+		const playerLeft = this.player.x - this.player.width / 2;
+		const playerRight = this.player.x + this.player.width / 2;
+		const playerTop = this.player.y - this.player.height * this.player.originY;
+		const playerBottom = this.player.y + this.player.height * (1 - this.player.originY);
+
+		// Convertir les coins du joueur en coordonnées de grille
+		const topLeft = IsometricUtils.screenToGrid(playerLeft - this.mapOffsetX, playerTop - this.mapOffsetY);
+		const topRight = IsometricUtils.screenToGrid(playerRight - this.mapOffsetX, playerTop - this.mapOffsetY);
+		const bottomLeft = IsometricUtils.screenToGrid(playerLeft - this.mapOffsetX, playerBottom - this.mapOffsetY);
+		const bottomRight = IsometricUtils.screenToGrid(playerRight - this.mapOffsetX, playerBottom - this.mapOffsetY);
+
+		// Déterminer les limites de grille occupées par le joueur
+		const minGridX = Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+		const maxGridX = Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+		const minGridY = Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+		const maxGridY = Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+
+		// Calculer quelle tile contient le plus de surface du joueur
+		let bestTileX = minGridX;
+		let bestTileY = minGridY;
+		let maxOverlap = 0;
+
+		for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
+			for (let gridY = minGridY; gridY <= maxGridY; gridY++) {
+				const overlap = this.calculateTileOverlap(gridX, gridY, playerLeft, playerTop, playerRight, playerBottom);
+				if (overlap > maxOverlap) {
+					maxOverlap = overlap;
+					bestTileX = gridX;
+					bestTileY = gridY;
+				}
+			}
+		}
+
+		this.playerGridX = bestTileX;
+		this.playerGridY = bestTileY;
 	}
+
+	calculateTileOverlap(gridX: number, gridY: number, playerLeft: number, playerTop: number, playerRight: number, playerBottom: number): number {
+		// Convertir la position de grille en coordonnées d'écran
+		const tileScreenPos = IsometricUtils.gridToScreen(gridX, gridY);
+		const tileLeft = tileScreenPos.x + this.mapOffsetX - IsometricUtils.TILE_WIDTH / 2;
+		const tileRight = tileScreenPos.x + this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2;
+		const tileTop = tileScreenPos.y + this.mapOffsetY - IsometricUtils.TILE_HEIGHT / 2;
+		const tileBottom = tileScreenPos.y + this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2;
+
+		// Calculer l'intersection entre le joueur et la tile
+		const overlapLeft = Math.max(playerLeft, tileLeft);
+		const overlapRight = Math.min(playerRight, tileRight);
+		const overlapTop = Math.max(playerTop, tileTop);
+		const overlapBottom = Math.min(playerBottom, tileBottom);
+
+		// Si il n'y a pas d'intersection, retourner 0
+		if (overlapLeft >= overlapRight || overlapTop >= overlapBottom) {
+			return 0;
+		}
+
+		// Calculer la surface d'intersection
+		const overlapArea = (overlapRight - overlapLeft) * (overlapBottom - overlapTop);
+		return overlapArea;
+	}
+
+	updateDebugText() {
+		if (!this.debugText || !this.player) return;
+
+		// Vérifier si le joueur est sur un plan de travail
+		const isPlayerOnCounter = this.isoMap?.isCounter(this.playerGridX, this.playerGridY) || false;
+		
+		let targetX = this.playerGridX + this.lastDirection.x;
+		let targetY = this.playerGridY + this.lastDirection.y;
+		
+		// Si le joueur est sur un plan de travail, la cible est sa propre position
+		if (isPlayerOnCounter) {
+			targetX = this.playerGridX;
+			targetY = this.playerGridY;
+		}
+		
+		const hasCounterAtTarget = this.isoMap?.isCounter(targetX, targetY) || false;
+		
+		// Debug : afficher les plans de travail disponibles
+		const totalCounters = this.isoMap?.getCounterTiles().length || 0;
+		
+		// Convertir la direction en texte
+		let directionText = '';
+		if (this.lastDirection.x === 0 && this.lastDirection.y === -1) directionText = 'HAUT';
+		else if (this.lastDirection.x === 1 && this.lastDirection.y === 0) directionText = 'DROITE';
+		else if (this.lastDirection.x === 0 && this.lastDirection.y === 1) directionText = 'BAS';
+		else if (this.lastDirection.x === -1 && this.lastDirection.y === 0) directionText = 'GAUCHE';
+		
+		// Calculer les limites du joueur pour le debug
+		const playerLeft = this.player.x - this.player.width / 2;
+		const playerRight = this.player.x + this.player.width / 2;
+		const playerTop = this.player.y - this.player.height * this.player.originY;
+		const playerBottom = this.player.y + this.player.height * (1 - this.player.originY);
+		
+		this.debugText.setText(
+			`Position joueur: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})\n` +
+			`Limites joueur: (${playerLeft.toFixed(0)}, ${playerTop.toFixed(0)}) à (${playerRight.toFixed(0)}, ${playerBottom.toFixed(0)})\n` +
+			`Grille (majorité): (${this.playerGridX}, ${this.playerGridY})\n` +
+			`Sur plan de travail: ${isPlayerOnCounter ? 'OUI' : 'NON'}\n` +
+			`Direction: ${directionText} (${this.lastDirection.x}, ${this.lastDirection.y})\n` +
+			`Position cible: (${targetX}, ${targetY})\n` +
+			`Plan de travail à la cible: ${hasCounterAtTarget ? 'OUI' : 'NON'}\n` +
+			`Plans disponibles: ${totalCounters}`
+		);
+	}
+
+	updateInventoryDisplay() {
+		if (!this.inventoryText) return;
+
+		if (this.inventory.length === 0) {
+			this.inventoryText.setText('Inventaire: Vide (max: 1)');
+		} else {
+			this.inventoryText.setText(`Inventaire: ${this.inventory.join(', ')} (1/1)`);
+		}
+	}
+
+	updateCarriedItemPosition() {
+		if (!this.carriedItem || !this.player) return;
+
+		// Faire suivre l'objet porté au joueur
+		this.carriedItem.setPosition(this.player.x, this.player.y - 30);
+		
+		// Mettre à jour la profondeur pour rester au-dessus du joueur
+		this.carriedItem.setDepth(this.player.depth + 10);
+	}
+
+	interactWithCounter() {
+		if (!this.isoMap) return;
+
+		let targetX = this.playerGridX + this.lastDirection.x;
+		let targetY = this.playerGridY + this.lastDirection.y;
+		
+		// Si le joueur est sur un plan de travail, interagir avec ce même plan
+		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY)) {
+			targetX = this.playerGridX;
+			targetY = this.playerGridY;
+			console.log(`Joueur sur plan de travail, interaction sur la même position (${targetX}, ${targetY})`);
+		}
+		
+		if (this.isoMap.isCounter(targetX, targetY)) {
+			console.log(`Interaction avec le plan de travail à la position (${targetX}, ${targetY})`);
+			
+			// Vérifier s'il y a un objet sur ce plan de travail
+			const hasItem = this.hasItemOnCounter(targetX, targetY);
+			
+			if (hasItem && this.inventory.length === 0) {
+				// Ramasser l'objet (inventaire vide)
+				const itemType = this.removeItemFromCounter(targetX, targetY);
+				if (itemType) {
+					this.inventory.push(itemType);
+					this.createCarriedItem(itemType); // Créer l'objet porté visible
+					console.log(`Ramassé: ${itemType}`);
+				}
+			} else if (!hasItem && this.inventory.length > 0) {
+				// Poser l'objet (inventaire contient un objet)
+				const itemType = this.inventory.pop()!;
+				this.placeItemOnCounter(targetX, targetY, itemType);
+				this.removeCarriedItem(); // Supprimer l'objet porté visible
+				console.log(`Posé: ${itemType}`);
+			} else if (hasItem && this.inventory.length > 0) {
+				console.log('Inventaire plein (limite: 1 objet), ne peut pas ramasser');
+			} else if (hasItem && this.inventory.length === 0) {
+				console.log('Erreur: objet détecté mais inventaire vide');
+			} else {
+				console.log('Aucun objet sur le plan de travail, inventaire vide');
+			}
+			
+			// Effet visuel sur le plan de travail (supprimé pour éviter l'animation lors de la pose)
+			// const counterTile = this.isoMap.getCounter(targetX, targetY);
+			// if (counterTile) {
+			// 	this.tweens.add({
+			// 		targets: counterTile,
+			// 		alpha: 0.5,
+			// 		duration: 200,
+			// 		yoyo: true,
+			// 		repeat: 1
+			// 	});
+			// }
+		} else {
+			console.log(`Aucun plan de travail à la position (${targetX}, ${targetY})`);
+		}
+	}
+
+	placeItemOnCounter(gridX: number, gridY: number, itemType: string) {
+		if (!this.isoMap || !this.isoMap.isCounter(gridX, gridY)) return false;
+
+		const key = `${gridX},${gridY}`;
+		
+		// Vérifier s'il n'y a pas déjà un objet sur ce plan de travail
+		if (this.itemsOnCounters.has(key)) return false;
+
+		// Créer l'objet sur le plan de travail
+		const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
+		const item = this.add.image(
+			screenPos.x + this.mapOffsetX, 
+			screenPos.y + this.mapOffsetY, 
+			itemType
+		);
+		item.setOrigin(0.5, 0.5);
+		item.setScale(1.2); // Rendre le cookie un peu plus grand
+		
+		// Positionner l'objet légèrement au-dessus du plan de travail
+		item.setDepth(item.y + 100); // Profondeur plus élevée que le plan de travail
+		
+		this.itemsOnCounters.set(key, item);
+		return true;
+	}
+
+	removeItemFromCounter(gridX: number, gridY: number): string | null {
+		const key = `${gridX},${gridY}`;
+		const item = this.itemsOnCounters.get(key);
+		
+		if (item) {
+			const itemType = item.texture.key;
+			item.destroy();
+			this.itemsOnCounters.delete(key);
+			return itemType;
+		}
+		
+		return null;
+	}
+
+	hasItemOnCounter(gridX: number, gridY: number): boolean {
+		const key = `${gridX},${gridY}`;
+		return this.itemsOnCounters.has(key);
+	}
+
+	createCarriedItem(itemType: string) {
+		if (!this.player) return;
+
+		// Détruire l'objet porté précédent s'il existe
+		if (this.carriedItem) {
+			this.carriedItem.destroy();
+		}
+
+		// Créer le nouvel objet porté
+		this.carriedItem = this.add.image(this.player.x, this.player.y - 30, itemType);
+		this.carriedItem.setOrigin(0.5, 0.5);
+		this.carriedItem.setScale(0.8); // Un peu plus petit que sur le plan de travail
+		this.carriedItem.setDepth(this.player.depth + 10); // Au-dessus du joueur
+	}
+
+	removeCarriedItem() {
+		if (this.carriedItem) {
+			this.carriedItem.destroy();
+			this.carriedItem = undefined;
+		}
+	}
+
+	changeScene() {
+        this.scene.start('GameOver');
+    }
 
 	/* END-USER-CODE */
 }

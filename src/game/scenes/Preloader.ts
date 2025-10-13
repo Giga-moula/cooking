@@ -58,6 +58,9 @@ export default class Preloader extends Phaser.Scene {
     {
         // Use the 'pack' file to load in any assets you need for this scene
         this.load.pack('preload', 'assets/preload-asset-pack.json');
+        
+        // Charger le cookie
+        this.load.image('cookie', 'assets/cookie.png');
     }
 
     create ()

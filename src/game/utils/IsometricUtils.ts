@@ -45,12 +45,14 @@ export class IsometricMap {
     private scene: Phaser.Scene;
     private tiles: Map<string, Phaser.GameObjects.Image>;
     private solidTiles: Map<string, Phaser.Physics.Arcade.Sprite>;
+    private counterTiles: Map<string, Phaser.Physics.Arcade.Sprite>;
     private mapData: number[][];
     
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.tiles = new Map();
         this.solidTiles = new Map();
+        this.counterTiles = new Map();
         this.mapData = [];
     }
 
@@ -68,7 +70,8 @@ export class IsometricMap {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4); // 4 = mur solide
+                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif)
+                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5);
                 }
             }
         }
@@ -93,6 +96,14 @@ export class IsometricMap {
             body.setImmovable(true);
             body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
             
+            // Différencier les murs des plans de travail
+            if (texture === 'iso-counter') {
+                // Plan de travail : impassable mais interactif
+                this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
+                console.log(`Plan de travail créé à la position (${gridX}, ${gridY})`);
+            }
+            
+            // Tous les tiles solides (murs + plans de travail) vont dans solidTiles pour les collisions
             this.solidTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
         } else {
             // Créer une image normale pour les tiles traversables
@@ -145,6 +156,9 @@ export class IsometricMap {
         
         this.solidTiles.forEach(tile => tile.destroy());
         this.solidTiles.clear();
+        
+        this.counterTiles.forEach(tile => tile.destroy());
+        this.counterTiles.clear();
     }
 
     /**
@@ -152,6 +166,29 @@ export class IsometricMap {
      */
     getSolidTiles(): Phaser.Physics.Arcade.Sprite[] {
         return Array.from(this.solidTiles.values());
+    }
+
+    /**
+     * Récupère tous les plans de travail
+     */
+    getCounterTiles(): Phaser.Physics.Arcade.Sprite[] {
+        return Array.from(this.counterTiles.values());
+    }
+
+    /**
+     * Vérifie si une position de grille contient un plan de travail
+     */
+    isCounter(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        return this.counterTiles.has(key);
+    }
+
+    /**
+     * Récupère un plan de travail à une position donnée
+     */
+    getCounter(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+        const key = `${gridX},${gridY}`;
+        return this.counterTiles.get(key);
     }
 }
 
