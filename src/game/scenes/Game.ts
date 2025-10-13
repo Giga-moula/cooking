@@ -8,19 +8,18 @@ import { IsometricMap, IsometricUtils } from '../utils/IsometricUtils';
 
 export default class Game extends Phaser.Scene {
 	private isoMap?: IsometricMap;
-	private player?: Phaser.GameObjects.Sprite;
+	private player?: Phaser.Physics.Arcade.Sprite;
 	private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
 	private playerSpeed: number = 150; // Pixels par seconde
 	private mapOffsetX: number = 272;
 	private mapOffsetY: number = 144;
+	private mapWidth: number = 10; // Nombre de tiles en largeur
+	private mapHeight: number = 10; // Nombre de tiles en hauteur
 	
 	// Précalcul des constantes pour optimisation
 	private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
-	private minX: number = 0;
-	private maxX: number = 0;
-	private minY: number = 0;
-	private maxY: number = 0;
 	private lastPlayerY: number = 0;
+	private walls?: Phaser.Physics.Arcade.StaticGroup;
 
 	constructor() {
 		super("Game");
@@ -75,11 +74,8 @@ export default class Game extends Phaser.Scene {
 		// Créer le joueur
 		this.createPlayer();
 
-		// Calculer les limites une seule fois
-		this.minX = this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2;
-		this.maxX = this.mapOffsetX + 10 * IsometricUtils.TILE_WIDTH - IsometricUtils.TILE_WIDTH / 2;
-		this.minY = this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2;
-		this.maxY = this.mapOffsetY + 10 * IsometricUtils.TILE_HEIGHT - IsometricUtils.TILE_HEIGHT / 2;
+		// Créer les murs invisibles autour de la carte
+		this.createMapBoundaries();
 
 		// Configurer les contrôles
 		this.cursors = this.input.keyboard?.createCursorKeys();
@@ -160,10 +156,91 @@ export default class Game extends Phaser.Scene {
 		const startX = this.mapOffsetX + 5 * IsometricUtils.TILE_WIDTH + IsometricUtils.TILE_WIDTH / 2;
 		const startY = this.mapOffsetY + 5 * IsometricUtils.TILE_HEIGHT + IsometricUtils.TILE_HEIGHT / 2;
 		
-		this.player = this.add.sprite(startX, startY, 'iso-player');
+		// Créer un sprite avec physique
+		this.player = this.physics.add.sprite(startX, startY, 'iso-player');
 		this.player.setOrigin(0.5, 0.75);
+		
+		// Configurer la hitbox (zone de collision)
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		
+		// Le personnage visuel est un cercle centré à (24, 32) avec rayon 16px
+		// On crée une hitbox circulaire qui correspond au cercle visible
+		const hitboxRadius = 14; // Un peu plus petit que le cercle visuel (16px)
+		body.setCircle(
+			hitboxRadius,           // Rayon de 14 pixels
+			24 - hitboxRadius,      // Offset X : 24 - 14 = 10 (pour centrer sur le cercle)
+			32 - hitboxRadius       // Offset Y : 32 - 14 = 18 (pour centrer sur le cercle)
+		);
+		
 		this.lastPlayerY = startY;
 		this.updatePlayerDepth();
+	}
+
+	createMapBoundaries() {
+		// Créer un groupe de murs statiques (invisibles)
+		this.walls = this.physics.add.staticGroup();
+
+		const wallThickness = 1; // Épaisseur des murs (1 pixel)
+		
+		// Calculer les vraies limites de la carte
+		// Les tiles sont centrés, donc on doit tenir compte de leur taille
+		const tileHalfWidth = IsometricUtils.TILE_WIDTH / 2;
+		const tileHalfHeight = IsometricUtils.TILE_HEIGHT / 2;
+		
+		// Limites réelles de la carte (bords extérieurs des tiles)
+		const mapLeft = this.mapOffsetX - tileHalfWidth;
+		const mapRight = this.mapOffsetX + this.mapWidth * IsometricUtils.TILE_WIDTH - tileHalfWidth;
+		const mapTop = this.mapOffsetY - tileHalfHeight;
+		const mapBottom = this.mapOffsetY + this.mapHeight * IsometricUtils.TILE_HEIGHT - tileHalfHeight;
+
+		// Mur du haut
+		const topWall = this.add.rectangle(
+			(mapLeft + mapRight) / 2,
+			mapTop - wallThickness / 2,
+			(mapRight - mapLeft) + wallThickness * 2,
+			wallThickness,
+			0xff0000,
+			0.2 // Légèrement visible pour débugger
+		);
+		this.walls.add(topWall);
+
+		// Mur du bas
+		const bottomWall = this.add.rectangle(
+			(mapLeft + mapRight) / 2,
+			mapBottom + wallThickness / 2,
+			(mapRight - mapLeft) + wallThickness * 2,
+			wallThickness,
+			0xff0000,
+			0.2 // Légèrement visible pour débugger
+		);
+		this.walls.add(bottomWall);
+
+		// Mur de gauche
+		const leftWall = this.add.rectangle(
+			mapLeft - wallThickness / 2,
+			(mapTop + mapBottom) / 2,
+			wallThickness,
+			mapBottom - mapTop,
+			0xff0000,
+			0.2 // Légèrement visible pour débugger
+		);
+		this.walls.add(leftWall);
+
+		// Mur de droite
+		const rightWall = this.add.rectangle(
+			mapRight + wallThickness / 2,
+			(mapTop + mapBottom) / 2,
+			wallThickness,
+			mapBottom - mapTop,
+			0xff0000,
+			0.2 // Légèrement visible pour débugger
+		);
+		this.walls.add(rightWall);
+
+		// Activer la collision entre le joueur et les murs
+		if (this.player && this.walls) {
+			this.physics.add.collider(this.player, this.walls);
+		}
 	}
 
 	updatePlayerDepth() {
@@ -179,23 +256,20 @@ export default class Game extends Phaser.Scene {
 	update(time: number, delta: number) {
 		if (!this.cursors || !this.player) return;
 
-		// Calculer la vitesse en fonction du delta time (pour un mouvement fluide)
-		const speed = this.playerSpeed * (delta / 1000);
-		
 		let velocityX = 0;
 		let velocityY = 0;
 
 		// Déplacement fluide avec les flèches
 		if (this.cursors.up!.isDown) {
-			velocityY = -speed;
+			velocityY = -this.playerSpeed;
 		} else if (this.cursors.down!.isDown) {
-			velocityY = speed;
+			velocityY = this.playerSpeed;
 		}
 
 		if (this.cursors.left!.isDown) {
-			velocityX = -speed;
+			velocityX = -this.playerSpeed;
 		} else if (this.cursors.right!.isDown) {
-			velocityX = speed;
+			velocityX = this.playerSpeed;
 		}
 
 		// Normaliser la vitesse en diagonale (utilise la constante précalculée)
@@ -204,9 +278,8 @@ export default class Game extends Phaser.Scene {
 			velocityY *= this.DIAGONAL_FACTOR;
 		}
 
-		// Calculer et appliquer la nouvelle position (avec limites précalculées)
-		this.player.x = Phaser.Math.Clamp(this.player.x + velocityX, this.minX, this.maxX);
-		this.player.y = Phaser.Math.Clamp(this.player.y + velocityY, this.minY, this.maxY);
+		// Appliquer la vélocité (la physique gère les collisions)
+		this.player.setVelocity(velocityX, velocityY);
 
 		// Mettre à jour la profondeur seulement si Y a changé
 		if (this.player.y !== this.lastPlayerY) {
