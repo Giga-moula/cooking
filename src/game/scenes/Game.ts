@@ -190,37 +190,37 @@ export default class Game extends Phaser.Scene {
 			graphics.destroy();
 		});
 
-		// Créer un sprite simple pour le joueur
-		const playerGraphics = this.add.graphics();
-		playerGraphics.fillStyle(0xFF6B6B, 1);
-		playerGraphics.fillCircle(24, 32, 16);
-		playerGraphics.fillStyle(0xFFFFFF, 1);
-		playerGraphics.fillCircle(18, 26, 4);
-		playerGraphics.fillCircle(30, 26, 4);
-		playerGraphics.generateTexture('iso-player', 48, 64);
-		playerGraphics.destroy();
+		// Les sprites de grand-mère sont déjà chargés dans le préchargeur
+		// Pas besoin de générer de texture, on utilise directement les images
 	}
 
 	createPlayer() {
 		// Positionner le joueur sur un tile d'herbe (case 2,2) pour éviter les bordures
+		// Ajustement pour l'origine centrée (0.5, 0.5) au lieu de (0.5, 0.75)
 		const startX = this.mapOffsetX + 2 * IsometricUtils.TILE_WIDTH + IsometricUtils.TILE_WIDTH / 2;
-		const startY = this.mapOffsetY + 2 * IsometricUtils.TILE_HEIGHT + IsometricUtils.TILE_HEIGHT / 2;
+		const startY = this.mapOffsetY + 2 * IsometricUtils.TILE_HEIGHT + IsometricUtils.TILE_HEIGHT / 2 - 12; // -12 pour compenser le changement d'origine
 		
-		// Créer un sprite avec physique
-		this.player = this.physics.add.sprite(startX, startY, 'iso-player');
-		this.player.setOrigin(0.5, 0.75);
+		// Créer un sprite avec physique (grand-mère de face par défaut)
+		this.player = this.physics.add.sprite(startX, startY, 'grandma-front');
+		this.player.setOrigin(0.5, 0.5); // Centré pour la rotation
 		
 		// Configurer la hitbox (zone de collision)
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		
-		// Le personnage visuel est un cercle centré à (24, 32) avec rayon 16px
-		// On crée une hitbox circulaire qui correspond au cercle visible
-		const hitboxRadius = 14; // Un peu plus petit que le cercle visuel (16px)
-		body.setCircle(
-			hitboxRadius,           // Rayon de 14 pixels
-			24 - hitboxRadius,      // Offset X : 24 - 14 = 10 (pour centrer sur le cercle)
-			32 - hitboxRadius       // Offset Y : 32 - 14 = 18 (pour centrer sur le cercle)
-		);
+		// Hitbox rectangulaire adaptée aux sprites de grand-mère
+		// Taille complète en largeur, hauteur réduite
+		const hitboxWidth = this.player.width; // Toute la largeur
+		const hitboxHeight = this.player.height * 0.6; // 60% de la hauteur
+		
+		// Positionner la hitbox au niveau des pieds
+		body.setSize(hitboxWidth, hitboxHeight);
+		
+		// Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
+		// Avec origine (0.5, 0.5), offset positif descend vers le bas
+		// X: centré horizontalement (0)
+		// Y: positionner au bas (offset positif pour descendre)
+		const offsetY = this.player.height * 0.4; // 40% de la hauteur vers le bas
+		body.setOffset(0, offsetY);
 		
 		this.lastPlayerY = startY;
 		this.updatePlayerDepth();
@@ -313,17 +313,21 @@ export default class Game extends Phaser.Scene {
 		if (this.cursors.up!.isDown) {
 			velocityY = -this.playerSpeed;
 			this.lastDirection = { x: 0, y: -1 }; // Haut
+			this.updatePlayerSprite('grandma-back', false); // Vue de dos
 		} else if (this.cursors.down!.isDown) {
 			velocityY = this.playerSpeed;
 			this.lastDirection = { x: 0, y: 1 }; // Bas
+			this.updatePlayerSprite('grandma-front', false); // Vue de face
 		}
 
 		if (this.cursors.left!.isDown) {
 			velocityX = -this.playerSpeed;
 			this.lastDirection = { x: -1, y: 0 }; // Gauche
+			this.updatePlayerSprite('grandma-side', true); // Vue de côté (gauche, retournée)
 		} else if (this.cursors.right!.isDown) {
 			velocityX = this.playerSpeed;
 			this.lastDirection = { x: 1, y: 0 }; // Droite
+			this.updatePlayerSprite('grandma-side', false); // Vue de côté (droite, normale)
 		}
 
 		// Normaliser la vitesse en diagonale (utilise la constante précalculée)
@@ -356,11 +360,13 @@ export default class Game extends Phaser.Scene {
 	updatePlayerGridPosition() {
 		if (!this.player || !this.isoMap) return;
 
-		// Calculer les limites du sprite du joueur
-		const playerLeft = this.player.x - this.player.width / 2;
-		const playerRight = this.player.x + this.player.width / 2;
-		const playerTop = this.player.y - this.player.height * this.player.originY;
-		const playerBottom = this.player.y + this.player.height * (1 - this.player.originY);
+		// Calculer les limites du sprite du joueur avec origine centrée (0.5, 0.5)
+		// Utiliser la hitbox réelle du joueur pour plus de précision
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		const playerLeft = this.player.x - body.halfWidth;
+		const playerRight = this.player.x + body.halfWidth;
+		const playerTop = this.player.y - body.halfHeight;
+		const playerBottom = this.player.y + body.halfHeight;
 
 		// Convertir les coins du joueur en coordonnées de grille
 		const topLeft = IsometricUtils.screenToGrid(playerLeft - this.mapOffsetX, playerTop - this.mapOffsetY);
@@ -445,11 +451,12 @@ export default class Game extends Phaser.Scene {
 		else if (this.lastDirection.x === 0 && this.lastDirection.y === 1) directionText = 'BAS';
 		else if (this.lastDirection.x === -1 && this.lastDirection.y === 0) directionText = 'GAUCHE';
 		
-		// Calculer les limites du joueur pour le debug
-		const playerLeft = this.player.x - this.player.width / 2;
-		const playerRight = this.player.x + this.player.width / 2;
-		const playerTop = this.player.y - this.player.height * this.player.originY;
-		const playerBottom = this.player.y + this.player.height * (1 - this.player.originY);
+		// Calculer les limites du joueur pour le debug (utiliser la hitbox réelle)
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		const playerLeft = this.player.x - body.halfWidth;
+		const playerRight = this.player.x + body.halfWidth;
+		const playerTop = this.player.y - body.halfHeight;
+		const playerBottom = this.player.y + body.halfHeight;
 		
 		this.debugText.setText(
 			`Position joueur: (${this.player.x.toFixed(0)}, ${this.player.y.toFixed(0)})\n` +
@@ -476,11 +483,56 @@ export default class Game extends Phaser.Scene {
 	updateCarriedItemPosition() {
 		if (!this.carriedItem || !this.player) return;
 
-		// Faire suivre l'objet porté au joueur
-		this.carriedItem.setPosition(this.player.x, this.player.y - 30);
+		// Calculer la position de l'objet porté en fonction de la direction du joueur
+		// Ajustement pour les sprites de grand-mère
+		const offsetDistance = 20; // Distance du centre du sprite
 		
-		// Mettre à jour la profondeur pour rester au-dessus du joueur
-		this.carriedItem.setDepth(this.player.depth + 10);
+		// Calculer l'offset en fonction de la direction
+		let offsetX = this.lastDirection.x * offsetDistance;
+		let offsetY = this.lastDirection.y * offsetDistance;
+		
+		// Si le joueur va sur les côtés (gauche ou droite), baisser un peu l'objet
+		if (this.lastDirection.x !== 0) {
+			offsetY += 8; // Baisser de 8 pixels sur les côtés
+		}
+		
+		// Si le joueur va vers le haut, baisser l'objet et le passer derrière
+		if (this.lastDirection.y === -1) {
+			offsetY += 15; // Baisser de 15 pixels vers le haut
+		}
+		
+		// Positionner l'objet porté
+		this.carriedItem.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+		
+		// Mettre à jour la profondeur : derrière si vers le haut, devant sinon
+		if (this.lastDirection.y === -1) {
+			this.carriedItem.setDepth(this.player.depth - 5); // Derrière la grand-mère
+		} else {
+			this.carriedItem.setDepth(this.player.depth + 10); // Devant la grand-mère
+		}
+	}
+
+	updatePlayerSprite(textureKey: string, flipX: boolean = false) {
+		if (!this.player) return;
+		
+		// Changer la texture du sprite
+		this.player.setTexture(textureKey);
+		
+		// Appliquer le retournement horizontal si nécessaire
+		this.player.setFlipX(flipX);
+		
+		// Ajuster la hitbox selon la nouvelle texture
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		const hitboxWidth = this.player.width; // Toute la largeur
+		const hitboxHeight = this.player.height * 0.6; // 60% de la hauteur
+		
+		// Positionner la hitbox au niveau des pieds
+		body.setSize(hitboxWidth, hitboxHeight);
+		
+		// Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
+		// Avec origine (0.5, 0.5), offset positif descend vers le bas
+		const offsetY = this.player.height * 0.4; // 40% de la hauteur vers le bas
+		body.setOffset(0, offsetY);
 	}
 
 	interactWithCounter() {
@@ -592,11 +644,35 @@ export default class Game extends Phaser.Scene {
 			this.carriedItem.destroy();
 		}
 
+		// Calculer la position initiale en fonction de la direction actuelle
+		// Ajustement pour les sprites de grand-mère
+		const offsetDistance = 20; // Distance du centre du sprite
+		
+		// Calculer l'offset en fonction de la direction
+		let offsetX = this.lastDirection.x * offsetDistance;
+		let offsetY = this.lastDirection.y * offsetDistance;
+		
+		// Si le joueur va sur les côtés (gauche ou droite), baisser un peu l'objet
+		if (this.lastDirection.x !== 0) {
+			offsetY += 8; // Baisser de 8 pixels sur les côtés
+		}
+		
+		// Si le joueur va vers le haut, baisser l'objet et le passer derrière
+		if (this.lastDirection.y === -1) {
+			offsetY += 15; // Baisser de 15 pixels vers le haut
+		}
+
 		// Créer le nouvel objet porté
-		this.carriedItem = this.add.image(this.player.x, this.player.y - 30, itemType);
+		this.carriedItem = this.add.image(this.player.x + offsetX, this.player.y + offsetY, itemType);
 		this.carriedItem.setOrigin(0.5, 0.5);
 		this.carriedItem.setScale(0.8); // Un peu plus petit que sur le plan de travail
-		this.carriedItem.setDepth(this.player.depth + 10); // Au-dessus du joueur
+		
+		// Profondeur : derrière si vers le haut, devant sinon
+		if (this.lastDirection.y === -1) {
+			this.carriedItem.setDepth(this.player.depth - 5); // Derrière la grand-mère
+		} else {
+			this.carriedItem.setDepth(this.player.depth + 10); // Devant la grand-mère
+		}
 	}
 
 	removeCarriedItem() {
