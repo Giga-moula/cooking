@@ -97,7 +97,7 @@ export default class MainMenu extends Phaser.Scene {
 
     createPlayButton() {
         // Créer un conteneur pour le bouton
-        const buttonContainer = this.add.container(512, 400);
+        const buttonContainer = this.add.container(512, 440);
         buttonContainer.setDepth(10); // Boutons au premier plan
 
         // Fond du bouton - forme de pilule avec dégradé
@@ -105,11 +105,11 @@ export default class MainMenu extends Phaser.Scene {
 
         // Dessiner la forme de pilule (plus large)
         buttonBg.fillGradientStyle(0xffd700, 0xff8c00, 0xffd700, 0xff8c00, 1);
-        buttonBg.fillRoundedRect(-140, -30, 280, 60, 30);
+        buttonBg.fillRoundedRect(-160, -30, 320, 60, 30);
 
         // Bordure marron foncé
         buttonBg.lineStyle(6, 0x8b4513, 1);
-        buttonBg.strokeRoundedRect(-140, -30, 280, 60, 30);
+        buttonBg.strokeRoundedRect(-160, -30, 320, 60, 30);
 
         buttonContainer.add(buttonBg);
 
@@ -125,7 +125,7 @@ export default class MainMenu extends Phaser.Scene {
         buttonContainer.add(playText);
 
         // Rendre le bouton interactif
-        buttonContainer.setSize(280, 60);
+        buttonContainer.setSize(320, 60);
         buttonContainer.setInteractive({ useHandCursor: true });
 
         buttonContainer.on("pointerout", () => {
@@ -165,75 +165,164 @@ export default class MainMenu extends Phaser.Scene {
         this.titleContainer = this.add.container(512, 150);
         this.titleContainer.setDepth(10); // Titre au premier plan
 
-        // Texte "BURNING" - blanc avec contour marron (plus grand)
-        const burningText = this.add.text(0, -20, "BURNING", {
+        // Ligne 1: "HARDCORE BURNING" - blanc avec contour marron
+        const line1Text = this.add.text(0, -70, "THE HARDCORE", {
             fontFamily: "Arial Black",
-            fontSize: "86px",
+            fontSize: "80px",
             color: "#ffffff",
             stroke: "#8b4513",
-            strokeThickness: 12,
+            strokeThickness: 10,
         });
-        burningText.setOrigin(0.5, 0.5);
+        line1Text.setOrigin(0.5, 0.5);
 
-        // Ombre douce pour "BURNING"
-        const burningShadow = this.add.text(3, -17, "BURNING", {
+        // Ombre douce pour ligne 1
+        const line1Shadow = this.add.text(3, -67, "THE HARDCORE", {
             fontFamily: "Arial Black",
-            fontSize: "86px",
+            fontSize: "80px",
             color: "#e0e0e0",
         });
-        burningShadow.setOrigin(0.5, 0.5);
-        burningShadow.setAlpha(0.8);
+        line1Shadow.setOrigin(0.5, 0.5);
+        line1Shadow.setAlpha(0.8);
 
-        // Texte "MAMA" - dégradé jaune avec contour marron (plus petit)
-        const mamaText = this.add.text(0, 30, "GRANDMAMA", {
+        // Ligne 2: "BURNING GRANDMAMA" - divisé en deux parties
+        // Partie 1: "BURNING GRAND" (statique) - décalé vers la gauche
+        const line2Part1Text = this.add.text(-100, -10, "BURNING GRAND", {
             fontFamily: "Arial Black",
-            fontSize: "78px",
-            color: "#ffff00",
-            stroke: "#8b4513",
-            strokeThickness: 12,
-        });
-        mamaText.setOrigin(0.5, 0.5);
-
-        // Ombre douce pour "MAMA"
-        const mamaShadow = this.add.text(3, 33, "GRANDMAMA", {
-            fontFamily: "Arial Black",
-            fontSize: "78px",
-            color: "#e0e0e0",
-        });
-        mamaShadow.setOrigin(0.5, 0.5);
-        mamaShadow.setAlpha(0.8);
-
-        // Texte "2" - jaune avec contour marron
-        const twoText = this.add.text(0, 85, "2", {
-            fontFamily: "Arial Black",
-            fontSize: "102px",
+            fontSize: "70px",
             color: "#ffff00",
             stroke: "#8b4513",
             strokeThickness: 10,
         });
-        twoText.setOrigin(0.5, 0.5);
+        line2Part1Text.setOrigin(0.5, 0.5);
 
-        // Ombre douce pour "2"
-        const twoShadow = this.add.text(3, 88, "2", {
+        const line2Part1Shadow = this.add.text(-97, -7, "BURNING GRAND", {
             fontFamily: "Arial Black",
-            fontSize: "102px",
+            fontSize: "70px",
             color: "#e0e0e0",
         });
-        twoShadow.setOrigin(0.5, 0.5);
-        twoShadow.setAlpha(0.8);
+        line2Part1Shadow.setOrigin(0.5, 0.5);
+        line2Part1Shadow.setAlpha(0.8);
+
+        // Calculer la position de "MAMA" pour qu'il soit juste après "GRAND"
+        const line2Part1Width = line2Part1Text.width;
+        const mamaXPosition = -100 + line2Part1Width / 2 + 5; // Petit espace de 5px
+
+        // Partie 2: "MAMA" (qui tremble)
+        const line2Part2Text = this.add.text(mamaXPosition, -10, "MAMA", {
+            fontFamily: "Arial Black",
+            fontSize: "70px",
+            color: "#ffff00",
+            stroke: "#8b4513",
+            strokeThickness: 10,
+        });
+        line2Part2Text.setOrigin(0, 0.5);
+
+        const line2Part2Shadow = this.add.text(mamaXPosition + 3, -7, "MAMA", {
+            fontFamily: "Arial Black",
+            fontSize: "70px",
+            color: "#e0e0e0",
+        });
+        line2Part2Shadow.setOrigin(0, 0.5);
+        line2Part2Shadow.setAlpha(0.8);
+
+        // Ligne 3: "3D TURBO" - jaune foncé avec contour marron
+        const line3Text = this.add.text(0, 37, "DELUXE 3D TURBO", {
+            fontFamily: "BBH Sans Bartle",
+            fontSize: "50px",
+            color: "#ffa500",
+            stroke: "#8b4513",
+            strokeThickness: 10,
+        });
+        line3Text.setOrigin(0.5, 0.5);
+
+        // Ombre douce pour ligne 3
+        const line3Shadow = this.add.text(3, 37, "DELUXE 3D TURBO", {
+            fontFamily: "BBH Sans Bartle",
+            fontSize: "50px",
+            color: "#e0e0e0",
+        });
+        line3Shadow.setOrigin(0.5, 0.5);
+        line3Shadow.setAlpha(0.8);
+
+        // Ligne 4: "4" seul et plus gros - rouge bordeaux avec contour marron
+        const line4Text = this.add.text(0, 95, "EDITION 4", {
+            fontFamily: "Arial Black",
+            fontSize: "72px",
+            color: "#ffff00",
+            stroke: "#8b4513",
+            strokeThickness: 12,
+        });
+        line4Text.setOrigin(0.5, 0.5);
+
+        // Ombre douce pour ligne 4
+        const line4Shadow = this.add.text(3, 98, "EDITION 4", {
+            fontFamily: "Arial Black",
+            fontSize: "72px",
+            color: "#e0e0e0",
+        });
+        line4Shadow.setOrigin(0.5, 0.5);
+        line4Shadow.setAlpha(0.8);
 
         // Ajouter les éléments au conteneur dans l'ordre (ombres en arrière-plan)
-        this.titleContainer.add(burningShadow);
-        this.titleContainer.add(mamaShadow);
-        this.titleContainer.add(twoShadow);
-        this.titleContainer.add(burningText);
-        this.titleContainer.add(mamaText);
-        this.titleContainer.add(twoText);
+        this.titleContainer.add(line1Shadow);
+        this.titleContainer.add(line2Part1Shadow);
+        this.titleContainer.add(line2Part2Shadow);
+        this.titleContainer.add(line3Shadow);
+        this.titleContainer.add(line4Shadow);
+        this.titleContainer.add(line1Text);
+        this.titleContainer.add(line2Part1Text);
+        this.titleContainer.add(line2Part2Text);
+        this.titleContainer.add(line3Text);
+        this.titleContainer.add(line4Text);
+
+        // Animation de levier sur "THE HARDCORE" (rotation gauche-droite)
+        this.tweens.add({
+            targets: [line1Text, line1Shadow],
+            rotation: 0.05, // Rotation de ~3 degrés
+            duration: 1500,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Animation de tremblement sur "MAMA"
+        this.tweens.add({
+            targets: [line2Part2Text, line2Part2Shadow],
+            x: "+=4",
+            y: "+=3",
+            duration: 50,
+            ease: "Linear",
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Animation de zoom/dézoom sur "DELUXE 3D TURBO"
+        this.tweens.add({
+            targets: [line3Text, line3Shadow],
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 1200,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Animation de zoom/dézoom sur "EDITION 4" (en décalé)
+        this.tweens.add({
+            targets: [line4Text, line4Shadow],
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 1200,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1,
+            delay: 1200, // Décalage d'un cycle complet
+        });
     }
 
     createLeaderboardButton() {
         // Créer un conteneur pour le bouton Leaderboard
-        const buttonContainer = this.add.container(512, 490);
+        const buttonContainer = this.add.container(512, 530);
         buttonContainer.setDepth(10); // Boutons au premier plan
 
         // Fond du bouton - forme de pilule avec dégradé
@@ -301,24 +390,24 @@ export default class MainMenu extends Phaser.Scene {
 
     createLeaderboardPreview() {
         // Créer un conteneur pour l'aperçu du leaderboard
-        const previewContainer = this.add.container(150, 445);
+        const previewContainer = this.add.container(150, 485);
         previewContainer.setDepth(10); // Leaderboard au premier plan
 
-        // Fond de l'aperçu - forme de pilule
+        // Fond de l'aperçu - forme de pilule (plus grande)
         const previewBg = this.add.graphics();
         previewBg.fillGradientStyle(0x4a4a4a, 0x2a2a2a, 0x4a4a4a, 0x2a2a2a, 1);
-        previewBg.fillRoundedRect(-100, -120, 200, 240, 20);
+        previewBg.fillRoundedRect(-130, -155, 260, 310, 20);
 
         // Bordure dorée
         previewBg.lineStyle(4, 0xffd700, 1);
-        previewBg.strokeRoundedRect(-100, -120, 200, 240, 20);
+        previewBg.strokeRoundedRect(-130, -155, 260, 310, 20);
 
         previewContainer.add(previewBg);
 
         // Titre "TOP 3"
-        const titleText = this.add.text(0, -90, "TOP 3", {
+        const titleText = this.add.text(0, -115, "TOP 3", {
             fontFamily: "Arial Black",
-            fontSize: "24px",
+            fontSize: "32px",
             color: "#ffd700",
             stroke: "#8b4513",
             strokeThickness: 4,
@@ -327,9 +416,9 @@ export default class MainMenu extends Phaser.Scene {
         previewContainer.add(titleText);
 
         // 1er place
-        const firstPlace = this.add.text(0, -40, "1. CHEF_MAMA", {
+        const firstPlace = this.add.text(0, -50, "1. CHEF_MAMA", {
             fontFamily: "Arial Black",
-            fontSize: "16px",
+            fontSize: "20px",
             color: "#ffd700",
             stroke: "#8b4513",
             strokeThickness: 3,
@@ -337,18 +426,18 @@ export default class MainMenu extends Phaser.Scene {
         firstPlace.setOrigin(0.5, 0.5);
         previewContainer.add(firstPlace);
 
-        const firstScore = this.add.text(0, -20, "12,450 pts", {
+        const firstScore = this.add.text(0, -22, "12,450 pts", {
             fontFamily: "Arial",
-            fontSize: "14px",
+            fontSize: "18px",
             color: "#ffffff",
         });
         firstScore.setOrigin(0.5, 0.5);
         previewContainer.add(firstScore);
 
         // 2ème place
-        const secondPlace = this.add.text(0, 10, "2. BURNING_COOK", {
+        const secondPlace = this.add.text(0, 18, "2. BURNING_COOK", {
             fontFamily: "Arial Black",
-            fontSize: "16px",
+            fontSize: "20px",
             color: "#c0c0c0",
             stroke: "#8b4513",
             strokeThickness: 3,
@@ -356,18 +445,18 @@ export default class MainMenu extends Phaser.Scene {
         secondPlace.setOrigin(0.5, 0.5);
         previewContainer.add(secondPlace);
 
-        const secondScore = this.add.text(0, 30, "11,890 pts", {
+        const secondScore = this.add.text(0, 46, "11,890 pts", {
             fontFamily: "Arial",
-            fontSize: "14px",
+            fontSize: "18px",
             color: "#ffffff",
         });
         secondScore.setOrigin(0.5, 0.5);
         previewContainer.add(secondScore);
 
         // 3ème place
-        const thirdPlace = this.add.text(0, 60, "3. HOT_KITCHEN", {
+        const thirdPlace = this.add.text(0, 86, "3. HOT_KITCHEN", {
             fontFamily: "Arial Black",
-            fontSize: "16px",
+            fontSize: "20px",
             color: "#cd7f32",
             stroke: "#8b4513",
             strokeThickness: 3,
@@ -375,9 +464,9 @@ export default class MainMenu extends Phaser.Scene {
         thirdPlace.setOrigin(0.5, 0.5);
         previewContainer.add(thirdPlace);
 
-        const thirdScore = this.add.text(0, 80, "10,720 pts", {
+        const thirdScore = this.add.text(0, 114, "10,720 pts", {
             fontFamily: "Arial",
-            fontSize: "14px",
+            fontSize: "18px",
             color: "#ffffff",
         });
         thirdScore.setOrigin(0.5, 0.5);
