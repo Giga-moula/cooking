@@ -5,6 +5,11 @@
                 "url": "assets/bg.png",
                 "type": "image",
                 "key": "background"
+            },
+            {
+                "url": "assets/kitchen.png",
+                "type": "image",
+                "key": "kitchen"
             }
         ]
     },
