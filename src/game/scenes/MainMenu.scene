@@ -17,21 +17,12 @@
             "id": "eddaf8e1-94d1-401d-a328-cdfb23d1fef5",
             "label": "background",
             "texture": {
-                "key": "background"
+                "key": "kitchen"
             },
             "x": 512,
-            "y": 384
-        },
-        {
-            "type": "Image",
-            "id": "e5babb96-c526-40f4-94d3-ce0955d9767d",
-            "label": "logo",
-            "scope": "CLASS",
-            "texture": {
-                "key": "logo"
-            },
-            "x": 512,
-            "y": 384
+            "y": 384,
+            "displayWidth": 1024,
+            "displayHeight": 768
         },
         {
             "type": "Text",
@@ -52,7 +43,7 @@
     ],
     "plainObjects": [],
     "meta": {
-        "app": "Phaser Editor 2D - Scene Editor",
+        "app": "Phaser Editor - Scene Editor",
         "url": "https://phaser.io/editor",
         "contentType": "phasereditor2d.core.scene.SceneContentType",
         "version": 5
