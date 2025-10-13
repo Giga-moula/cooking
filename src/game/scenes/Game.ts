@@ -501,14 +501,21 @@ export default class Game extends Phaser.Scene {
 			offsetY += 15; // Baisser de 15 pixels vers le haut
 		}
 		
+		// Si le joueur va vers le bas, ajuster la position pour éviter les conflits
+		if (this.lastDirection.y === 1) {
+			offsetY -= 5; // Remonter légèrement quand on va vers le bas
+		}
+		
 		// Positionner l'objet porté
 		this.carriedItem.setPosition(this.player.x + offsetX, this.player.y + offsetY);
 		
-		// Mettre à jour la profondeur : derrière si vers le haut, devant sinon
+		// Mettre à jour la profondeur selon la direction
+		// Utiliser une profondeur fixe pour éviter les oscillations
+		const baseDepth = 10000; // Profondeur fixe élevée
 		if (this.lastDirection.y === -1) {
-			this.carriedItem.setDepth(this.player.depth - 5); // Derrière la grand-mère
+			this.carriedItem.setDepth(baseDepth - 100); // Derrière la grand-mère (vers le haut)
 		} else {
-			this.carriedItem.setDepth(this.player.depth + 10); // Devant la grand-mère
+			this.carriedItem.setDepth(baseDepth + 100); // Devant la grand-mère (toutes autres directions)
 		}
 	}
 
@@ -661,17 +668,24 @@ export default class Game extends Phaser.Scene {
 		if (this.lastDirection.y === -1) {
 			offsetY += 15; // Baisser de 15 pixels vers le haut
 		}
+		
+		// Si le joueur va vers le bas, ajuster la position pour éviter les conflits
+		if (this.lastDirection.y === 1) {
+			offsetY -= 5; // Remonter légèrement quand on va vers le bas
+		}
 
 		// Créer le nouvel objet porté
 		this.carriedItem = this.add.image(this.player.x + offsetX, this.player.y + offsetY, itemType);
 		this.carriedItem.setOrigin(0.5, 0.5);
 		this.carriedItem.setScale(0.8); // Un peu plus petit que sur le plan de travail
 		
-		// Profondeur : derrière si vers le haut, devant sinon
+		// Profondeur selon la direction
+		// Utiliser une profondeur fixe pour éviter les oscillations
+		const baseDepth = 10000; // Profondeur fixe élevée
 		if (this.lastDirection.y === -1) {
-			this.carriedItem.setDepth(this.player.depth - 5); // Derrière la grand-mère
+			this.carriedItem.setDepth(baseDepth - 100); // Derrière la grand-mère (vers le haut)
 		} else {
-			this.carriedItem.setDepth(this.player.depth + 10); // Devant la grand-mère
+			this.carriedItem.setDepth(baseDepth + 100); // Devant la grand-mère (toutes autres directions)
 		}
 	}
 
