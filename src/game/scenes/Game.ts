@@ -94,7 +94,7 @@ export default class Game extends Phaser.Scene {
 		const tileTextures = {
 			1: 'planks',
 			4: 'iso-wall',
-			5: 'table-bottom',
+			5: 'table', // Le système de tables modulaires gérera automatiquement les textures
 			6: 'choco_box',
 			7: 'butter_box',
 			8: 'flour_box',
@@ -293,7 +293,6 @@ export default class Game extends Phaser.Scene {
 		
 		deliveryGraphics.generateTexture('iso-delivery-zone', tileSize, tileSize);
 		deliveryGraphics.destroy();
-		
 	}
 
     createPlayer() {
