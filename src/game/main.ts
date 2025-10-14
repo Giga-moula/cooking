@@ -1,6 +1,6 @@
 import { AUTO, Game } from "phaser";
 import Boot from "./scenes/Boot";
-import GameExample from "./scenes/Game.example";
+import MainGame from "./scenes/Game"; // Importer la scène Game
 import GameOver from "./scenes/GameOver";
 import MainMenu from "./scenes/MainMenu";
 import Preloader from "./scenes/Preloader";
@@ -20,7 +20,7 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: true, // Affiche les hitboxes avec des bordures
         },
     },
-    scene: [Boot, Preloader, MainMenu, GameExample, GameOver],
+    scene: [Boot, Preloader, MainMenu, MainGame, GameOver],
 };
 
 const StartGame = (parent: string) => {

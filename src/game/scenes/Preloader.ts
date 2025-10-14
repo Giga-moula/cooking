@@ -66,10 +66,6 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("cookie", "assets/cookie.png");
         this.load.image("star", "assets/star.png");
         this.load.image("favicon", "assets/favicon.png");
-        this.load.pack("preload", "assets/preload-asset-pack.json");
-
-        // Charger le cookie
-        this.load.image("cookie", "assets/cookie.png");
 
         // Charger les sprites de grand-mère
         this.load.image("grandma-front", "assets/grandma_blue.png");
