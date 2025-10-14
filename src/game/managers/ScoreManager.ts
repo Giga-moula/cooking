@@ -103,7 +103,6 @@ export class ScoreManager {
     calculateRecipePoints(dishId: string): number {
         const basePoints: { [key: string]: number } = {
             cookie: 100,
-            dough: 50,
         };
 
         return basePoints[dishId] || 50;
