@@ -67,6 +67,11 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("star", "assets/star.png");
         this.load.image("favicon", "assets/favicon.png");
 
+        // Charger les caisses d'ingrédients pour la récupération
+        this.load.image("butter_box", "assets/butter_box.png");
+        this.load.image("flour_box", "assets/flour_box.png");
+        this.load.image("choco_box", "assets/choco_box.png");
+
         // Charger les sprites de grand-mère
         this.load.image("grandma-front", "assets/grandma_blue.png");
         this.load.image("grandma-back", "assets/grandma_blue_back.png");
