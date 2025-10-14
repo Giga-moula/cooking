@@ -485,7 +485,7 @@ export default class MainMenu extends Phaser.Scene {
     }
 
     changeScene() {
-        this.scene.start("Game");
+        this.scene.start("GameExample"); // 🧪 TEST - Lance Game.example
     }
     /* END-USER-CODE */
 }
