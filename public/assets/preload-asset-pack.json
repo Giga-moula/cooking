@@ -12,27 +12,27 @@
                 "key": "star"
             },
             {
-                "url": "assets/cookie.png",
+                "url": "assets/meal/cookie.png",
                 "type": "image",
                 "key": "cookie"
             },
             {
-                "url": "assets/chocolate.png",
+                "url": "assets/ingredients/chocolate.png",
                 "type": "image",
                 "key": "chocolate"
             },
             {
-                "url": "assets/butter.png",
+                "url": "assets/ingredients/butter.png",
                 "type": "image",
                 "key": "butter"
             },
             {
-                "url": "assets/wheat_floor.png",
+                "url": "assets/ingredients/wheat_floor.png",
                 "type": "image",
                 "key": "wheat_floor"
             },
             {
-                "url": "assets/dough.png",
+                "url": "assets/crafted/dough.png",
                 "type": "image",
                 "key": "dough"
             }
@@ -46,4 +46,3 @@
         "showAllFilesInBlocks": false
     }
 }
-

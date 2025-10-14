@@ -7,7 +7,7 @@
                 "key": "background"
             },
             {
-                "url": "assets/kitchen.png",
+                "url": "assets/background/kitchen.png",
                 "type": "image",
                 "key": "kitchen"
             }

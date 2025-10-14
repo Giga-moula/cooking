@@ -59,18 +59,26 @@ export default class Preloader extends Phaser.Scene {
         this.load.pack("preload", "assets/preload-asset-pack.json");
 
         // Charger les ingrédients
-        this.load.image("butter", "assets/butter.png");
-        this.load.image("flour", "assets/flour.png");
-        this.load.image("chocolate", "assets/chocolate.png");
-        this.load.image("dough", "assets/dough.png");
-        this.load.image("cookie", "assets/cookie.png");
-        this.load.image("star", "assets/star.png");
+        this.load.image("butter", "assets/ingredients/butter.png");
+        this.load.image("flour", "assets/ingredients/flour.png");
+        this.load.image("chocolate", "assets/ingredients/chocolate.png");
+        this.load.image("dough", "assets/crafted/dough.png");
+        this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("favicon", "assets/favicon.png");
 
         // Charger les sprites de grand-mère
-        this.load.image("grandma-front", "assets/grandma_blue.png");
-        this.load.image("grandma-back", "assets/grandma_blue_back.png");
-        this.load.image("grandma-side", "assets/grandma_blue_side.png");
+        this.load.image(
+            "grandma-front",
+            "assets/grandma/blue/grandma_blue_front.png"
+        );
+        this.load.image(
+            "grandma-back",
+            "assets/grandma/blue/grandma_blue_back.png"
+        );
+        this.load.image(
+            "grandma-side",
+            "assets/grandma/blue/grandma_blue_side.png"
+        );
     }
 
     create() {
@@ -86,4 +94,3 @@ export default class Preloader extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
-
