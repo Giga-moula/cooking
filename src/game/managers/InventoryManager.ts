@@ -7,42 +7,11 @@ export class InventoryManager {
     private scene: Phaser.Scene;
     private inventory: string[] = [];
     private carriedItem?: Phaser.GameObjects.Image;
-    private inventoryText?: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
     }
 
-    /**
-     * Initialise l'affichage de l'inventaire
-     */
-    initializeInventoryDisplay(x: number = 10, y: number = 220): void {
-        this.inventoryText = this.scene.add.text(x, y, "", {
-            fontFamily: "Arial",
-            fontSize: "14px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 5, y: 5 },
-        });
-        this.inventoryText.setScrollFactor(0);
-        this.inventoryText.setDepth(1000);
-        this.updateInventoryDisplay();
-    }
-
-    /**
-     * Met à jour l'affichage de l'inventaire
-     */
-    updateInventoryDisplay(): void {
-        if (!this.inventoryText) return;
-
-        if (this.inventory.length === 0) {
-            this.inventoryText.setText("Inventaire: Vide (max: 1)");
-        } else {
-            this.inventoryText.setText(
-                `Inventaire: ${this.inventory.join(", ")} (1/1)`
-            );
-        }
-    }
 
     /**
      * Crée un objet porté visible au-dessus du joueur
@@ -139,7 +108,6 @@ export class InventoryManager {
         if (this.inventory.length >= 1) return false; // Inventaire plein
 
         this.inventory.push(itemType);
-        this.updateInventoryDisplay();
         return true;
     }
 
@@ -150,7 +118,6 @@ export class InventoryManager {
         if (this.inventory.length === 0) return null;
 
         const item = this.inventory.pop()!;
-        this.updateInventoryDisplay();
         return item;
     }
 
