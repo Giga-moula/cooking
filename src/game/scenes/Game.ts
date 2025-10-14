@@ -208,19 +208,20 @@ export default class Game extends Phaser.Scene {
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		
 		// Hitbox rectangulaire adaptée aux sprites de grand-mère
-		// Taille complète en largeur, hauteur réduite
+		// Taille réduite de moitié
 		const hitboxWidth = this.player.width; // Toute la largeur
-		const hitboxHeight = this.player.height * 0.6; // 60% de la hauteur
+		const hitboxHeight = this.player.height * 0.3; // 30% de la hauteur (moitié de 60%)
 		
 		// Positionner la hitbox au niveau des pieds
 		body.setSize(hitboxWidth, hitboxHeight);
 		
 		// Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
 		// Avec origine (0.5, 0.5), offset positif descend vers le bas
-		// X: centré horizontalement (0)
+		// X: centrer la hitbox réduite
+		const offsetX = (this.player.width - hitboxWidth) / 2;
 		// Y: positionner au bas (offset positif pour descendre)
-		const offsetY = this.player.height * 0.4; // 40% de la hauteur vers le bas
-		body.setOffset(0, offsetY);
+		const offsetY = this.player.height * 0.7; // 70% de la hauteur vers le bas
+		body.setOffset(offsetX, offsetY);
 		
 		this.lastPlayerY = startY;
 		this.updatePlayerDepth();
@@ -300,6 +301,15 @@ export default class Game extends Phaser.Scene {
 			// On multiplie par 10 et on ajoute un offset de 5 pour être sûr d'être au-dessus des tiles
 			this.player.setDepth(this.player.y * 10 + 5);
 			this.lastPlayerY = this.player.y;
+			
+			// Mettre à jour la profondeur de l'objet porté en même temps
+			if (this.carriedItem) {
+				if (this.lastDirection.y === -1) {
+					this.carriedItem.setDepth(this.player.depth - 1); // Derrière (vers le haut)
+				} else {
+					this.carriedItem.setDepth(this.player.depth + 1); // Devant (autres directions)
+				}
+			}
 		}
 	}
 
@@ -509,14 +519,7 @@ export default class Game extends Phaser.Scene {
 		// Positionner l'objet porté
 		this.carriedItem.setPosition(this.player.x + offsetX, this.player.y + offsetY);
 		
-		// Mettre à jour la profondeur selon la direction
-		// Utiliser une profondeur fixe pour éviter les oscillations
-		const baseDepth = 10000; // Profondeur fixe élevée
-		if (this.lastDirection.y === -1) {
-			this.carriedItem.setDepth(baseDepth - 100); // Derrière la grand-mère (vers le haut)
-		} else {
-			this.carriedItem.setDepth(baseDepth + 100); // Devant la grand-mère (toutes autres directions)
-		}
+		// La profondeur est maintenant gérée dans updatePlayerDepth()
 	}
 
 	updatePlayerSprite(textureKey: string, flipX: boolean = false) {
@@ -531,15 +534,16 @@ export default class Game extends Phaser.Scene {
 		// Ajuster la hitbox selon la nouvelle texture
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		const hitboxWidth = this.player.width; // Toute la largeur
-		const hitboxHeight = this.player.height * 0.6; // 60% de la hauteur
+		const hitboxHeight = this.player.height * 0.3; // 30% de la hauteur (moitié de 60%)
 		
 		// Positionner la hitbox au niveau des pieds
 		body.setSize(hitboxWidth, hitboxHeight);
 		
 		// Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
 		// Avec origine (0.5, 0.5), offset positif descend vers le bas
-		const offsetY = this.player.height * 0.4; // 40% de la hauteur vers le bas
-		body.setOffset(0, offsetY);
+		const offsetX = (this.player.width - hitboxWidth) / 2;
+		const offsetY = this.player.height * 0.7; // 70% de la hauteur vers le bas
+		body.setOffset(offsetX, offsetY);
 	}
 
 	interactWithCounter() {
@@ -680,12 +684,12 @@ export default class Game extends Phaser.Scene {
 		this.carriedItem.setScale(0.8); // Un peu plus petit que sur le plan de travail
 		
 		// Profondeur selon la direction
-		// Utiliser une profondeur fixe pour éviter les oscillations
-		const baseDepth = 10000; // Profondeur fixe élevée
+		// Utiliser la profondeur du joueur comme base pour éviter les oscillations
+		const playerDepth = this.player.depth;
 		if (this.lastDirection.y === -1) {
-			this.carriedItem.setDepth(baseDepth - 100); // Derrière la grand-mère (vers le haut)
+			this.carriedItem.setDepth(playerDepth - 1); // Derrière la grand-mère (vers le haut)
 		} else {
-			this.carriedItem.setDepth(baseDepth + 100); // Devant la grand-mère (toutes autres directions)
+			this.carriedItem.setDepth(playerDepth + 1); // Devant la grand-mère (toutes autres directions)
 		}
 	}
 
