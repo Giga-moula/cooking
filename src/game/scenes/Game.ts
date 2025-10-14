@@ -173,22 +173,6 @@ export default class Game extends Phaser.Scene {
         // Démarrer la première vague
         this.waveManager.startWave(1);
 
-        // Initialiser le système de vagues
-        this.waveManager = new WaveManager(
-            this,
-            this.orderDisplayManager,
-            this.scoreManager,
-            this.ingredientManager.getRecipeManager()
-        );
-        this.waveManager.initializeWaveDisplay();
-        // Connecter le système de vagues avec OrderDisplayManager
-        this.orderDisplayManager.setOrderCompletedCallback(() => {
-            this.waveManager?.completeRecipe();
-        });
-
-        // Démarrer la première vague
-        this.waveManager.startWave(1);
-
         // Afficher les contrôles
         this.displayControls();
 
@@ -259,6 +243,9 @@ export default class Game extends Phaser.Scene {
         }
     }
 
+    /**
+     * Change de scène (retour au menu)
+     */
     changeScene() {
         this.endGame();
     }
@@ -284,81 +271,6 @@ export default class Game extends Phaser.Scene {
             }
         );
         controlsText.setDepth(1000);
-    }
-
-    /**
-     * Transforme les ingrédients sur une tile spéciale
-     */
-    transformIngredientsOnSpecialTile() {
-                if (!this.player1 || !this.mapManager || !this.counterManager || !this.player1.getInventory()) {
-            console.log("Managers manquants 1");
-            return;
-        }
-
-        const playerGridX = this.player1.getPlayerGridX();
-        const playerGridY = this.player1.getPlayerGridY();
-        const lastDirection = this.player1.getLastDirection();
-
-        console.log(`Joueur en position: (${playerGridX}, ${playerGridY}), direction: (${lastDirection.x}, ${lastDirection.y})`);
-
-        // Calculer la position adjacente selon la direction
-        const adjacentX = playerGridX + lastDirection.x;
-        const adjacentY = playerGridY + lastDirection.y;
-
-        console.log(`Position adjacente calculée: (${adjacentX}, ${adjacentY})`);
-        console.log(`Est une tile spéciale: ${this.mapManager.isSpecialTile(adjacentX, adjacentY)}`);
-        
-        // Vérifier aussi si le joueur est directement sur une tile spéciale
-        console.log(`Joueur sur tile spéciale: ${this.mapManager.isSpecialTile(playerGridX, playerGridY)}`);
-
-        // Vérifier si la position adjacente est une tile spéciale
-        if (this.mapManager.isSpecialTile(adjacentX, adjacentY)) {
-            console.log(`Tile spéciale trouvée en (${adjacentX}, ${adjacentY})`);
-            
-            // Vérifier s'il y a un objet sur cette tile
-            if (this.counterManager.hasItemOnCounter(adjacentX, adjacentY)) {
-                console.log("Objet trouvé sur la tile spéciale, tentative de transformation");
-                // Effectuer la transformation
-                const success = this.counterManager.performSpecialTransformation(adjacentX, adjacentY);
-                if (success) {
-                    console.log("Transformation réussie !");
-                } else {
-                    console.log("Aucune transformation possible");
-                }
-            } else if (!this.player1.getInventory().isEmpty()) {
-                console.log("Inventaire non vide, tentative de placement");
-                // Poser un ingrédient sur la tile spéciale
-                const player = this.player1.getPlayer();
-                if (player) {
-                    const itemType = this.player1.getInventory().removeItem();
-                    if (itemType) {
-                        console.log(`Tentative de placer ${itemType} sur la tile spéciale`);
-                        const placed = this.counterManager.placeItemOnCounter(
-                            adjacentX,
-                            adjacentY,
-                            itemType
-                        );
-                        if (placed) {
-                            this.player1.getInventory().removeCarriedItem();
-                            this.counterManager.showCombinationMessage(
-                                `📦 ${itemType} posé`,
-                                adjacentX,
-                                adjacentY
-                            );
-                            console.log("Ingrédient placé avec succès");
-                        } else {
-                            console.log("Échec du placement de l'ingrédient");
-                            // Remettre l'ingrédient dans l'inventaire
-                            this.player1.getInventory().addItem(itemType);
-                        }
-                    }
-                }
-            } else {
-                console.log("Aucun ingrédient dans l'inventaire");
-            }
-        } else {
-            console.log("Pas de tile spéciale à côté du joueur");
-        }
     }
 
     /**
