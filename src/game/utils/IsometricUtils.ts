@@ -4,8 +4,8 @@
 
 export class IsometricUtils {
     // Taille des tiles en pixels (carrés)
-    static TILE_WIDTH = 48;
-    static TILE_HEIGHT = 48;
+    static TILE_WIDTH = 64;  // Modifier ici pour changer la taille
+    static TILE_HEIGHT = 64;
 
     /**
      * Convertit les coordonnées de grille (x, y) en coordonnées écran (grille carrée)
@@ -33,6 +33,16 @@ export class IsometricUtils {
      */
     static getDepth(gridX: number, gridY: number): number {
         return gridY * 1000 + gridX;
+    }
+
+    /**
+     * Calcule le scale nécessaire pour adapter une image à la taille des tiles
+     */
+    static calculateTileScale(imageWidth: number, imageHeight: number): number {
+        // On utilise la plus petite dimension pour garder les proportions
+        const scaleX = this.TILE_WIDTH / imageWidth; 
+        const scaleY = this.TILE_HEIGHT / imageHeight;
+        return Math.min(scaleX, scaleY);
     }
 }
 
@@ -73,7 +83,7 @@ export class IsometricMap {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
                     // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs)
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6);
+                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6, tileType === 5 || tileType >= 6);
                 }
             }
         }
@@ -82,7 +92,7 @@ export class IsometricMap {
     /**
      * Crée un tile individuel
      */
-    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0, isSolid: boolean = false): Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite {
+    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0, isSolid: boolean = false, isCounter: boolean = false): Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const key = `${gridX},${gridY}`;
         
@@ -93,16 +103,47 @@ export class IsometricMap {
             tile = this.scene.physics.add.sprite(screenPos.x + offsetX, screenPos.y + offsetY, texture);
             tile.setOrigin(0.5, 0.5);
             
-            // Configurer le body comme immobile
+            // Appliquer le scale automatique pour les images (pas les tiles procédurales)
+            this.applyAutoScale(tile, texture);
+            
+            // Configurer la physique APRÈS le scale pour que les collisions correspondent à la taille réelle du sprite
             const body = (tile as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
             body.setImmovable(true);
-            body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
             
-            // Différencier les murs des plans de travail
-            if (texture === 'iso-counter') {
-                // Plan de travail : impassable mais interactif
+            // Pour les tiles procédurales (iso-*), utiliser la taille des tiles
+            if (texture.startsWith('iso-')) {
+                body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                body.setOffset(0, 0);
+            } else {
+                // Pour les images réelles (tables, etc.), utiliser la taille réelle du sprite après scale
+                const scaledWidth = tile.width;
+                const scaledHeight = tile.height;
+                
+                // Ajuster la zone de collision selon le type de texture
+                let collisionRatio = 1; // Par défaut, 80% de la taille du sprite
+                
+                if (texture.startsWith('table-')) {
+                    // Pour les tables, utiliser une zone de collision plus précise
+                    collisionRatio = 1; // 70% pour les tables
+                }
+                
+                const collisionWidth = Math.min(scaledWidth * collisionRatio, IsometricUtils.TILE_WIDTH);
+                const collisionHeight = Math.min(scaledHeight * collisionRatio, IsometricUtils.TILE_HEIGHT);
+                
+                body.setSize(collisionWidth, collisionHeight);
+                body.setOffset(
+                    (scaledWidth - collisionWidth) / 2,
+                    (scaledHeight - collisionHeight) / 2
+                );
+                
+                console.log(`Zone de collision pour ${texture}: ${collisionWidth.toFixed(1)}x${collisionHeight.toFixed(1)} (sprite: ${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}, ratio: ${collisionRatio})`);
+            }
+            
+            // Différencier les murs des plans de travail / tables
+            if (texture === 'iso-counter' || texture.startsWith('table-') || isCounter) {
+                // Plan de travail / Table : impassable mais interactif
                 this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
-                console.log(`Plan de travail créé à la position (${gridX}, ${gridY})`);
+                console.log(`Plan de travail/table créé à la position (${gridX}, ${gridY}) avec texture: ${texture}`);
             }
             
             // Tous les tiles solides (murs + plans de travail) vont dans solidTiles pour les collisions
@@ -112,6 +153,9 @@ export class IsometricMap {
             tile = this.scene.add.image(screenPos.x + offsetX, screenPos.y + offsetY, texture);
             tile.setOrigin(0.5, 0.5);
             this.tiles.set(key, tile as Phaser.GameObjects.Image);
+            
+            // Appliquer le scale automatique pour les images (pas les tiles procédurales)
+            this.applyAutoScale(tile, texture);
         }
         
         // La profondeur est basée sur le bas du tile (pour cohérence avec le joueur)
@@ -129,6 +173,41 @@ export class IsometricMap {
     }
 
     /**
+     * Récupère un tile solide à une position de grille donnée
+     */
+    getSolidTile(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+        return this.solidTiles.get(`${gridX},${gridY}`);
+    }
+
+    /**
+     * Applique un scale automatique aux images pour les adapter à la taille des tiles
+     */
+    private applyAutoScale(tile: Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite, texture: string): void {
+        // Ne pas appliquer de scale aux textures procédurales (qui commencent par "iso-")
+        if (texture.startsWith('iso-')) {
+            return;
+        }
+
+        try {
+            // Récupérer la texture et ses dimensions
+            const textureObj = this.scene.textures.get(texture);
+            if (textureObj && textureObj.source.length > 0) {
+                const source = textureObj.source[0] as unknown as HTMLImageElement;
+                const imageWidth = source.width;
+                const imageHeight = source.height;
+                
+                // Calculer et appliquer le scale
+                const scale = IsometricUtils.calculateTileScale(imageWidth, imageHeight);
+                tile.setScale(scale);
+                
+                console.log(`Scale appliqué à ${texture}: ${scale} (image: ${imageWidth}x${imageHeight}, tile: ${IsometricUtils.TILE_WIDTH}x${IsometricUtils.TILE_HEIGHT})`);
+            }
+        } catch (error) {
+            console.warn(`Impossible de calculer le scale pour ${texture}:`, error);
+        }
+    }
+
+    /**
      * Supprime un tile
      */
     removeTile(gridX: number, gridY: number) {
@@ -136,6 +215,20 @@ export class IsometricMap {
         if (tile) {
             tile.destroy();
             this.tiles.delete(`${gridX},${gridY}`);
+        }
+    }
+
+    /**
+     * Supprime un tile solide
+     */
+    removeSolidTile(gridX: number, gridY: number) {
+        const key = `${gridX},${gridY}`;
+        const tile = this.getSolidTile(gridX, gridY);
+        if (tile) {
+            tile.destroy();
+            this.solidTiles.delete(key);
+            // Aussi retirer de counterTiles si c'est une table/comptoir
+            this.counterTiles.delete(key);
         }
     }
 
