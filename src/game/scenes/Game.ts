@@ -48,6 +48,18 @@ export default class Game extends Phaser.Scene {
         // Fond de couleur
         this.cameras.main.setBackgroundColor(0x87ceeb); // Bleu ciel
 
+        // 🎵 Continuer la musique si elle n'est pas déjà en cours
+        if (
+            !this.sound.get("grandma-song") ||
+            !this.sound.get("grandma-song")?.isPlaying
+        ) {
+            const music = this.sound.add("grandma-song", {
+                loop: true,
+                volume: 0.5,
+            });
+            music.play();
+        }
+
         // Initialiser les managers
         this.mapManager = new MapManager(
             this,
