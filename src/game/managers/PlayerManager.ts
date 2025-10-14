@@ -16,9 +16,6 @@ export class PlayerManager {
     private mapOffsetX: number;
     private mapOffsetY: number;
 
-    // Debug
-    private debugCircle?: Phaser.GameObjects.Graphics;
-    private debugText?: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
         this.scene = scene;
@@ -136,16 +133,6 @@ export class PlayerManager {
         const newGridX = gridPos.x;
         const newGridY = gridPos.y;
 
-        // Debug log
-        if (this.playerGridX !== newGridX || this.playerGridY !== newGridY) {
-            console.log(
-                `Centre: (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`
-            );
-            console.log(
-                `Grille changée: (${this.playerGridX}, ${this.playerGridY}) -> (${newGridX}, ${newGridY})`
-            );
-        }
-
         this.playerGridX = newGridX;
         this.playerGridY = newGridY;
     }
@@ -195,108 +182,6 @@ export class PlayerManager {
         const offsetX = (this.player.width - hitboxWidth) / 2;
         const offsetY = this.player.height * 0.7;
         body.setOffset(offsetX, offsetY);
-    }
-
-    /**
-     * Initialise le cercle de debug pour visualiser le centre de la hitbox
-     */
-    initializeDebugCircle(): void {
-        this.debugCircle = this.scene.add.graphics();
-        this.debugCircle.setDepth(10000);
-    }
-
-    /**
-     * Met à jour le cercle de debug
-     */
-    updateDebugCircle(): void {
-        if (!this.debugCircle || !this.player) return;
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-
-        this.debugCircle.clear();
-
-        // Cercle au centre de la hitbox
-        this.debugCircle.fillStyle(0xff0000, 0.8);
-        this.debugCircle.fillCircle(body.center.x, body.center.y, 3);
-
-        // Cercle aux pieds
-        this.debugCircle.fillStyle(0x00ff00, 0.8);
-        this.debugCircle.fillCircle(body.center.x, body.bottom, 5);
-
-        // Ligne verticale
-        this.debugCircle.lineStyle(1, 0xffff00, 0.5);
-        this.debugCircle.lineBetween(
-            body.center.x,
-            body.center.y,
-            body.center.x,
-            body.bottom
-        );
-    }
-
-    /**
-     * Initialise le texte de debug
-     */
-    initializeDebugText(width: number, height: number): void {
-        this.debugText = this.scene.add.text(width - 10, height - 10, "", {
-            fontFamily: "Arial",
-            fontSize: "12px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 5, y: 5 },
-        });
-        this.debugText.setOrigin(1, 1);
-        this.debugText.setScrollFactor(0);
-        this.debugText.setDepth(1000);
-    }
-
-    /**
-     * Met à jour le texte de debug
-     */
-    updateDebugText(
-        isPlayerOnCounter: boolean,
-        hasCounterAtTarget: boolean,
-        totalCounters: number
-    ): void {
-        if (!this.debugText || !this.player) return;
-
-        const targetX = this.playerGridX + this.lastDirection.x;
-        const targetY = this.playerGridY + this.lastDirection.y;
-
-        // Convertir la direction en texte
-        let directionText = "";
-        if (this.lastDirection.x === 0 && this.lastDirection.y === -1)
-            directionText = "HAUT";
-        else if (this.lastDirection.x === 1 && this.lastDirection.y === 0)
-            directionText = "DROITE";
-        else if (this.lastDirection.x === 0 && this.lastDirection.y === 1)
-            directionText = "BAS";
-        else if (this.lastDirection.x === -1 && this.lastDirection.y === 0)
-            directionText = "GAUCHE";
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-        const playerLeft = this.player.x - body.halfWidth;
-        const playerRight = this.player.x + body.halfWidth;
-        const playerTop = this.player.y - body.halfHeight;
-        const playerBottom = this.player.y + body.halfHeight;
-
-        this.debugText.setText(
-            `Position joueur: (${this.player.x.toFixed(
-                0
-            )}, ${this.player.y.toFixed(0)})\n` +
-                `Limites joueur: (${playerLeft.toFixed(0)}, ${playerTop.toFixed(
-                    0
-                )}) à (${playerRight.toFixed(0)}, ${playerBottom.toFixed(
-                    0
-                )})\n` +
-                `Grille (majorité): (${this.playerGridX}, ${this.playerGridY})\n` +
-                `Sur plan de travail: ${isPlayerOnCounter ? "OUI" : "NON"}\n` +
-                `Direction: ${directionText} (${this.lastDirection.x}, ${this.lastDirection.y})\n` +
-                `Position cible: (${targetX}, ${targetY})\n` +
-                `Plan de travail à la cible: ${
-                    hasCounterAtTarget ? "OUI" : "NON"
-                }\n` +
-                `Plans disponibles: ${totalCounters}`
-        );
     }
 
     // Getters

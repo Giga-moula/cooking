@@ -84,9 +84,6 @@ export class CounterInteractionManager {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
-
-        // Créer des particules scintillantes
-        try {
             const particles = this.scene.add.particles(x, y, "star", {
                 speed: { min: -100, max: 100 },
                 angle: { min: 0, max: 360 },
@@ -99,9 +96,6 @@ export class CounterInteractionManager {
             this.scene.time.delayedCall(600, () => {
                 particles.destroy();
             });
-        } catch (e) {
-            console.log("Pas de particules (texture 'star' manquante)");
-        }
     }
 
     /**

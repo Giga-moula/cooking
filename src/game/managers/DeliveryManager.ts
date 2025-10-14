@@ -53,9 +53,7 @@ export class DeliveryManager {
     isDeliveryZone(gridX: number, gridY: number): boolean {
         const isDelivery =
             gridX === this.deliveryZone.x && gridY === this.deliveryZone.y;
-        console.log(
-            `🔍 isDeliveryZone(${gridX}, ${gridY}) = ${isDelivery} (zone configurée: ${this.deliveryZone.x}, ${this.deliveryZone.y})`
-        );
+
         return isDelivery;
     }
 
@@ -80,9 +78,7 @@ export class DeliveryManager {
         const targetX = playerGridX + lastDirection.x;
         const targetY = playerGridY + lastDirection.y;
         const isLooking = this.isDeliveryZone(targetX, targetY);
-        console.log(
-            `👀 isLookingAtDeliveryZone() = ${isLooking} (regarde vers ${targetX}, ${targetY})`
-        );
+
         return isLooking;
     }
 
@@ -98,7 +94,7 @@ export class DeliveryManager {
         const y = screenPos.y + this.mapOffsetY;
 
         // Effet de particules
-        try {
+
             const particles = this.scene.add.particles(x, y, "star", {
                 speed: { min: -100, max: 100 },
                 angle: { min: 0, max: 360 },
@@ -111,9 +107,6 @@ export class DeliveryManager {
             this.scene.time.delayedCall(1000, () => {
                 particles.destroy();
             });
-        } catch (e) {
-            console.log("Effet de particules non disponible");
-        }
 
         // Message de succès
         const message = this.scene.add.text(x, y - 50, "✓ Livré !", {

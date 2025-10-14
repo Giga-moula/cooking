@@ -116,8 +116,6 @@ export default class Game extends Phaser.Scene {
         // Initialiser les tiles d'ingrédients
         this.mapManager.initializeIngredientTiles();
 
-        // Initialiser le gestionnaire d'ingrédients
-        this.ingredientManager.printDebugInfo();
 
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
@@ -129,36 +127,10 @@ export default class Game extends Phaser.Scene {
 
         this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
-        this.inventoryManager.initializeInventoryDisplay();
 
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
-        // Texte d'aide
-        const helpText = this.add.text(
-            10,
-            650,
-            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
-                "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
-                "🎯 Gagnez des points à chaque livraison réussie !",
-            {
-                fontFamily: "Arial",
-                fontSize: "14px",
-                color: "#ffffff",
-                backgroundColor: "#000000",
-                padding: { x: 10, y: 10 },
-            }
-        );
-        helpText.setScrollFactor(0);
-        helpText.setDepth(1000);
-
-        // Initialiser le debug du joueur
-        this.playerManager.initializeDebugCircle();
-        this.playerManager.initializeDebugText(
-            this.cameras.main.width,
-            this.cameras.main.height
-        );
 
         // Touche espace pour retourner au menu
         this.input.keyboard?.on("keydown-SPACE", () => {
@@ -185,7 +157,6 @@ export default class Game extends Phaser.Scene {
         // Mettre à jour la position en grille du joueur
         this.playerManager.updateGridPosition();
 
-        // Mettre à jour le texte de debug
         const isoMap = this.mapManager?.getIsoMap();
         const playerGridX = this.playerManager.getPlayerGridX();
         const playerGridY = this.playerManager.getPlayerGridY();
@@ -200,15 +171,6 @@ export default class Game extends Phaser.Scene {
             targetX = playerGridX;
             targetY = playerGridY;
         }
-
-        const hasCounterAtTarget = isoMap?.isCounter(targetX, targetY) || false;
-        const totalCounters = isoMap?.getCounterTiles().length || 0;
-
-        this.playerManager.updateDebugText(
-            isPlayerOnCounter,
-            hasCounterAtTarget,
-            totalCounters
-        );
 
         // Mettre à jour la position de l'objet porté
         if (this.inventoryManager) {
@@ -225,9 +187,6 @@ export default class Game extends Phaser.Scene {
                 this.inventoryManager?.getCarriedItem()
             );
         }
-
-        // Dessiner le cercle de debug au centre de la hitbox
-        this.playerManager.updateDebugCircle();
     }
 
     interactWithCounter() {
@@ -260,20 +219,12 @@ export default class Game extends Phaser.Scene {
         ) {
             targetX = playerGridX;
             targetY = playerGridY;
-            console.log(
-                `Joueur sur tile interactive, interaction sur la même position (${targetX}, ${targetY})`
-            );
-        }
 
-        console.log(
-            `Position joueur grille: (${playerGridX}, ${playerGridY}), Direction: (${lastDirection.x}, ${lastDirection.y}), Cible: (${targetX}, ${targetY})`
-        );
+        }
 
         // Vérifier d'abord si c'est une tile d'ingrédient
         if (this.mapManager.isIngredientTile(targetX, targetY)) {
-            console.log(
-                `Interaction avec tile d'ingrédient à la position (${targetX}, ${targetY})`
-            );
+
 
             if (this.inventoryManager.isEmpty()) {
                 const ingredientType = this.mapManager.getIngredientFromTile(
@@ -289,35 +240,21 @@ export default class Game extends Phaser.Scene {
                         lastDirection,
                         player.depth
                     );
-                    console.log(`Récupéré: ${ingredientType}`);
                 }
-            } else {
-                console.log(
-                    "Inventaire plein (limite: 1 objet), ne peut pas récupérer d'ingrédient"
-                );
-            }
+            } 
         }
         // Sinon, vérifier si c'est une zone de livraison
         else if (this.deliveryManager?.isDeliveryZone(targetX, targetY)) {
-            console.log(
-                `Interaction avec la zone de livraison à la position (${targetX}, ${targetY})`
-            );
+
             this.processDelivery();
         }
         // Sinon, vérifier si c'est un plan de travail
         else if (isoMap.isCounter(targetX, targetY)) {
-            console.log(
-                `Interaction avec le plan de travail à la position (${targetX}, ${targetY})`
-            );
+
 
             const hasItem = this.counterManager.hasItemOnCounter(
                 targetX,
                 targetY
-            );
-            console.log(
-                `Objet sur comptoir: ${hasItem}, Inventaire: ${
-                    this.inventoryManager.isEmpty() ? 0 : 1
-                }`
             );
 
             if (hasItem && this.inventoryManager.isEmpty()) {
@@ -335,7 +272,6 @@ export default class Game extends Phaser.Scene {
                         lastDirection,
                         player.depth
                     );
-                    console.log(`Ramassé: ${itemType}`);
                 }
             } else if (!hasItem && !this.inventoryManager.isEmpty()) {
                 // Poser l'objet
@@ -347,7 +283,6 @@ export default class Game extends Phaser.Scene {
                         itemType
                     );
                     this.inventoryManager.removeCarriedItem();
-                    console.log(`Posé: ${itemType}`);
                 }
             } else if (hasItem && !this.inventoryManager.isEmpty()) {
                 // Tenter une combinaison
@@ -363,9 +298,6 @@ export default class Game extends Phaser.Scene {
                         .combineIngredients(itemInHand, itemOnCounter);
 
                     if (resultId) {
-                        console.log(
-                            `✨ Combinaison réussie : ${itemInHand} + ${itemOnCounter} = ${resultId}`
-                        );
 
                         // Retirer les ingrédients
                         this.inventoryManager.removeItem();
@@ -395,33 +327,15 @@ export default class Game extends Phaser.Scene {
                             );
                         }
 
-                        console.log(
-                            `✨ ${resultId} créé - à livrer dans la zone rouge !`
-                        );
                     } else {
-                        console.log(
-                            `❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
-                        );
                         this.counterManager.showCombinationMessage(
                             "❌ Pas de recette",
                             targetX,
                             targetY
                         );
                     }
-                } else {
-                    console.log(
-                        "Inventaire plein (limite: 1 objet), ne peut pas ramasser"
-                    );
                 }
-            } else {
-                console.log(
-                    "Aucun objet sur le plan de travail, inventaire vide"
-                );
             }
-        } else {
-            console.log(
-                `Aucune tile interactive à la position (${targetX}, ${targetY})`
-            );
         }
     }
 
@@ -447,12 +361,6 @@ export default class Game extends Phaser.Scene {
         const playerGridY = this.playerManager.getPlayerGridY();
         const lastDirection = this.playerManager.getLastDirection();
 
-        console.log(
-            `🚚 processDelivery appelé - Position joueur: (${playerGridX}, ${playerGridY}), Inventaire: ${
-                this.inventoryManager.isEmpty() ? 0 : 1
-            }`
-        );
-
         // Vérifier si le joueur est dans la zone OU regarde vers la zone
         const isInZone = this.deliveryManager.isInDeliveryZone(
             playerGridX,
@@ -468,9 +376,6 @@ export default class Game extends Phaser.Scene {
             (!isInZone && !isLookingAtZone) ||
             this.inventoryManager.isEmpty()
         ) {
-            console.log(
-                `❌ Conditions non remplies - Dans zone: ${isInZone}, Regarde zone: ${isLookingAtZone}, Inventaire vide: ${this.inventoryManager.isEmpty()}`
-            );
             return;
         }
 
@@ -490,17 +395,10 @@ export default class Game extends Phaser.Scene {
                     this.scoreManager.calculateRecipePoints(carriedItem);
                 this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
 
-                console.log(`🎉 Plat livré avec succès : ${carriedItem}`);
                 this.deliveryManager.showDeliverySuccessEffect();
             } else {
-                console.log(
-                    `❌ Ce plat n'est pas dans les commandes : ${carriedItem}`
-                );
                 this.deliveryManager.showDeliveryErrorEffect();
             }
-        } else {
-            console.log(`❌ Ce n'est pas un plat fini : ${carriedItem}`);
-            this.deliveryManager.showDeliveryErrorEffect();
         }
     }
 

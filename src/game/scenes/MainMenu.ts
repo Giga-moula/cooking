@@ -379,10 +379,7 @@ export default class MainMenu extends Phaser.Scene {
                 yoyo: true,
                 repeat: 1,
                 onComplete: () => {
-                    // Ne fait rien pour le moment
-                    console.log(
-                        "Leaderboard clicked - à implémenter plus tard"
-                    );
+
                 },
             });
         });

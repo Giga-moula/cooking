@@ -116,14 +116,5 @@ export class TableTileManager {
     /**
      * Affiche un résumé des configurations pour débogage
      */
-    public debugConfigurations(configurations: TableTileConfig[]): void {
-        console.log("=== Configuration des comptoirs ===");
-        configurations.forEach((config) => {
-            console.log(
-                `Position (${config.gridX}, ${config.gridY}): ${config.texture}`
-            );
-        });
-        console.log("==================================");
-    }
 }
 
