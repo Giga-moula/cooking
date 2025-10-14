@@ -293,10 +293,7 @@ export default class Game extends Phaser.Scene {
 		
 		deliveryGraphics.generateTexture('iso-delivery-zone', tileSize, tileSize);
 		deliveryGraphics.destroy();
-
-		// Les sprites de grand-mère sont déjà chargés dans le préchargeur
-		// Pas besoin de générer de texture, on utilise directement les images
-		// La texture de pâte (dough.png) est déjà chargée dans le préchargeur
+		
 	}
 
     createPlayer() {
