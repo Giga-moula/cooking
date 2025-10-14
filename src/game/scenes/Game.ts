@@ -1,5 +1,3 @@
-/* START OF COMPILED CODE */
-
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { EventBus } from "../EventBus";
@@ -157,6 +155,15 @@ export default class Game extends Phaser.Scene {
         this.player1.getInventory().initializeInventoryDisplay(10, 220);
         this.player2.getInventory().initializeInventoryDisplay(10, 260);
 
+        // Initialiser le timer (5 minutes) AVANT InteractionSystem
+        this.timerManager = new TimerManager(this);
+        this.timerManager.initializeTimerDisplay(512, 20);
+        this.timerManager.start(300, () => {
+            // Callback quand le temps est écoulé
+            console.log("⏱️ Temps écoulé !");
+            this.endGame();
+        });
+
         // Créer le système d'interaction orienté objet (APRÈS tous les managers)
         this.interactionSystem = new InteractionSystem(
             this,
@@ -165,7 +172,8 @@ export default class Game extends Phaser.Scene {
             this.deliveryManager,
             this.ingredientManager,
             this.orderDisplayManager,
-            this.scoreManager
+            this.scoreManager,
+            this.timerManager // ✅ Passer le timer au système d'interaction
         );
 
         // Texte d'aide
