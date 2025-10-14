@@ -51,6 +51,12 @@ export default class Game extends Phaser.Scene {
     private deliveryZone: { x: number; y: number } = { x: 8, y: 8 }; // Position de la zone de livraison
     private deliveryZoneGraphics?: Phaser.GameObjects.Graphics; // Visualisation de la zone
 
+    // Système de score
+    private score: number = 0; // Score actuel
+    private scoreText?: Phaser.GameObjects.Text; // Affichage du score
+    private totalDeliveries: number = 0; // Nombre total de livraisons
+    private scoreMultiplier: number = 1; // Multiplicateur de score (pour les combos futurs)
+
     constructor() {
         super("Game");
 
@@ -143,17 +149,20 @@ export default class Game extends Phaser.Scene {
         // Initialiser le système de livraison
         this.initializeDeliveryZone();
 
+        // Initialiser le système de score
+        this.initializeScoreDisplay();
+
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
         // Texte d'aide
         const helpText = this.add.text(
             10,
-            10,
+            650,
             "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes et livrez-les dans la zone rouge !\n" +
-                "🔍 DEBUG: Zone livraison = (8,8) - Regardez la console !",
+                "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
+                "🎯 Gagnez des points à chaque livraison réussie !",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -165,14 +174,20 @@ export default class Game extends Phaser.Scene {
         helpText.setScrollFactor(0);
         helpText.setDepth(1000);
 
-        // Texte de debug pour la position
-        this.debugText = this.add.text(10, 120, "", {
-            fontFamily: "Arial",
-            fontSize: "14px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 5, y: 5 },
-        });
+        // Texte de debug pour la position (en bas à droite)
+        this.debugText = this.add.text(
+            this.cameras.main.width - 10,
+            this.cameras.main.height - 10,
+            "",
+            {
+                fontFamily: "Arial",
+                fontSize: "12px",
+                color: "#ffffff",
+                backgroundColor: "#000000",
+                padding: { x: 5, y: 5 },
+            }
+        );
+        this.debugText.setOrigin(1, 1); // Ancrage en bas à droite
         this.debugText.setScrollFactor(0);
         this.debugText.setDepth(1000);
 
@@ -1044,14 +1059,11 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
-     * Initialise l'affichage des recettes en haut à droite
+     * Initialise l'affichage des recettes en haut à gauche
      */
     initializeRecipeDisplay() {
         // Créer un conteneur pour toutes les boîtes de recettes
-        const recipeContainer = this.add.container(
-            this.cameras.main.width - 20,
-            20
-        );
+        const recipeContainer = this.add.container(20, 20);
         recipeContainer.setScrollFactor(0); // Fixe à l'écran
         recipeContainer.setDepth(2000); // Au-dessus de tout
 
@@ -1068,7 +1080,7 @@ export default class Game extends Phaser.Scene {
         const boxWidth = 120;
         const boxHeight = 140;
         const spacing = 10;
-        const x = -(index * (boxWidth + spacing) + boxWidth); // Positionner de droite à gauche
+        const x = index * (boxWidth + spacing); // Positionner de gauche à droite
         const y = 0;
 
         // Créer le conteneur de la boîte
@@ -1410,6 +1422,10 @@ export default class Game extends Phaser.Scene {
                 this.inventory.pop();
                 this.removeCarriedItem();
 
+                // Ajouter des points au score
+                const points = this.calculateRecipePoints(carriedItem);
+                this.addScore(points, `Livraison ${carriedItem}`);
+
                 console.log(`🎉 Plat livré avec succès : ${carriedItem}`);
                 this.showDeliverySuccessEffect();
             } else {
@@ -1504,6 +1520,106 @@ export default class Game extends Phaser.Scene {
             ease: "Cubic.easeOut",
             onComplete: () => message.destroy(),
         });
+    }
+
+    /**
+     * Initialise l'affichage du score
+     */
+    initializeScoreDisplay() {
+        // Créer l'affichage du score en haut à gauche
+        this.scoreText = this.add.text(20, 200, "Score: 0", {
+            fontFamily: "Arial",
+            fontSize: "24px",
+            color: "#FFD700", // Or
+            stroke: "#000000",
+            strokeThickness: 3,
+        });
+        this.scoreText.setScrollFactor(0); // Fixe à l'écran
+        this.scoreText.setDepth(2000); // Au-dessus de tout
+    }
+
+    /**
+     * Met à jour l'affichage du score
+     */
+    updateScoreDisplay() {
+        if (this.scoreText) {
+            this.scoreText.setText(`Score: ${this.score}`);
+        }
+    }
+
+    /**
+     * Ajoute des points au score
+     */
+    addScore(points: number, reason: string = "") {
+        const pointsToAdd = points * this.scoreMultiplier;
+        this.score += pointsToAdd;
+        this.totalDeliveries++;
+
+        console.log(
+            `🎯 +${pointsToAdd} points! ${reason} (Total: ${this.score})`
+        );
+
+        // Mettre à jour l'affichage
+        this.updateScoreDisplay();
+
+        // Afficher l'effet de points gagnés
+        this.showScoreEffect(pointsToAdd);
+    }
+
+    /**
+     * Affiche un effet visuel pour les points gagnés
+     */
+    showScoreEffect(points: number) {
+        if (!this.scoreText) return;
+
+        // Créer un texte flottant pour les points
+        const scoreEffect = this.add.text(
+            this.scoreText.x + 100,
+            this.scoreText.y,
+            `+${points}`,
+            {
+                fontFamily: "Arial",
+                fontSize: "20px",
+                color: "#00FF00", // Vert
+                stroke: "#000000",
+                strokeThickness: 2,
+            }
+        );
+        scoreEffect.setScrollFactor(0);
+        scoreEffect.setDepth(3000);
+
+        // Animation de montée et disparition
+        this.tweens.add({
+            targets: scoreEffect,
+            y: scoreEffect.y - 30,
+            alpha: 0,
+            duration: 1500,
+            ease: "Cubic.easeOut",
+            onComplete: () => scoreEffect.destroy(),
+        });
+
+        // Animation de pulsation du score principal
+        this.tweens.add({
+            targets: this.scoreText,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            duration: 200,
+            yoyo: true,
+            ease: "Cubic.easeInOut",
+        });
+    }
+
+    /**
+     * Calcule les points pour une recette donnée
+     */
+    calculateRecipePoints(dishId: string): number {
+        // Points de base selon le type de plat
+        const basePoints: { [key: string]: number } = {
+            cookie: 100,
+            dough: 50, // Si jamais on permet de livrer de la pâte
+        };
+
+        return basePoints[dishId] || 50; // Points par défaut
     }
 
     /**
