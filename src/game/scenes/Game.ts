@@ -11,6 +11,7 @@ import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
+import { TimerManager } from "../managers/TimerManager";
 /* END-USER-IMPORTS */
 
 export default class Game extends Phaser.Scene {
@@ -27,6 +28,7 @@ export default class Game extends Phaser.Scene {
     private deliveryManager?: DeliveryManager;
     private scoreManager?: ScoreManager;
     private ingredientManager?: IngredientInteractionManager;
+    private timerManager?: TimerManager;
 
     constructor() {
         super("Game");
@@ -131,6 +133,14 @@ export default class Game extends Phaser.Scene {
         this.scoreManager.initializeScoreDisplay();
         this.inventoryManager.initializeInventoryDisplay();
 
+        // Initialiser et démarrer le timer (20 secondes)
+        this.timerManager = new TimerManager(this, 20);
+        this.timerManager.initializeTimerDisplay(20, 20);
+        this.timerManager.start(() => {
+            // Quand le temps est écoulé, aller à GameOver
+            this.endGame();
+        });
+
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -138,7 +148,8 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             650,
-            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
+            "⏱️ Vous avez 20 secondes pour faire le meilleur score !\n" +
+                "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
                 "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
                 "🎯 Gagnez des points à chaque livraison réussie !",
@@ -426,7 +437,26 @@ export default class Game extends Phaser.Scene {
     }
 
     changeScene() {
-        this.scene.start("GameOver");
+        this.endGame();
+    }
+
+    /**
+     * Termine la partie et passe à l'écran GameOver
+     */
+    endGame() {
+        // Arrêter le timer s'il est actif
+        if (this.timerManager) {
+            this.timerManager.stop();
+        }
+
+        // Passer le score à la scène GameOver
+        const finalScore = this.scoreManager?.getScore() || 0;
+        const totalDeliveries = this.scoreManager?.getTotalDeliveries() || 0;
+
+        this.scene.start("GameOver", {
+            score: finalScore,
+            deliveries: totalDeliveries,
+        });
     }
 
     /**

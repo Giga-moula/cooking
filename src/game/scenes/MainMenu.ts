@@ -368,7 +368,7 @@ export default class MainMenu extends Phaser.Scene {
             buttonContainer.setScale(1);
         });
 
-        // Action au clic avec effet (ne fait rien pour le moment)
+        // Action au clic avec effet - lance la scène Leaderboard
         buttonContainer.on("pointerdown", () => {
             // Animation de clic
             this.tweens.add({
@@ -379,10 +379,8 @@ export default class MainMenu extends Phaser.Scene {
                 yoyo: true,
                 repeat: 1,
                 onComplete: () => {
-                    // Ne fait rien pour le moment
-                    console.log(
-                        "Leaderboard clicked - à implémenter plus tard"
-                    );
+                    // Lancer la scène Leaderboard
+                    this.scene.start("Leaderboard");
                 },
             });
         });
