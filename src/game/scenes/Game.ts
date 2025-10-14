@@ -113,6 +113,10 @@ export default class Game extends Phaser.Scene {
 		// Initialiser les tiles d'ingrédients
 		this.initializeIngredientTiles();
 
+		// Initialiser le gestionnaire d'ingrédients
+		this.ingredientManager = new IngredientInteractionManager();
+		this.ingredientManager.printDebugInfo();
+
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -216,9 +220,10 @@ export default class Game extends Phaser.Scene {
             graphics.destroy();
         });
 
-        // Les sprites de grand-mère sont déjà chargés dans le préchargeur
-        // Pas besoin de générer de texture, on utilise directement les images
-    }
+		// Les sprites de grand-mère sont déjà chargés dans le préchargeur
+		// Pas besoin de générer de texture, on utilise directement les images
+		// La texture de pâte (dough.png) est déjà chargée dans le préchargeur
+	}
 
     createPlayer() {
         // Positionner le joueur sur un tile d'herbe (case 2,2) pour éviter les bordures
@@ -682,60 +687,9 @@ export default class Game extends Phaser.Scene {
 					this.createCarriedItem(ingredientType); // Créer l'objet porté visible
 					console.log(`Récupéré: ${ingredientType}`);
 				}
-			} else {
- // Tenter une combinaison : ingrédient dans l'inventaire + ingrédient sur le comptoir
- const itemInHand = this.inventory[0];
- const itemOnCounter = this.getItemTypeOnCounter(
-	 targetX,
-	 targetY
- );
-
- if (itemOnCounter && this.ingredientManager) {
-	 const resultId = this.ingredientManager
-		 .getRecipeManager()
-		 .combineIngredients(itemInHand, itemOnCounter);
-
-	 if (resultId) {
-		 // Combinaison réussie !
-		 console.log(
-			 `✨ Combinaison réussie : ${itemInHand} + ${itemOnCounter} = ${resultId}`
-		 );
-
-		 // Retirer l'ingrédient de l'inventaire
-		 this.inventory.pop();
-		 this.removeCarriedItem();
-
-		 // Retirer l'ingrédient du comptoir
-		 this.removeItemFromCounter(targetX, targetY);
-
-		 // Créer le résultat au même endroit
-		 this.placeItemOnCounter(targetX, targetY, resultId);
-
-		 // Effet visuel et message
-		 this.playFusionEffect(targetX, targetY);
-		 const ingredient = this.ingredientManager
-			 .getRecipeManager()
-			 .getIngredient(resultId);
-		 if (ingredient) {
-			 this.showCombinationMessage(
-				 `✨ ${ingredient.name} créé !`,
-				 targetX,
-				 targetY
-			 );
-		 }
-	 } else {
-		 // Pas de recette valide
-		 console.log(
-			 `❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
-		 );
-		 this.showCombinationMessage(
-			 "❌ Pas de recette",
-			 targetX,
-			 targetY
-		 );
-	 }
- }
-			}
+		} else {
+			console.log('Inventaire plein (limite: 1 objet), ne peut pas récupérer d\'ingrédient');
+		}
 		}
 		// Sinon, vérifier si c'est un plan de travail
 		else if (this.isoMap.isCounter(targetX, targetY)) {
@@ -760,7 +714,57 @@ export default class Game extends Phaser.Scene {
 				this.removeCarriedItem(); // Supprimer l'objet porté visible
 				console.log(`Posé: ${itemType}`);
 			} else if (hasItem && this.inventory.length > 0) {
-				console.log('Inventaire plein (limite: 1 objet), ne peut pas ramasser');
+				// Tenter une combinaison : ingrédient dans l'inventaire + ingrédient sur le comptoir
+				const itemInHand = this.inventory[0];
+				const itemOnCounter = this.getItemTypeOnCounter(targetX, targetY);
+
+				if (itemOnCounter && this.ingredientManager) {
+					const resultId = this.ingredientManager
+						.getRecipeManager()
+						.combineIngredients(itemInHand, itemOnCounter);
+
+					if (resultId) {
+						// Combinaison réussie !
+						console.log(
+							`✨ Combinaison réussie : ${itemInHand} + ${itemOnCounter} = ${resultId}`
+						);
+
+						// Retirer l'ingrédient de l'inventaire
+						this.inventory.pop();
+						this.removeCarriedItem();
+
+						// Retirer l'ingrédient du comptoir
+						this.removeItemFromCounter(targetX, targetY);
+
+						// Créer le résultat au même endroit
+						this.placeItemOnCounter(targetX, targetY, resultId);
+
+						// Effet visuel et message
+						this.playFusionEffect(targetX, targetY);
+						const ingredient = this.ingredientManager
+							.getRecipeManager()
+							.getIngredient(resultId);
+						if (ingredient) {
+							this.showCombinationMessage(
+								`✨ ${ingredient.name} créé !`,
+								targetX,
+								targetY
+							);
+						}
+					} else {
+						// Pas de recette valide
+						console.log(
+							`❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
+						);
+						this.showCombinationMessage(
+							"❌ Pas de recette",
+							targetX,
+							targetY
+						);
+					}
+				} else {
+					console.log('Inventaire plein (limite: 1 objet), ne peut pas ramasser');
+				}
 			} else if (hasItem && this.inventory.length === 0) {
 				console.log('Erreur: objet détecté mais inventaire vide');
 			} else {

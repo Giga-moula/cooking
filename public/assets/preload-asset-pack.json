@@ -30,6 +30,11 @@
                 "url": "assets/wheat_floor.png",
                 "type": "image",
                 "key": "wheat_floor"
+            },
+            {
+                "url": "assets/dough.png",
+                "type": "image",
+                "key": "dough"
             }
         ]
     },
