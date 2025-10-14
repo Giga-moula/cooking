@@ -32,27 +32,12 @@ export class MapManager {
 
     /**
      * Crée les tiles isométriques procéduralement
+     * Les images des caisses d'ingrédients sont chargées directement depuis les assets
      */
     createIsometricTiles(): void {
         const tileSize = 64;  // Doit correspondre à TILE_WIDTH/TILE_HEIGHT
         const tiles = [
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
-            { key: "iso-counter", color: 0xd2691e, darkColor: 0xb8860b },
-            {
-                key: "iso-ingredient-chocolate",
-                color: 0x8b4513,
-                darkColor: 0x654321,
-            },
-            {
-                key: "iso-ingredient-butter",
-                color: 0xffd700,
-                darkColor: 0xddaa00,
-            },
-            {
-                key: "iso-ingredient-wheat",
-                color: 0xf5deb3,
-                darkColor: 0xd2b48c,
-            },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
         ];
 
@@ -136,10 +121,10 @@ export class MapManager {
             2: "planks", 
             3: "planks",
             4: "iso-wall",
-            5: "iso-counter", // Texture temporaire, sera remplacée par les vraies textures de table
-            6: "iso-ingredient-chocolate",
-            7: "iso-ingredient-butter",
-            8: "iso-ingredient-wheat",
+            5: "planks", // Texture temporaire, sera remplacée par les vraies textures de table
+            6: "choco_box",      // Caisse de chocolat
+            7: "butter_box",     // Caisse de beurre
+            8: "flour_box",      // Caisse de farine
             9: "iso-delivery-zone",
         };
     }
@@ -158,8 +143,8 @@ export class MapManager {
             // Les tables sont des tiles solides, on doit les récupérer depuis solidTiles
             const existingSolidTile = this.isoMap!.getSolidTile(config.gridX, config.gridY);
             if (existingSolidTile) {
-                // Vérifier si c'est bien une table temporaire (iso-counter)
-                if (existingSolidTile.texture.key === 'iso-counter') {
+                // Vérifier si c'est bien une table temporaire (planks)
+                if (existingSolidTile.texture.key === 'planks') {
                     // Supprimer l'ancien tile solide
                     this.isoMap!.removeSolidTile(config.gridX, config.gridY);
                     
