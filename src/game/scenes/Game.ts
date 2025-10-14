@@ -47,6 +47,10 @@ export default class Game extends Phaser.Scene {
     private activeOrders: string[] = []; // Commandes actives (plats à réaliser)
     private maxOrders: number = 4; // Nombre maximum de commandes simultanées
 
+    // Système de livraison
+    private deliveryZone: { x: number; y: number } = { x: 8, y: 8 }; // Position de la zone de livraison
+    private deliveryZoneGraphics?: Phaser.GameObjects.Graphics; // Visualisation de la zone
+
     constructor() {
         super("Game");
 
@@ -74,7 +78,7 @@ export default class Game extends Phaser.Scene {
         this.isoMap = new IsometricMap(this);
 
         // Exemple de carte (10x10)
-        // 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 0 = vide
+        // 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 9 = zone de livraison, 0 = vide
         const mapData = [
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
             [4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
@@ -84,7 +88,7 @@ export default class Game extends Phaser.Scene {
             [4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
             [4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
             [4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
-            [4, 7, 8, 1, 1, 1, 1, 1, 2, 4],
+            [4, 7, 8, 1, 1, 1, 1, 1, 9, 4],
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
         ];
 
@@ -97,6 +101,7 @@ export default class Game extends Phaser.Scene {
             6: "iso-ingredient-chocolate",
             7: "iso-ingredient-butter",
             8: "iso-ingredient-wheat",
+            9: "iso-delivery-zone",
         };
 
         // Créer la carte directement avec l'offset
@@ -135,6 +140,9 @@ export default class Game extends Phaser.Scene {
         this.initializeRecipeDisplay();
         this.generateNewOrders();
 
+        // Initialiser le système de livraison
+        this.initializeDeliveryZone();
+
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -142,9 +150,10 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             10,
-            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner | Espace : Menu\n" +
+            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes affichées en haut à droite !",
+                "💡 Réalisez les commandes et livrez-les dans la zone rouge !\n" +
+                "🔍 DEBUG: Zone livraison = (8,8) - Regardez la console !",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -219,6 +228,11 @@ export default class Game extends Phaser.Scene {
                 color: 0xf5deb3,
                 darkColor: 0xd2b48c,
             }, // Beige farine
+            {
+                key: "iso-delivery-zone",
+                color: 0xff6b6b,
+                darkColor: 0xe53e3e,
+            }, // Rouge zone de livraison
         ];
 
         tiles.forEach(({ key, color, darkColor }) => {
@@ -696,10 +710,11 @@ export default class Game extends Phaser.Scene {
         let targetX = this.playerGridX + this.lastDirection.x;
         let targetY = this.playerGridY + this.lastDirection.y;
 
-        // Si le joueur est sur un plan de travail ou une tile d'ingrédient, interagir avec cette même position
+        // Si le joueur est sur un plan de travail, une tile d'ingrédient ou une zone de livraison, interagir avec cette même position
         if (
             this.isoMap.isCounter(this.playerGridX, this.playerGridY) ||
-            this.isIngredientTile(this.playerGridX, this.playerGridY)
+            this.isIngredientTile(this.playerGridX, this.playerGridY) ||
+            this.isDeliveryZone(this.playerGridX, this.playerGridY)
         ) {
             targetX = this.playerGridX;
             targetY = this.playerGridY;
@@ -734,6 +749,13 @@ export default class Game extends Phaser.Scene {
                     "Inventaire plein (limite: 1 objet), ne peut pas récupérer d'ingrédient"
                 );
             }
+        }
+        // Sinon, vérifier si c'est une zone de livraison
+        else if (this.isDeliveryZone(targetX, targetY)) {
+            console.log(
+                `Interaction avec la zone de livraison à la position (${targetX}, ${targetY})`
+            );
+            this.processDelivery();
         }
         // Sinon, vérifier si c'est un plan de travail
         else if (this.isoMap.isCounter(targetX, targetY)) {
@@ -803,10 +825,10 @@ export default class Game extends Phaser.Scene {
                             );
                         }
 
-                        // Vérifier si ce plat correspond à une commande
-                        if (this.checkOrderCompletion(resultId)) {
-                            console.log(`🎉 Commande complétée : ${resultId}`);
-                        }
+                        // Note: La validation des commandes se fait maintenant lors de la livraison
+                        console.log(
+                            `✨ ${resultId} créé - à livrer dans la zone rouge !`
+                        );
                     } else {
                         // Pas de recette valide
                         console.log(
@@ -1284,6 +1306,199 @@ export default class Game extends Phaser.Scene {
         this.tweens.add({
             targets: message,
             y: y - 40,
+            alpha: 0,
+            duration: 1500,
+            ease: "Cubic.easeOut",
+            onComplete: () => message.destroy(),
+        });
+    }
+
+    /**
+     * Initialise la zone de livraison
+     */
+    initializeDeliveryZone() {
+        // Créer une visualisation de la zone de livraison
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        this.deliveryZoneGraphics = this.add.graphics();
+        this.deliveryZoneGraphics.fillStyle(0xff6b6b, 0.3); // Rouge semi-transparent
+        this.deliveryZoneGraphics.fillRoundedRect(x - 24, y - 24, 48, 48, 8);
+        this.deliveryZoneGraphics.lineStyle(3, 0xff6b6b, 0.8);
+        this.deliveryZoneGraphics.strokeRoundedRect(x - 24, y - 24, 48, 48, 8);
+        this.deliveryZoneGraphics.setDepth(100);
+
+        // Ajouter un texte "LIVRAISON"
+        const deliveryText = this.add.text(x, y - 30, "LIVRAISON", {
+            fontFamily: "Arial",
+            fontSize: "12px",
+            color: "#FF6B6B",
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+        deliveryText.setOrigin(0.5);
+        deliveryText.setDepth(101);
+    }
+
+    /**
+     * Vérifie si le joueur est dans la zone de livraison
+     */
+    isInDeliveryZone(): boolean {
+        return (
+            this.playerGridX === this.deliveryZone.x &&
+            this.playerGridY === this.deliveryZone.y
+        );
+    }
+
+    /**
+     * Vérifie si une position est une zone de livraison
+     */
+    isDeliveryZone(gridX: number, gridY: number): boolean {
+        const isDelivery =
+            gridX === this.deliveryZone.x && gridY === this.deliveryZone.y;
+        console.log(
+            `🔍 isDeliveryZone(${gridX}, ${gridY}) = ${isDelivery} (zone configurée: ${this.deliveryZone.x}, ${this.deliveryZone.y})`
+        );
+        return isDelivery;
+    }
+
+    /**
+     * Vérifie si le joueur regarde vers la zone de livraison
+     */
+    isLookingAtDeliveryZone(): boolean {
+        const targetX = this.playerGridX + this.lastDirection.x;
+        const targetY = this.playerGridY + this.lastDirection.y;
+        const isLooking = this.isDeliveryZone(targetX, targetY);
+        console.log(
+            `👀 isLookingAtDeliveryZone() = ${isLooking} (regarde vers ${targetX}, ${targetY})`
+        );
+        return isLooking;
+    }
+
+    /**
+     * Traite la livraison d'un plat
+     */
+    processDelivery() {
+        console.log(
+            `🚚 processDelivery appelé - Position joueur: (${this.playerGridX}, ${this.playerGridY}), Zone: (${this.deliveryZone.x}, ${this.deliveryZone.y}), Inventaire: ${this.inventory.length}`
+        );
+
+        // Vérifier si le joueur est dans la zone OU regarde vers la zone
+        const isInZone = this.isInDeliveryZone();
+        const isLookingAtZone = this.isLookingAtDeliveryZone();
+
+        if ((!isInZone && !isLookingAtZone) || this.inventory.length === 0) {
+            console.log(
+                `❌ Conditions non remplies - Dans zone: ${isInZone}, Regarde zone: ${isLookingAtZone}, Inventaire vide: ${
+                    this.inventory.length === 0
+                }`
+            );
+            return;
+        }
+
+        const carriedItem = this.inventory[0];
+
+        // Vérifier si c'est un plat fini
+        if (this.ingredientManager?.getRecipeManager().isDish(carriedItem)) {
+            // Vérifier si ce plat correspond à une commande
+            if (this.checkOrderCompletion(carriedItem)) {
+                // Supprimer l'objet de l'inventaire
+                this.inventory.pop();
+                this.removeCarriedItem();
+
+                console.log(`🎉 Plat livré avec succès : ${carriedItem}`);
+                this.showDeliverySuccessEffect();
+            } else {
+                console.log(
+                    `❌ Ce plat n'est pas dans les commandes : ${carriedItem}`
+                );
+                this.showDeliveryErrorEffect();
+            }
+        } else {
+            console.log(`❌ Ce n'est pas un plat fini : ${carriedItem}`);
+            this.showDeliveryErrorEffect();
+        }
+    }
+
+    /**
+     * Affiche un effet de succès pour la livraison
+     */
+    showDeliverySuccessEffect() {
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        // Effet de particules
+        try {
+            const particles = this.add.particles(x, y, "star", {
+                speed: { min: -100, max: 100 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 0.5, end: 0 },
+                lifespan: 1000,
+                quantity: 20,
+                blendMode: "ADD",
+            });
+
+            this.time.delayedCall(1000, () => {
+                particles.destroy();
+            });
+        } catch (e) {
+            console.log("Effet de particules non disponible");
+        }
+
+        // Message de succès
+        const message = this.add.text(x, y - 50, "✓ Livré !", {
+            fontFamily: "Arial",
+            fontSize: "20px",
+            color: "#4CAF50",
+            stroke: "#ffffff",
+            strokeThickness: 3,
+        });
+        message.setOrigin(0.5);
+        message.setDepth(3000);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 80,
+            alpha: 0,
+            duration: 2000,
+            ease: "Cubic.easeOut",
+            onComplete: () => message.destroy(),
+        });
+    }
+
+    /**
+     * Affiche un effet d'erreur pour la livraison
+     */
+    showDeliveryErrorEffect() {
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        // Message d'erreur
+        const message = this.add.text(x, y - 50, "❌ Pas de commande", {
+            fontFamily: "Arial",
+            fontSize: "16px",
+            color: "#FF6B6B",
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+        message.setOrigin(0.5);
+        message.setDepth(3000);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 80,
             alpha: 0,
             duration: 1500,
             ease: "Cubic.easeOut",
