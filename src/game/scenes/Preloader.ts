@@ -66,6 +66,11 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("favicon", "assets/favicon.png");
 
+        // Charger les caisses d'ingrédients pour la récupération
+        this.load.image("butter_box", "assets/butter_box.png");
+        this.load.image("flour_box", "assets/flour_box.png");
+        this.load.image("choco_box", "assets/choco_box.png");
+
         // Charger les sprites de grand-mère
         this.load.image(
             "grandma-front",
@@ -79,6 +84,63 @@ export default class Preloader extends Phaser.Scene {
             "grandma-side",
             "assets/grandma/blue/grandma_blue_side.png"
         );
+
+        // Charger les tuiles de table
+        this.load.image("table-mono", "assets/table/table-mono.png");
+        this.load.image("table-open-left", "assets/table/table-open-left.png");
+        this.load.image(
+            "table-open-right",
+            "assets/table/table-open-right.png"
+        );
+        this.load.image(
+            "table-open-left-top",
+            "assets/table/table-open-left-top.png"
+        );
+        this.load.image(
+            "table-open-right-left",
+            "assets/table/table-open-right-left.png"
+        );
+        this.load.image(
+            "table-open-right-left-top",
+            "assets/table/table-open-right-left-top.png"
+        );
+        this.load.image(
+            "table-open-right-top",
+            "assets/table/table-open-right-top.png"
+        );
+        this.load.image(
+            "table-open-bottom",
+            "assets/table/table-open-bottom.png"
+        );
+        this.load.image(
+            "table-open-left-bottom",
+            "assets/table/table-open-left-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-bottom",
+            "assets/table/table-open-right-bottom.png"
+        );
+        this.load.image(
+            "table-open-left-top-bottom",
+            "assets/table/table-open-left-top-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-top-bottom",
+            "assets/table/table-open-right-top-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-left-top-bottom",
+            "assets/table/table-open-right-left-top-bottom.png"
+        );
+        this.load.image(
+            "table-open-top-bottom",
+            "assets/table/table-open-top-bottom.png"
+        );
+
+        // Charger les textures de sol
+        this.load.image("planks", "assets/planks.png");
+        // 🎵 Charger la musique de grand-mère
+        this.load.audio("grandma-song", "assets/musics/grandma_song.mp3");
     }
 
     create() {

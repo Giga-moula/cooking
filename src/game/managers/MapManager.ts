@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
+import { TableTileManager } from "./tableManager";
 
 /**
  * Gestionnaire de la carte : tiles, murs, limites
@@ -13,6 +14,7 @@ export class MapManager {
     private mapWidth: number;
     private mapHeight: number;
     private ingredientTiles: Map<string, string> = new Map();
+    private tableTileManager?: TableTileManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -30,30 +32,12 @@ export class MapManager {
 
     /**
      * Crée les tiles isométriques procéduralement
+     * Les images des caisses d'ingrédients sont chargées directement depuis les assets
      */
     createIsometricTiles(): void {
-        const tileSize = 48;
+        const tileSize = 64;  // Doit correspondre à TILE_WIDTH/TILE_HEIGHT
         const tiles = [
-            { key: "iso-grass", color: 0x5cb85c, darkColor: 0x4a9d4a },
-            { key: "iso-dirt", color: 0x8b7355, darkColor: 0x6d5a43 },
-            { key: "iso-water", color: 0x4a90e2, darkColor: 0x3a75c4 },
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
-            { key: "iso-counter", color: 0xd2691e, darkColor: 0xb8860b },
-            {
-                key: "iso-ingredient-chocolate",
-                color: 0x8b4513,
-                darkColor: 0x654321,
-            },
-            {
-                key: "iso-ingredient-butter",
-                color: 0xffd700,
-                darkColor: 0xddaa00,
-            },
-            {
-                key: "iso-ingredient-wheat",
-                color: 0xf5deb3,
-                darkColor: 0xd2b48c,
-            },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
         ];
 
@@ -101,17 +85,19 @@ export class MapManager {
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
         ];
 
-        const tileTextures = {
-            1: "iso-grass",
-            2: "iso-dirt",
-            3: "iso-water",
-            4: "iso-wall",
-            5: "iso-counter",
-            6: "iso-ingredient-chocolate",
-            7: "iso-ingredient-butter",
-            8: "iso-ingredient-wheat",
-            9: "iso-delivery-zone",
-        };
+        // Générer les configurations de tables AVANT de créer la carte
+        this.tableTileManager = new TableTileManager(mapData);
+        const tableConfigurations = this.tableTileManager.generateTableConfigurations();
+        
+        // Debug : compter le nombre de tables
+        const tableCount = mapData.flat().filter(value => value === 5).length;
+        console.log(`🔢 Nombre de tables dans mapData: ${tableCount}`);
+        console.log(`🔢 Nombre de configurations générées: ${tableConfigurations.length}`);
+        
+        this.tableTileManager.debugConfigurations(tableConfigurations);
+
+        // Créer un mapping des textures avec les bonnes textures de table
+        const tileTextures = this.createTileTexturesWithTables(tableConfigurations);
 
         this.isoMap.createMap(
             mapData,
@@ -120,7 +106,70 @@ export class MapManager {
             this.mapOffsetY
         );
 
+        // Appliquer les vraies textures de table après la création
+        this.applyTableTextures(tableConfigurations);
+
         return this.isoMap;
+    }
+
+    /**
+     * Crée le mapping des textures de base
+     */
+    private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string}>): { [key: number]: string } {
+        return {
+            1: "planks",
+            2: "planks", 
+            3: "planks",
+            4: "iso-wall",
+            5: "planks", // Texture temporaire, sera remplacée par les vraies textures de table
+            6: "choco_box",      // Caisse de chocolat
+            7: "butter_box",     // Caisse de beurre
+            8: "flour_box",      // Caisse de farine
+            9: "iso-delivery-zone",
+        };
+    }
+
+    /**
+     * Applique les textures de comptoir/table correctes selon les adjacences
+     */
+    private applyTableTextures(tableConfigurations: Array<{gridX: number, gridY: number, texture: string}>): void {
+        if (!this.isoMap) return;
+
+        let replacedCount = 0;
+        
+        tableConfigurations.forEach(config => {
+            const key = `${config.gridX},${config.gridY}`;
+            
+            // Les tables sont des tiles solides, on doit les récupérer depuis solidTiles
+            const existingSolidTile = this.isoMap!.getSolidTile(config.gridX, config.gridY);
+            if (existingSolidTile) {
+                // Vérifier si c'est bien une table temporaire (planks)
+                if (existingSolidTile.texture.key === 'planks') {
+                    // Supprimer l'ancien tile solide
+                    this.isoMap!.removeSolidTile(config.gridX, config.gridY);
+                    
+                    // Créer le nouveau tile avec la bonne texture de table
+                    this.isoMap!.createTile(
+                        config.gridX, 
+                        config.gridY, 
+                        config.texture, 
+                        this.mapOffsetX, 
+                        this.mapOffsetY, 
+                        true, // isSolid = true pour les comptoirs
+                        true  // isCounter = true pour les tables/comptoirs
+                    );
+                    
+                    replacedCount++;
+                    console.log(`✅ Table remplacée à (${config.gridX}, ${config.gridY}) avec texture: ${config.texture}`);
+                } else {
+                    console.log(`⚠️ Tile à (${config.gridX}, ${config.gridY}) n'est pas une table temporaire: ${existingSolidTile.texture.key}`);
+                }
+            } else {
+                console.warn(`❌ Aucune table trouvée à la position (${config.gridX}, ${config.gridY})`);
+            }
+        });
+        
+        console.log(`🔄 Total de tables remplacées: ${replacedCount}/${tableConfigurations.length}`);
     }
 
     /**
@@ -233,6 +282,10 @@ export class MapManager {
 
     getMapOffsetY(): number {
         return this.mapOffsetY;
+    }
+
+    getTableTileManager(): TableTileManager | undefined {
+        return this.tableTileManager;
     }
 }
 
