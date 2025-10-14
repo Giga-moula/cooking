@@ -118,13 +118,9 @@ export class RecipeManager {
         const recipe = this.recipes.get(key);
 
         if (recipe) {
-            console.log(
-                `Recette trouvée: ${recipe.ingredient1} + ${recipe.ingredient2} = ${recipe.result}`
-            );
             return recipe.result;
         }
 
-        console.log(`Aucune recette pour ${ingredient1} + ${ingredient2}`);
         return null;
     }
 

@@ -88,13 +88,6 @@ export class MapManager {
         // Générer les configurations de tables AVANT de créer la carte
         this.tableTileManager = new TableTileManager(mapData);
         const tableConfigurations = this.tableTileManager.generateTableConfigurations();
-        
-        // Debug : compter le nombre de tables
-        const tableCount = mapData.flat().filter(value => value === 5).length;
-        console.log(`🔢 Nombre de tables dans mapData: ${tableCount}`);
-        console.log(`🔢 Nombre de configurations générées: ${tableConfigurations.length}`);
-        
-        this.tableTileManager.debugConfigurations(tableConfigurations);
 
         // Créer un mapping des textures avec les bonnes textures de table
         const tileTextures = this.createTileTexturesWithTables(tableConfigurations);
@@ -160,16 +153,10 @@ export class MapManager {
                     );
                     
                     replacedCount++;
-                    console.log(`✅ Table remplacée à (${config.gridX}, ${config.gridY}) avec texture: ${config.texture}`);
-                } else {
-                    console.log(`⚠️ Tile à (${config.gridX}, ${config.gridY}) n'est pas une table temporaire: ${existingSolidTile.texture.key}`);
-                }
-            } else {
-                console.warn(`❌ Aucune table trouvée à la position (${config.gridX}, ${config.gridY})`);
+                } 
             }
         });
         
-        console.log(`🔄 Total de tables remplacées: ${replacedCount}/${tableConfigurations.length}`);
     }
 
     /**
@@ -244,11 +231,6 @@ export class MapManager {
         this.ingredientTiles.set("1,1", "chocolate");
         this.ingredientTiles.set("1,8", "butter");
         this.ingredientTiles.set("2,8", "wheat_floor");
-
-        console.log(
-            "Tiles d'ingrédients initialisées:",
-            Array.from(this.ingredientTiles.entries())
-        );
     }
 
     /**

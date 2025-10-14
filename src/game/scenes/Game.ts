@@ -140,8 +140,6 @@ export default class Game extends Phaser.Scene {
         // Initialiser les tiles d'ingrédients
         this.mapManager.initializeIngredientTiles();
 
-        // Initialiser le gestionnaire d'ingrédients
-        this.ingredientManager.printDebugInfo();
 
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
@@ -197,15 +195,6 @@ export default class Game extends Phaser.Scene {
         );
         helpText.setScrollFactor(0);
         helpText.setDepth(1000);
-
-        // Initialiser le debug des joueurs
-        for (const player of this.playerList) {
-            player.initializeDebugCircle();
-            player.initializeDebugText(
-                this.cameras.main.width,
-                this.cameras.main.height
-            );
-        }
 
         // Touche espace pour retourner au menu
         this.input.keyboard?.on("keydown-SPACE", () => {

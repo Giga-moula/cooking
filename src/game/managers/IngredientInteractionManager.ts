@@ -53,21 +53,6 @@ export class IngredientInteractionManager {
     }
 
     /**
-     * Affiche les informations de debug
-     */
-    public printDebugInfo(): void {
-        console.log('=== INGRÉDIENTS DISPONIBLES ===');
-        this.getAllIngredients().forEach(ingredient => {
-            console.log(`- ${ingredient.id}: ${ingredient.name} (texture: ${ingredient.texture})`);
-        });
-
-        console.log('\n=== RECETTES DISPONIBLES ===');
-        this.getAllRecipes().forEach(recipe => {
-            console.log(`- ${recipe.ingredient1} + ${recipe.ingredient2} = ${recipe.result} (${recipe.name})`);
-        });
-    }
-
-    /**
      * Nettoyage des ressources
      */
     public cleanup(): void {

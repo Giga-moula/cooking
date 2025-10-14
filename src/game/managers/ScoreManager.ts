@@ -46,9 +46,6 @@ export class ScoreManager {
         this.score += pointsToAdd;
         this.totalDeliveries++;
 
-        console.log(
-            `🎯 +${pointsToAdd} points! ${reason} (Total: ${this.score})`
-        );
 
         this.updateScoreDisplay();
         this.showScoreEffect(pointsToAdd);

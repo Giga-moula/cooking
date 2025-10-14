@@ -251,7 +251,6 @@ export class OrderDisplayManager {
         const y = box.container.y + 70;
 
         // Effet de particules
-        try {
             const particles = this.scene.add.particles(x, y, "star", {
                 speed: { min: -50, max: 50 },
                 angle: { min: 0, max: 360 },
@@ -264,9 +263,6 @@ export class OrderDisplayManager {
             this.scene.time.delayedCall(800, () => {
                 particles.destroy();
             });
-        } catch (e) {
-            console.log("Effet de particules non disponible");
-        }
 
         // Message de succès
         const message = this.scene.add.text(
