@@ -30,10 +30,20 @@ export default class MainMenu extends Phaser.Scene {
     /* START-USER-CODE */
     fallingCookies!: Phaser.GameObjects.Group;
     titleContainer!: Phaser.GameObjects.Container;
+    music?: Phaser.Sound.BaseSound;
 
     // Write your code here
     create() {
         this.editorCreate();
+
+        // 🎵 Démarrer la musique de grand-mère
+        if (!this.sound.get("grandma-song")) {
+            this.music = this.sound.add("grandma-song", {
+                loop: true,
+                volume: 0.5, // Volume à 50%
+            });
+            this.music.play();
+        }
 
         // Créer un groupe pour les cookies tombants
         this.fallingCookies = this.add.group();
@@ -54,6 +64,7 @@ export default class MainMenu extends Phaser.Scene {
         this.createPlayButton();
         this.createLeaderboardButton();
         this.createLeaderboardPreview();
+        this.createMusicButton();
 
         // Pas d'animation pour le moment comme demandé
 
@@ -481,6 +492,74 @@ export default class MainMenu extends Phaser.Scene {
             ease: "Sine.easeInOut",
             yoyo: true,
             repeat: -1,
+        });
+    }
+
+    createMusicButton() {
+        // Créer un bouton pour contrôler la musique
+        const buttonContainer = this.add.container(950, 50);
+        buttonContainer.setDepth(100);
+
+        // Fond circulaire
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(0xffd700, 1);
+        buttonBg.fillCircle(0, 0, 30);
+        buttonBg.lineStyle(4, 0x8b4513, 1);
+        buttonBg.strokeCircle(0, 0, 30);
+
+        buttonContainer.add(buttonBg);
+
+        // Icône musique (note musicale emoji)
+        const musicIcon = this.add.text(0, 0, "🎵", {
+            fontSize: "32px",
+        });
+        musicIcon.setOrigin(0.5, 0.5);
+        buttonContainer.add(musicIcon);
+
+        // Rendre le bouton interactif
+        buttonContainer.setSize(60, 60);
+        buttonContainer.setInteractive({ useHandCursor: true });
+
+        let isMuted = false;
+
+        buttonContainer.on("pointerdown", () => {
+            isMuted = !isMuted;
+
+            if (isMuted) {
+                this.sound.setMute(true);
+                musicIcon.setText("🔇");
+            } else {
+                this.sound.setMute(false);
+                musicIcon.setText("🎵");
+            }
+
+            // Animation de clic
+            this.tweens.add({
+                targets: buttonContainer,
+                scaleX: 0.9,
+                scaleY: 0.9,
+                duration: 100,
+                yoyo: true,
+            });
+        });
+
+        // Hover effect
+        buttonContainer.on("pointerover", () => {
+            this.tweens.add({
+                targets: buttonContainer,
+                scaleX: 1.1,
+                scaleY: 1.1,
+                duration: 200,
+            });
+        });
+
+        buttonContainer.on("pointerout", () => {
+            this.tweens.add({
+                targets: buttonContainer,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+            });
         });
     }
 

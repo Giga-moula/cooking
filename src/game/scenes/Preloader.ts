@@ -71,7 +71,6 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("grandma-front", "assets/grandma_blue.png");
         this.load.image("grandma-back", "assets/grandma_blue_back.png");
         this.load.image("grandma-side", "assets/grandma_blue_side.png");
-
         // Charger les tuiles de table
         this.load.image("table-mono", "assets/table/table-mono.png");
         this.load.image("table-open-left", "assets/table/table-open-left.png");
@@ -90,6 +89,8 @@ export default class Preloader extends Phaser.Scene {
 
         // Charger les textures de sol
         this.load.image("planks", "assets/planks.png");
+         // 🎵 Charger la musique de grand-mère
+        this.load.audio("grandma-song", "assets/musics/grandma_song.mp3")
     }
 
     create() {
