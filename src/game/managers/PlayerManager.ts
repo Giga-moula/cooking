@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -7,6 +8,7 @@ import { IsometricUtils } from "../utils/IsometricUtils";
 export class PlayerManager {
     private scene: Phaser.Scene;
     private player?: Phaser.Physics.Arcade.Sprite;
+    private playerNumber: number; // 1 ou 2
     private playerSpeed: number = 150; // Pixels par seconde
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
     private lastPlayerY: number = 0;
@@ -15,17 +17,92 @@ export class PlayerManager {
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private mapOffsetX: number;
     private mapOffsetY: number;
+    private grandmaColor: string = "blue"; // Couleur par défaut
+
+    private controls: PlayerControls;
 
     // Debug
     private debugCircle?: Phaser.GameObjects.Graphics;
     private debugText?: Phaser.GameObjects.Text;
 
-    constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
+    constructor(
+        scene: Phaser.Scene,
+        mapOffsetX: number,
+        mapOffsetY: number,
+        playerNumber: number
+    ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+        this.playerNumber = playerNumber;
+        this.controls = this.initializeControls(playerNumber);
+
+        if (playerNumber === 1) {
+            this.grandmaColor = "blue";
+        } else {
+            this.grandmaColor = "red";
+        }
     }
 
+    private initializeControls(playerNumber: number): PlayerControls {
+        const controlsManager = new ControlsManager(this.scene);
+        if (playerNumber === 1) {
+            return controlsManager.getPlayer1Controls();
+        } else {
+            return controlsManager.getPlayer2Controls();
+        }
+    }
+
+    update(): void {
+        this.handleMovement();
+        this.updateGridPosition();
+        this.handleInteraction();
+    }
+
+    private handleMovement(): void {
+        if (!this.player) return;
+
+        let velocityX = 0;
+        let velocityY = 0;
+
+        if (this.controls.upKey.isDown) {
+            velocityY = -this.playerSpeed;
+            this.lastDirection = { x: 0, y: -1 };
+            this.updatePlayerSprite(`${this.grandmaColor}-grandma-back`, false);
+        } else if (this.controls.downKey.isDown) {
+            velocityY = this.playerSpeed;
+            this.lastDirection = { x: 0, y: 1 };
+            this.updatePlayerSprite(
+                `${this.grandmaColor}-grandma-front`,
+                false
+            );
+        }
+
+        if (this.controls.leftKey.isDown) {
+            velocityX = -this.playerSpeed;
+            this.lastDirection = { x: -1, y: 0 };
+            this.updatePlayerSprite(`${this.grandmaColor}-grandma-side`, true);
+        } else if (this.controls.rightKey.isDown) {
+            velocityX = this.playerSpeed;
+            this.lastDirection = { x: 1, y: 0 };
+            this.updatePlayerSprite(`${this.grandmaColor}-grandma-side`, false);
+        }
+
+        if (velocityX !== 0 && velocityY !== 0) {
+            velocityX *= this.DIAGONAL_FACTOR;
+            velocityY *= this.DIAGONAL_FACTOR;
+        }
+
+        this.player.setVelocity(velocityX, velocityY);
+    }
+
+    private handleInteraction(): void {
+        if (!this.player) return;
+        // Logique d'interaction (à implémenter)
+        if (this.controls.interactKey.isDown) {
+            console.log(`Joueur ${this.playerNumber} interagit`);
+        }
+    }
     /**
      * Crée le joueur à la position initiale
      */
@@ -48,7 +125,7 @@ export class PlayerManager {
         this.player = this.scene.physics.add.sprite(
             startX,
             startY,
-            "grandma-front"
+            `${this.grandmaColor}-grandma-front`
         );
         this.player.setOrigin(0.5, 0.5); // Centré pour la rotation
 
@@ -73,46 +150,6 @@ export class PlayerManager {
         this.updatePlayerDepth();
 
         return this.player;
-    }
-
-    /**
-     * Met à jour le mouvement du joueur basé sur les contrôles
-     */
-    updateMovement(cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
-        if (!this.player) return;
-
-        let velocityX = 0;
-        let velocityY = 0;
-
-        // Déplacement fluide avec les flèches
-        if (cursors.up!.isDown) {
-            velocityY = -this.playerSpeed;
-            this.lastDirection = { x: 0, y: -1 }; // Haut
-            this.updatePlayerSprite("grandma-back", false); // Vue de dos
-        } else if (cursors.down!.isDown) {
-            velocityY = this.playerSpeed;
-            this.lastDirection = { x: 0, y: 1 }; // Bas
-            this.updatePlayerSprite("grandma-front", false); // Vue de face
-        }
-
-        if (cursors.left!.isDown) {
-            velocityX = -this.playerSpeed;
-            this.lastDirection = { x: -1, y: 0 }; // Gauche
-            this.updatePlayerSprite("grandma-side", true); // Vue de côté (gauche, retournée)
-        } else if (cursors.right!.isDown) {
-            velocityX = this.playerSpeed;
-            this.lastDirection = { x: 1, y: 0 }; // Droite
-            this.updatePlayerSprite("grandma-side", false); // Vue de côté (droite, normale)
-        }
-
-        // Normaliser la vitesse en diagonale
-        if (velocityX !== 0 && velocityY !== 0) {
-            velocityX *= this.DIAGONAL_FACTOR;
-            velocityY *= this.DIAGONAL_FACTOR;
-        }
-
-        // Appliquer la vélocité
-        this.player.setVelocity(velocityX, velocityY);
     }
 
     /**
@@ -320,4 +357,3 @@ export class PlayerManager {
         return this.player ? this.player.y !== this.lastPlayerY : false;
     }
 }
-
