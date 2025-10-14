@@ -20,8 +20,10 @@ export class IsometricUtils {
      * Convertit les coordonnées écran en coordonnées de grille
      */
     static screenToGrid(screenX: number, screenY: number): { x: number, y: number } {
-        const gridX = Math.floor(screenX / this.TILE_WIDTH);
-        const gridY = Math.floor(screenY / this.TILE_HEIGHT);
+        // Utiliser Math.round pour une détection centrée sur les tiles
+        // Plus précis que Math.floor qui biaise vers le coin supérieur gauche
+        const gridX = Math.round(screenX / this.TILE_WIDTH);
+        const gridY = Math.round(screenY / this.TILE_HEIGHT);
         return { x: gridX, y: gridY };
     }
 

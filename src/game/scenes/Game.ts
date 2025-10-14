@@ -24,6 +24,7 @@ export default class Game extends Phaser.Scene {
 	private playerGridY: number = 2;
 	private debugText?: Phaser.GameObjects.Text;
 	private inventoryText?: Phaser.GameObjects.Text;
+	private centerDebugCircle?: Phaser.GameObjects.Graphics;
 	private inventory: string[] = []; // Inventaire du joueur
 	private itemsOnCounters: Map<string, Phaser.GameObjects.Image> = new Map(); // Objets posés sur les plans de travail
 	private carriedItem?: Phaser.GameObjects.Image; // Objet porté visible au-dessus du joueur
@@ -136,6 +137,10 @@ export default class Game extends Phaser.Scene {
 		});
 		this.inventoryText.setScrollFactor(0);
 		this.inventoryText.setDepth(1000);
+
+		// Cercle de debug pour visualiser le centre de la hitbox
+		this.centerDebugCircle = this.add.graphics();
+		this.centerDebugCircle.setDepth(10000); // Au-dessus de tout
 
 		// Touche espace pour retourner au menu
 		this.input.keyboard?.on('keydown-SPACE', () => {
@@ -365,29 +370,43 @@ export default class Game extends Phaser.Scene {
 		if (this.player.y !== this.lastPlayerY) {
 			this.updatePlayerDepth();
 		}
+
+		// Dessiner le cercle de debug au centre de la hitbox
+		this.updateDebugCircle();
 	}
 
 	updatePlayerGridPosition() {
 		if (!this.player || !this.isoMap) return;
 
-		// Utiliser le bas de la hitbox (pieds) pour déterminer la position en grille
+		// Calculer les limites de la hitbox du joueur
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		
-		// Point de référence : centre du bas de la hitbox (milieu des pieds)
-		const feetX = body.center.x;
-		const feetY = body.bottom;
+		// Utiliser le centre de la hitbox pour une détection plus stable
+		// Avec Math.round dans screenToGrid, le centre donne les meilleurs résultats
+		const centerX = body.center.x;
+		const centerY = body.center.y;
 		
-		// Convertir la position des pieds en coordonnées de grille
+		// Convertir la position du centre en coordonnées de grille
+		// screenToGrid utilise maintenant Math.round, donc pas besoin de Math.round ici
 		const gridPos = IsometricUtils.screenToGrid(
-			feetX - this.mapOffsetX,
-			feetY - this.mapOffsetY
+			centerX - this.mapOffsetX,
+			centerY - this.mapOffsetY
 		);
 		
-		this.playerGridX = Math.round(gridPos.x);
-		this.playerGridY = Math.round(gridPos.y);
+		const newGridX = gridPos.x;
+		const newGridY = gridPos.y;
+		
+		// Debug log
+		if (this.playerGridX !== newGridX || this.playerGridY !== newGridY) {
+			console.log(`Centre: (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`);
+			console.log(`Grille changée: (${this.playerGridX}, ${this.playerGridY}) -> (${newGridX}, ${newGridY})`);
+		}
+
+		this.playerGridX = newGridX;
+		this.playerGridY = newGridY;
 	}
 
-	calculateTileOverlap(gridX: number, gridY: number, playerLeft: number, playerTop: number, playerRight: number, playerBottom: number): number {
+	calculateTileOverlap(gridX: number, gridY: number, playerLeft: number, playerRight: number, playerTop: number, playerBottom: number): number {
 		// Convertir la position de grille en coordonnées d'écran
 		const tileScreenPos = IsometricUtils.gridToScreen(gridX, gridY);
 		const tileLeft = tileScreenPos.x + this.mapOffsetX - IsometricUtils.TILE_WIDTH / 2;
@@ -403,12 +422,37 @@ export default class Game extends Phaser.Scene {
 
 		// Si il n'y a pas d'intersection, retourner 0
 		if (overlapLeft >= overlapRight || overlapTop >= overlapBottom) {
+			// Debug: voir pourquoi il n'y a pas d'intersection
+			if (gridX === 5 && gridY === 4) {
+				console.log(`Tile (${gridX}, ${gridY}): tile=(${tileLeft.toFixed(0)},${tileTop.toFixed(0)})-(${tileRight.toFixed(0)},${tileBottom.toFixed(0)}), player=(${playerLeft.toFixed(0)},${playerTop.toFixed(0)})-(${playerRight.toFixed(0)},${playerBottom.toFixed(0)})`);
+			}
 			return 0;
 		}
 
 		// Calculer la surface d'intersection
 		const overlapArea = (overlapRight - overlapLeft) * (overlapBottom - overlapTop);
 		return overlapArea;
+	}
+
+	updateDebugCircle() {
+		if (!this.centerDebugCircle || !this.player) return;
+
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+
+		// Effacer le dessin précédent
+		this.centerDebugCircle.clear();
+
+		// Dessiner un cercle au centre de la hitbox (horizontal center, vertical center)
+		this.centerDebugCircle.fillStyle(0xff0000, 0.8); // Rouge, semi-transparent
+		this.centerDebugCircle.fillCircle(body.center.x, body.center.y, 3); // Rayon de 3 pixels
+
+		// Dessiner un cercle au bas de la hitbox (pieds) - point de référence pour la grille
+		this.centerDebugCircle.fillStyle(0x00ff00, 0.8); // Vert, semi-transparent
+		this.centerDebugCircle.fillCircle(body.center.x, body.bottom, 5); // Rayon de 5 pixels (plus gros)
+
+		// Dessiner une ligne verticale du centre aux pieds
+		this.centerDebugCircle.lineStyle(1, 0xffff00, 0.5); // Jaune, semi-transparent
+		this.centerDebugCircle.lineBetween(body.center.x, body.center.y, body.center.x, body.bottom);
 	}
 
 	updateDebugText() {
