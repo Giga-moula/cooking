@@ -32,6 +32,7 @@ export default class Game extends Phaser.Scene {
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private ingredientManager?: IngredientInteractionManager; // Gestionnaire de combinaisons d'ingrédients
 	private ingredientTiles: Map<string, string> = new Map(); // Mappage des tiles d'ingrédients (clé = position, valeur = type d'ingrédient)
+	private trashTiles: Map<string, boolean> = new Map(); // Mappage des tiles de poubelle (clé = position)
 
     constructor() {
         super("Game");
@@ -60,29 +61,28 @@ export default class Game extends Phaser.Scene {
 		this.isoMap = new IsometricMap(this);
 		
 		// Exemple de carte (10x10)
-		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 0 = vide
+		// 1 = sol (planks), 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 9 = poubelle, 0 = vide
 		const mapData = [
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-			[4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
-			[4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
-			[4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
+			[4, 6, 1, 1, 1, 1, 1, 1, 9, 4],
 			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-			[4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
-			[4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
-			[4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
-			[4, 7, 8, 1, 1, 1, 1, 1, 2, 4],
+			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
+			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
+			[4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+			[4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+			[4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
+			[4, 7, 8, 1, 1, 1, 1, 1, 1, 4],
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 		];
 
 		const tileTextures = {
-			1: 'iso-grass',
-			2: 'iso-dirt',
-			3: 'iso-water',
+			1: 'planks',
 			4: 'iso-wall',
-			5: 'iso-counter',
-			6: 'iso-ingredient-chocolate',
-			7: 'iso-ingredient-butter',
-			8: 'iso-ingredient-wheat'
+			5: 'table-bottom',
+			6: 'choco_box',
+			7: 'butter_box',
+			8: 'flour_box',
+			9: 'trash-bin'
 		};
 
         // Créer la carte directement avec l'offset
@@ -124,9 +124,10 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             10,
-            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner | Espace : Menu\n" +
+            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Jeter | Espace : Menu\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Ramasse un ingrédient et dépose-le sur un autre pour les combiner !",
+                "💡 Ramasse un ingrédient et dépose-le sur un autre pour les combiner !\n" +
+                "🗑️ Utilise la poubelle pour jeter un objet",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -160,10 +161,6 @@ export default class Game extends Phaser.Scene {
         this.inventoryText.setScrollFactor(0);
         this.inventoryText.setDepth(1000);
 
-        // Cercle de debug pour visualiser le centre de la hitbox
-        this.centerDebugCircle = this.add.graphics();
-        this.centerDebugCircle.setDepth(10000); // Au-dessus de tout
-
         // Touche espace pour retourner au menu
         this.input.keyboard?.on("keydown-SPACE", () => {
             this.changeScene();
@@ -181,14 +178,7 @@ export default class Game extends Phaser.Scene {
 		// Créer des tiles carrés style Stardew Valley
 		const tileSize = 48; // Taille du carré
 		const tiles = [
-			{ key: 'iso-grass', color: 0x5CB85C, darkColor: 0x4A9D4A }, // Vert herbe
-			{ key: 'iso-dirt', color: 0x8B7355, darkColor: 0x6D5A43 },  // Marron terre
-			{ key: 'iso-water', color: 0x4A90E2, darkColor: 0x3A75C4 }, // Bleu eau
 			{ key: 'iso-wall', color: 0x666666, darkColor: 0x444444 },  // Gris mur
-			{ key: 'iso-counter', color: 0xD2691E, darkColor: 0xB8860B }, // Marron bois
-			{ key: 'iso-ingredient-chocolate', color: 0x8B4513, darkColor: 0x654321 }, // Marron chocolat
-			{ key: 'iso-ingredient-butter', color: 0xFFD700, darkColor: 0xDDAA00 }, // Jaune beurre
-			{ key: 'iso-ingredient-wheat', color: 0xF5DEB3, darkColor: 0xD2B48C }, // Beige farine
 		];
 
         tiles.forEach(({ key, color, darkColor }) => {
@@ -219,6 +209,44 @@ export default class Game extends Phaser.Scene {
             graphics.generateTexture(key, tileSize, tileSize);
             graphics.destroy();
         });
+
+		// Créer une texture de poubelle
+		const trashGraphics = this.add.graphics();
+		
+		// Fond gris foncé
+		trashGraphics.fillStyle(0x4a4a4a, 1);
+		trashGraphics.fillRect(0, 0, tileSize, tileSize);
+		
+		// Corps de la poubelle (rectangle gris)
+		trashGraphics.fillStyle(0x666666, 1);
+		trashGraphics.fillRect(12, 16, 24, 24);
+		
+		// Couvercle de la poubelle (rectangle plus clair)
+		trashGraphics.fillStyle(0x888888, 1);
+		trashGraphics.fillRect(10, 12, 28, 6);
+		
+		// Poignée du couvercle
+		trashGraphics.fillStyle(0xaaaaaa, 1);
+		trashGraphics.fillRect(20, 8, 8, 4);
+		
+		// Symbole de recyclage (simplifié - X rouge)
+		trashGraphics.lineStyle(2, 0xff0000, 1);
+		trashGraphics.beginPath();
+		trashGraphics.moveTo(18, 22);
+		trashGraphics.lineTo(30, 34);
+		trashGraphics.strokePath();
+		trashGraphics.beginPath();
+		trashGraphics.moveTo(30, 22);
+		trashGraphics.lineTo(18, 34);
+		trashGraphics.strokePath();
+		
+		// Bordures pour effet 3D
+		trashGraphics.fillStyle(0x333333, 1);
+		trashGraphics.fillRect(tileSize - 4, 0, 4, tileSize);
+		trashGraphics.fillRect(0, tileSize - 4, tileSize, 4);
+		
+		trashGraphics.generateTexture('trash-bin', tileSize, tileSize);
+		trashGraphics.destroy();
 
 		// Les sprites de grand-mère sont déjà chargés dans le préchargeur
 		// Pas besoin de générer de texture, on utilise directement les images
@@ -410,8 +438,6 @@ export default class Game extends Phaser.Scene {
             this.updatePlayerDepth();
         }
 
-        // Dessiner le cercle de debug au centre de la hitbox
-        this.updateDebugCircle();
     }
 
     updatePlayerGridPosition() {
@@ -497,32 +523,6 @@ export default class Game extends Phaser.Scene {
         const overlapArea =
             (overlapRight - overlapLeft) * (overlapBottom - overlapTop);
         return overlapArea;
-    }
-
-    updateDebugCircle() {
-        if (!this.centerDebugCircle || !this.player) return;
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-
-        // Effacer le dessin précédent
-        this.centerDebugCircle.clear();
-
-        // Dessiner un cercle au centre de la hitbox (horizontal center, vertical center)
-        this.centerDebugCircle.fillStyle(0xff0000, 0.8); // Rouge, semi-transparent
-        this.centerDebugCircle.fillCircle(body.center.x, body.center.y, 3); // Rayon de 3 pixels
-
-        // Dessiner un cercle au bas de la hitbox (pieds) - point de référence pour la grille
-        this.centerDebugCircle.fillStyle(0x00ff00, 0.8); // Vert, semi-transparent
-        this.centerDebugCircle.fillCircle(body.center.x, body.bottom, 5); // Rayon de 5 pixels (plus gros)
-
-        // Dessiner une ligne verticale du centre aux pieds
-        this.centerDebugCircle.lineStyle(1, 0xffff00, 0.5); // Jaune, semi-transparent
-        this.centerDebugCircle.lineBetween(
-            body.center.x,
-            body.center.y,
-            body.center.x,
-            body.bottom
-        );
     }
 
     updateDebugText() {
@@ -666,8 +666,8 @@ export default class Game extends Phaser.Scene {
 		let targetX = this.playerGridX + this.lastDirection.x;
 		let targetY = this.playerGridY + this.lastDirection.y;
 		
-		// Si le joueur est sur un plan de travail ou une tile d'ingrédient, interagir avec cette même position
-		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY) || this.isIngredientTile(this.playerGridX, this.playerGridY)) {
+		// Si le joueur est sur un plan de travail, une tile d'ingrédient ou une poubelle, interagir avec cette même position
+		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY) || this.isIngredientTile(this.playerGridX, this.playerGridY) || this.isTrashTile(this.playerGridX, this.playerGridY)) {
 			targetX = this.playerGridX;
 			targetY = this.playerGridY;
 			console.log(`Joueur sur tile interactive, interaction sur la même position (${targetX}, ${targetY})`);
@@ -675,8 +675,27 @@ export default class Game extends Phaser.Scene {
 		
 		console.log(`Position joueur grille: (${this.playerGridX}, ${this.playerGridY}), Direction: (${this.lastDirection.x}, ${this.lastDirection.y}), Cible: (${targetX}, ${targetY})`);
 		
-		// Vérifier d'abord si c'est une tile d'ingrédient
-		if (this.isIngredientTile(targetX, targetY)) {
+		// Vérifier d'abord si c'est une tile de poubelle
+		if (this.isTrashTile(targetX, targetY)) {
+			console.log(`Interaction avec poubelle à la position (${targetX}, ${targetY})`);
+			
+			if (this.inventory.length > 0) {
+				// Jeter l'objet dans la poubelle
+				const itemType = this.inventory.pop()!;
+				this.removeCarriedItem();
+				console.log(`🗑️ Objet jeté dans la poubelle: ${itemType}`);
+				
+				// Afficher un message de confirmation
+				this.showCombinationMessage(`🗑️ ${itemType} jeté !`, targetX, targetY);
+				
+				// Effet visuel (particules si disponible)
+				this.playTrashEffect(targetX, targetY);
+			} else {
+				console.log('Inventaire vide, rien à jeter');
+			}
+		}
+		// Vérifier si c'est une tile d'ingrédient
+		else if (this.isIngredientTile(targetX, targetY)) {
 			console.log(`Interaction avec tile d'ingrédient à la position (${targetX}, ${targetY})`);
 			
 			if (this.inventory.length === 0) {
@@ -848,6 +867,33 @@ export default class Game extends Phaser.Scene {
         }
     }
 
+    playTrashEffect(gridX: number, gridY: number) {
+        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        // Créer des particules grises qui tombent (effet poubelle)
+        try {
+            const particles = this.add.particles(x, y - 10, "star", {
+                speed: { min: 20, max: 80 },
+                angle: { min: 60, max: 120 }, // Vers le bas
+                scale: { start: 0.3, end: 0 },
+                lifespan: 400,
+                quantity: 8,
+                tint: 0x888888, // Gris
+                gravityY: 200,
+            });
+
+            // Détruire l'émetteur après l'animation
+            this.time.delayedCall(400, () => {
+                particles.destroy();
+            });
+        } catch (e) {
+            // Si pas de texture 'star', on saute l'effet
+            console.log("Pas de particules (texture 'star' manquante)");
+        }
+    }
+
     showCombinationMessage(text: string, gridX: number, gridY: number) {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
@@ -940,6 +986,12 @@ export default class Game extends Phaser.Scene {
 		this.ingredientTiles.set('2,8', 'wheat_floor');
 		
 		console.log('Tiles d\'ingrédients initialisées:', Array.from(this.ingredientTiles.entries()));
+		
+		// Mapper les positions des tiles de poubelle selon la carte
+		// Position (8,1) = poubelle
+		this.trashTiles.set('8,1', true);
+		
+		console.log('Tiles de poubelle initialisées:', Array.from(this.trashTiles.entries()));
 	}
 
 	isIngredientTile(gridX: number, gridY: number): boolean {
@@ -950,6 +1002,11 @@ export default class Game extends Phaser.Scene {
 	getIngredientFromTile(gridX: number, gridY: number): string | null {
 		const key = `${gridX},${gridY}`;
 		return this.ingredientTiles.get(key) || null;
+	}
+
+	isTrashTile(gridX: number, gridY: number): boolean {
+		const key = `${gridX},${gridY}`;
+		return this.trashTiles.has(key);
 	}
 
     changeScene() {

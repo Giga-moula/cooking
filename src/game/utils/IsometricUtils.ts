@@ -72,7 +72,7 @@ export class IsometricMap {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs)
+                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs), 9 = poubelle (impassable mais interactive)
                     this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6);
                 }
             }
@@ -98,19 +98,60 @@ export class IsometricMap {
             body.setImmovable(true);
             body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
             
-            // Différencier les murs des plans de travail
-            if (texture === 'iso-counter') {
+            // Différencier les murs des plans de travail et des boîtes d'ingrédients
+            if (texture === 'table-bottom') {
                 // Plan de travail : impassable mais interactif
+                // Ajuster la taille pour qu'il remplisse bien la tile
+                const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                const scale = targetSize / Math.max(tile.width, tile.height);
+                tile.setScale(scale);
+                
+                // Hitbox ajustée pour une meilleure précision (même taille que les boîtes)
+                const hitboxSize = IsometricUtils.TILE_WIDTH * 0.7; // 70% de la taille de tile (33.6 pixels)
+                body.setSize(hitboxSize, hitboxSize);
+                
                 this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
-                console.log(`Plan de travail créé à la position (${gridX}, ${gridY})`);
+                console.log(`Plan de travail créé à la position (${gridX}, ${gridY}): ${texture} (scale: ${scale.toFixed(2)}, hitbox: ${hitboxSize})`);
+            } else if (texture === 'choco_box' || texture === 'butter_box' || texture === 'flour_box') {
+                // Boîtes d'ingrédients : impassables mais interactives
+                // Ajuster la taille pour qu'elles prennent toute la place dans la tile
+                const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                const scale = targetSize / Math.max(tile.width, tile.height);
+                tile.setScale(scale);
+                
+                // Hitbox ajustée pour une meilleure précision
+                const hitboxSize = IsometricUtils.TILE_WIDTH * 0.7; // 70% de la taille de tile (33.6 pixels)
+                body.setSize(hitboxSize, hitboxSize);
+                
+                console.log(`Boîte d'ingrédient créée à la position (${gridX}, ${gridY}): ${texture} (scale: ${scale.toFixed(2)}, hitbox: ${hitboxSize})`);
+            } else if (texture === 'trash-bin') {
+                // Poubelle : impassable mais interactive avec hitbox pleine taille
+                // Ajuster la taille pour qu'elle prenne toute la place dans la tile
+                const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                const scale = targetSize / Math.max(tile.width, tile.height);
+                tile.setScale(scale);
+                
+                // Hitbox pleine taille pour la poubelle
+                body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                
+                console.log(`Poubelle créée à la position (${gridX}, ${gridY}): ${texture} (scale: ${scale.toFixed(2)}, hitbox: ${IsometricUtils.TILE_WIDTH})`);
             }
             
-            // Tous les tiles solides (murs + plans de travail) vont dans solidTiles pour les collisions
+            // Tous les tiles solides (murs + plans de travail + boîtes) vont dans solidTiles pour les collisions
             this.solidTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
         } else {
             // Créer une image normale pour les tiles traversables
             tile = this.scene.add.image(screenPos.x + offsetX, screenPos.y + offsetY, texture);
             tile.setOrigin(0.5, 0.5);
+            
+            // Pour la texture planks, s'assurer qu'elle remplit bien la tile
+            if (texture === 'planks') {
+                const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                const scale = targetSize / Math.max(tile.width, tile.height);
+                tile.setScale(scale);
+                console.log(`Tile de sol créée à la position (${gridX}, ${gridY}): ${texture} (scale: ${scale.toFixed(2)})`);
+            }
+            
             this.tiles.set(key, tile as Phaser.GameObjects.Image);
         }
         

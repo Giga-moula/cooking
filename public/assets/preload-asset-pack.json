@@ -35,6 +35,31 @@
                 "url": "assets/dough.png",
                 "type": "image",
                 "key": "dough"
+            },
+            {
+                "url": "assets/flour_box.png",
+                "type": "image",
+                "key": "flour_box"
+            },
+            {
+                "url": "assets/choco_box.png",
+                "type": "image",
+                "key": "choco_box"
+            },
+            {
+                "url": "assets/butter_box.png",
+                "type": "image",
+                "key": "butter_box"
+            },
+            {
+                "url": "assets/planks.png",
+                "type": "image",
+                "key": "planks"
+            },
+            {
+                "url": "assets/table-bottom.png",
+                "type": "image",
+                "key": "table-bottom"
             }
         ]
     },
