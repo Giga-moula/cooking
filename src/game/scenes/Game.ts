@@ -370,44 +370,21 @@ export default class Game extends Phaser.Scene {
 	updatePlayerGridPosition() {
 		if (!this.player || !this.isoMap) return;
 
-		// Calculer les limites du sprite du joueur avec origine centrée (0.5, 0.5)
-		// Utiliser la hitbox réelle du joueur pour plus de précision
+		// Utiliser le bas de la hitbox (pieds) pour déterminer la position en grille
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
-		const playerLeft = this.player.x - body.halfWidth;
-		const playerRight = this.player.x + body.halfWidth;
-		const playerTop = this.player.y - body.halfHeight;
-		const playerBottom = this.player.y + body.halfHeight;
-
-		// Convertir les coins du joueur en coordonnées de grille
-		const topLeft = IsometricUtils.screenToGrid(playerLeft - this.mapOffsetX, playerTop - this.mapOffsetY);
-		const topRight = IsometricUtils.screenToGrid(playerRight - this.mapOffsetX, playerTop - this.mapOffsetY);
-		const bottomLeft = IsometricUtils.screenToGrid(playerLeft - this.mapOffsetX, playerBottom - this.mapOffsetY);
-		const bottomRight = IsometricUtils.screenToGrid(playerRight - this.mapOffsetX, playerBottom - this.mapOffsetY);
-
-		// Déterminer les limites de grille occupées par le joueur
-		const minGridX = Math.floor(Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
-		const maxGridX = Math.ceil(Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
-		const minGridY = Math.floor(Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
-		const maxGridY = Math.ceil(Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
-
-		// Calculer quelle tile contient le plus de surface du joueur
-		let bestTileX = minGridX;
-		let bestTileY = minGridY;
-		let maxOverlap = 0;
-
-		for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
-			for (let gridY = minGridY; gridY <= maxGridY; gridY++) {
-				const overlap = this.calculateTileOverlap(gridX, gridY, playerLeft, playerTop, playerRight, playerBottom);
-				if (overlap > maxOverlap) {
-					maxOverlap = overlap;
-					bestTileX = gridX;
-					bestTileY = gridY;
-				}
-			}
-		}
-
-		this.playerGridX = bestTileX;
-		this.playerGridY = bestTileY;
+		
+		// Point de référence : centre du bas de la hitbox (milieu des pieds)
+		const feetX = body.center.x;
+		const feetY = body.bottom;
+		
+		// Convertir la position des pieds en coordonnées de grille
+		const gridPos = IsometricUtils.screenToGrid(
+			feetX - this.mapOffsetX,
+			feetY - this.mapOffsetY
+		);
+		
+		this.playerGridX = Math.round(gridPos.x);
+		this.playerGridY = Math.round(gridPos.y);
 	}
 
 	calculateTileOverlap(gridX: number, gridY: number, playerLeft: number, playerTop: number, playerRight: number, playerBottom: number): number {
@@ -547,8 +524,12 @@ export default class Game extends Phaser.Scene {
 	}
 
 	interactWithCounter() {
-		if (!this.isoMap) return;
+		if (!this.isoMap || !this.player) return;
 
+		// Utiliser directement playerGridX et playerGridY qui sont déjà calculés
+		// dans updatePlayerGridPosition() basé sur la hitbox
+		
+		// Calculer la tile adjacente dans la direction regardée
 		let targetX = this.playerGridX + this.lastDirection.x;
 		let targetY = this.playerGridY + this.lastDirection.y;
 		
@@ -559,11 +540,14 @@ export default class Game extends Phaser.Scene {
 			console.log(`Joueur sur plan de travail, interaction sur la même position (${targetX}, ${targetY})`);
 		}
 		
+		console.log(`Position joueur grille: (${this.playerGridX}, ${this.playerGridY}), Direction: (${this.lastDirection.x}, ${this.lastDirection.y}), Cible: (${targetX}, ${targetY})`);
+		
 		if (this.isoMap.isCounter(targetX, targetY)) {
 			console.log(`Interaction avec le plan de travail à la position (${targetX}, ${targetY})`);
 			
 			// Vérifier s'il y a un objet sur ce plan de travail
 			const hasItem = this.hasItemOnCounter(targetX, targetY);
+			console.log(`Objet sur comptoir: ${hasItem}, Inventaire: ${this.inventory.length}`);
 			
 			if (hasItem && this.inventory.length === 0) {
 				// Ramasser l'objet (inventaire vide)
