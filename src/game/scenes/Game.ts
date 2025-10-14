@@ -1,5 +1,3 @@
-/* START OF COMPILED CODE */
-
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { EventBus } from "../EventBus";
@@ -9,18 +7,19 @@ import { IngredientInteractionManager } from "../managers/IngredientInteractionM
 import { InventoryManager } from "../managers/InventoryManager";
 import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
-import { PlayerManager } from "../managers/PlayerManager";
+import { PlayerManager } from "../managers/PlayerManager";  
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
-/* END-USER-IMPORTS */
 
 export default class Game extends Phaser.Scene {
-    private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
     private mapOffsetX: number = 272;
     private mapOffsetY: number = 144;
 
     // Managers
-    private playerManager?: PlayerManager;
+    private player1: PlayerManager;
+    private player2: PlayerManager;
+    private playerList: PlayerManager[];
+
     private mapManager?: MapManager;
     private inventoryManager?: InventoryManager;
     private counterManager?: CounterInteractionManager;
@@ -62,18 +61,31 @@ export default class Game extends Phaser.Scene {
             music.play();
         }
 
+        this.player1 = new PlayerManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY,
+            1
+        );
+        this.player1.createPlayer(2, 2);
+
+        this.player2 = new PlayerManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY,
+            2
+        );
+        this.player2.createPlayer(4, 4);
+
+        this.playerList = [this.player1, this.player2];
+
         // Initialiser les managers
         this.mapManager = new MapManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY
         );
-        this.playerManager = new PlayerManager(
-            this,
-            this.mapOffsetX,
-            this.mapOffsetY
-        );
-        this.inventoryManager = new InventoryManager(this);
+
         this.counterManager = new CounterInteractionManager(
             this,
             this.mapOffsetX,
@@ -93,27 +105,31 @@ export default class Game extends Phaser.Scene {
         // Créer la carte en grille
         const isoMap = this.mapManager.createMap();
 
-        // Créer le joueur
-        const player = this.playerManager.createPlayer();
-
         // Créer les murs invisibles autour de la carte
         const walls = this.mapManager.createMapBoundaries();
 
-        // Activer les collisions entre le joueur et les tiles solides
-        if (player && isoMap) {
+        // Activer les collisions entre les joueurs et les tiles solides
+        if (this.playerList && isoMap) {
             const solidTiles = isoMap.getSolidTiles();
             if (solidTiles.length > 0) {
-                this.physics.add.collider(player, solidTiles);
+                for (const player of this.playerList) {
+                    const playerSprite = player.getPlayer();
+                    if (playerSprite) {
+                        this.physics.add.collider(playerSprite, solidTiles);
+                    }
+                }
             }
         }
 
-        // Activer la collision entre le joueur et les murs
-        if (player && walls) {
-            this.physics.add.collider(player, walls);
+        // Activer la collision entre les joueurs et les murs
+        if (this.playerList && walls) {
+            for (const player of this.playerList) {
+                const playerSprite = player.getPlayer();
+                if (playerSprite) {
+                    this.physics.add.collider(playerSprite, walls);
         }
-
-        // Placer un cookie sur un plan de travail
-        this.counterManager.placeItemOnCounter(5, 2, "cookie");
+            }
+        }
 
         // Initialiser les tiles d'ingrédients
         this.mapManager.initializeIngredientTiles();
@@ -164,81 +180,26 @@ export default class Game extends Phaser.Scene {
         helpText.setScrollFactor(0);
         helpText.setDepth(1000);
 
-        // Initialiser le debug du joueur
-        this.playerManager.initializeDebugCircle();
-        this.playerManager.initializeDebugText(
+        // Initialiser le debug des joueurs
+        for (const player of this.playerList) {
+            player.initializeDebugCircle();
+            player.initializeDebugText(
             this.cameras.main.width,
             this.cameras.main.height
         );
+        }
 
         // Touche espace pour retourner au menu
         this.input.keyboard?.on("keydown-SPACE", () => {
             this.changeScene();
         });
 
-        // Touche E pour interagir avec les plans de travail
-        this.input.keyboard?.on("keydown-E", () => {
-            this.interactWithCounter();
-        });
-
         EventBus.emit("current-scene-ready", this);
     }
 
     update(time: number, delta: number) {
-        if (!this.cursors || !this.playerManager) return;
-
-        const player = this.playerManager.getPlayer();
-        if (!player) return;
-
-        // Mettre à jour le mouvement du joueur
-        this.playerManager.updateMovement(this.cursors);
-
-        // Mettre à jour la position en grille du joueur
-        this.playerManager.updateGridPosition();
-
-        // Mettre à jour le texte de debug
-        const isoMap = this.mapManager?.getIsoMap();
-        const playerGridX = this.playerManager.getPlayerGridX();
-        const playerGridY = this.playerManager.getPlayerGridY();
-        const lastDirection = this.playerManager.getLastDirection();
-
-        let targetX = playerGridX + lastDirection.x;
-        let targetY = playerGridY + lastDirection.y;
-
-        const isPlayerOnCounter =
-            isoMap?.isCounter(playerGridX, playerGridY) || false;
-        if (isPlayerOnCounter) {
-            targetX = playerGridX;
-            targetY = playerGridY;
-        }
-
-        const hasCounterAtTarget = isoMap?.isCounter(targetX, targetY) || false;
-        const totalCounters = isoMap?.getCounterTiles().length || 0;
-
-        this.playerManager.updateDebugText(
-            isPlayerOnCounter,
-            hasCounterAtTarget,
-            totalCounters
-        );
-
-        // Mettre à jour la position de l'objet porté
-        if (this.inventoryManager) {
-            this.inventoryManager.updateCarriedItemPosition(
-                player.x,
-                player.y,
-                lastDirection
-            );
-        }
-
-        // Mettre à jour la profondeur seulement si Y a changé
-        if (this.playerManager.hasPlayerMoved()) {
-            this.playerManager.updatePlayerDepth(
-                this.inventoryManager?.getCarriedItem()
-            );
-        }
-
-        // Dessiner le cercle de debug au centre de la hitbox
-        this.playerManager.updateDebugCircle();
+        this.player1.update();
+        this.player2.update();
     }
 
     interactWithCounter() {
