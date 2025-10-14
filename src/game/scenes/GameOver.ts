@@ -4,60 +4,363 @@
 
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
-import { EventBus } from '../EventBus';
+import { EventBus } from "../EventBus";
+import { LeaderboardService } from "../services/LeaderboardService";
 /* END-USER-IMPORTS */
 
 export default class GameOver extends Phaser.Scene {
+    private score: number = 0;
+    private deliveries: number = 0;
+    private scoreSaved: boolean = false;
+    private playerRank?: number;
 
-	constructor() {
-		super("GameOver");
+    constructor() {
+        super("GameOver");
 
-		/* START-USER-CTR-CODE */
-		// Write your code here.
-		/* END-USER-CTR-CODE */
-	}
-
-	editorCreate(): void {
-
-		// background
-		const background = this.add.image(512, 384, "background");
-		background.alpha = 0.5;
-		background.alphaTopLeft = 0.5;
-		background.alphaTopRight = 0.5;
-		background.alphaBottomLeft = 0.5;
-		background.alphaBottomRight = 0.5;
-
-		// textgameover
-		const textgameover = this.add.text(512, 384, "", {});
-		textgameover.setOrigin(0.5, 0.5);
-		textgameover.text = "Game Over";
-		textgameover.setStyle({ "align": "center", "color": "#ffffff", "fontFamily": "Arial Black", "fontSize": "64px", "stroke": "#000000", "strokeThickness":8});
-
-		this.events.emit("scene-awake");
-	}
-
-	/* START-USER-CODE */
-
-	// Write your code here
-
-	create() {
-
-		this.editorCreate();
-
-        this.cameras.main.setBackgroundColor(0xff0000);
-
-        EventBus.emit('current-scene-ready', this);
-
-	}
-
-    changeScene ()
-    {
-        this.scene.start('MainMenu');
+        /* START-USER-CTR-CODE */
+        // Write your code here.
+        /* END-USER-CTR-CODE */
     }
 
-	/* END-USER-CODE */
+    editorCreate(): void {
+        // background
+        const background = this.add.image(512, 384, "background");
+        background.alpha = 0.5;
+        background.alphaTopLeft = 0.5;
+        background.alphaTopRight = 0.5;
+        background.alphaBottomLeft = 0.5;
+        background.alphaBottomRight = 0.5;
+
+        // textgameover
+        const textgameover = this.add.text(512, 384, "", {});
+        textgameover.setOrigin(0.5, 0.5);
+        textgameover.text = "Game Over";
+        textgameover.setStyle({
+            align: "center",
+            color: "#ffffff",
+            fontFamily: "Arial Black",
+            fontSize: "64px",
+            stroke: "#000000",
+            strokeThickness: 8,
+        });
+
+        this.events.emit("scene-awake");
+    }
+
+    /* START-USER-CODE */
+
+    // Write your code here
+
+    init(data: { score: number; deliveries: number }) {
+        // Récupérer les données passées depuis la scène Game
+        this.score = data.score || 0;
+        this.deliveries = data.deliveries || 0;
+    }
+
+    create() {
+        this.editorCreate();
+
+        this.cameras.main.setBackgroundColor(0x000000);
+
+        // Titre "Temps écoulé !"
+        const titleText = this.add.text(512, 200, "⏱️ Temps écoulé !", {
+            fontFamily: "Arial Black",
+            fontSize: "48px",
+            color: "#ffffff",
+            stroke: "#000000",
+            strokeThickness: 6,
+            align: "center",
+        });
+        titleText.setOrigin(0.5);
+
+        // Afficher le score final
+        const scoreText = this.add.text(
+            512,
+            300,
+            `Score final : ${this.score}`,
+            {
+                fontFamily: "Arial",
+                fontSize: "36px",
+                color: "#FFD700", // Or
+                stroke: "#000000",
+                strokeThickness: 4,
+                align: "center",
+            }
+        );
+        scoreText.setOrigin(0.5);
+
+        // Afficher le nombre de livraisons
+        const deliveriesText = this.add.text(
+            512,
+            360,
+            `Livraisons réussies : ${this.deliveries}`,
+            {
+                fontFamily: "Arial",
+                fontSize: "28px",
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 3,
+                align: "center",
+            }
+        );
+        deliveriesText.setOrigin(0.5);
+
+        // Message de félicitations basé sur le score
+        let message = "Continuez à vous entraîner !";
+        if (this.score >= 500) {
+            message = "🌟 Excellent travail ! 🌟";
+        } else if (this.score >= 300) {
+            message = "👍 Bon travail !";
+        } else if (this.score >= 100) {
+            message = "Pas mal pour un début !";
+        }
+
+        const congratsText = this.add.text(512, 440, message, {
+            fontFamily: "Arial",
+            fontSize: "24px",
+            color: "#00FF00",
+            stroke: "#000000",
+            strokeThickness: 3,
+            align: "center",
+        });
+        congratsText.setOrigin(0.5);
+
+        // Afficher le formulaire de saisie du nom
+        this.showNameInputForm();
+
+        EventBus.emit("current-scene-ready", this);
+    }
+
+    /**
+     * Affiche le formulaire de saisie du nom du joueur
+     */
+    showNameInputForm() {
+        // Créer un conteneur HTML pour l'input
+        const formContainer = document.createElement("div");
+        formContainer.id = "name-input-container";
+        formContainer.style.position = "absolute";
+        formContainer.style.top = "500px";
+        formContainer.style.left = "50%";
+        formContainer.style.transform = "translateX(-50%)";
+        formContainer.style.textAlign = "center";
+        formContainer.style.zIndex = "1000";
+
+        // Label
+        const label = document.createElement("div");
+        label.textContent = "Entrez votre nom :";
+        label.style.color = "#ffffff";
+        label.style.fontFamily = "Arial";
+        label.style.fontSize = "20px";
+        label.style.marginBottom = "10px";
+        label.style.textShadow = "2px 2px 4px #000000";
+        formContainer.appendChild(label);
+
+        // Input
+        const input = document.createElement("input");
+        input.type = "text";
+        input.maxLength = 20;
+        input.placeholder = "Votre nom";
+        input.style.padding = "10px";
+        input.style.fontSize = "18px";
+        input.style.border = "2px solid #FFD700";
+        input.style.borderRadius = "5px";
+        input.style.marginRight = "10px";
+        input.style.width = "200px";
+        formContainer.appendChild(input);
+
+        // Bouton Sauvegarder
+        const saveButton = document.createElement("button");
+        saveButton.textContent = "💾 Sauvegarder";
+        saveButton.style.padding = "10px 20px";
+        saveButton.style.fontSize = "18px";
+        saveButton.style.backgroundColor = "#4CAF50";
+        saveButton.style.color = "white";
+        saveButton.style.border = "none";
+        saveButton.style.borderRadius = "5px";
+        saveButton.style.cursor = "pointer";
+        saveButton.style.marginRight = "10px";
+        formContainer.appendChild(saveButton);
+
+        // Bouton Passer
+        const skipButton = document.createElement("button");
+        skipButton.textContent = "Passer";
+        skipButton.style.padding = "10px 20px";
+        skipButton.style.fontSize = "18px";
+        skipButton.style.backgroundColor = "#666666";
+        skipButton.style.color = "white";
+        skipButton.style.border = "none";
+        skipButton.style.borderRadius = "5px";
+        skipButton.style.cursor = "pointer";
+        formContainer.appendChild(skipButton);
+
+        // Message de statut
+        const statusMessage = document.createElement("div");
+        statusMessage.style.color = "#ffffff";
+        statusMessage.style.fontFamily = "Arial";
+        statusMessage.style.fontSize = "16px";
+        statusMessage.style.marginTop = "10px";
+        statusMessage.style.textShadow = "2px 2px 4px #000000";
+        formContainer.appendChild(statusMessage);
+
+        document.body.appendChild(formContainer);
+
+        // Focus sur l'input
+        input.focus();
+
+        // Gérer la sauvegarde
+        const handleSave = async () => {
+            const playerName = input.value.trim();
+
+            if (!playerName) {
+                statusMessage.textContent = "⚠️ Veuillez entrer un nom";
+                statusMessage.style.color = "#FF0000";
+                return;
+            }
+
+            // Désactiver les boutons pendant la sauvegarde
+            saveButton.disabled = true;
+            skipButton.disabled = true;
+            input.disabled = true;
+            statusMessage.textContent = "💾 Sauvegarde en cours...";
+            statusMessage.style.color = "#FFD700";
+
+            // Sauvegarder le score
+            const result = await LeaderboardService.saveScore(
+                playerName,
+                this.score,
+                this.deliveries
+            );
+
+            if (result.success && result.rank) {
+                this.scoreSaved = true;
+                this.playerRank = result.rank;
+                statusMessage.textContent = `✅ Score sauvegardé ! Vous êtes ${
+                    result.rank
+                }${this.getOrdinalSuffix(result.rank)} !`;
+                statusMessage.style.color = "#00FF00";
+
+                // Attendre 2 secondes puis passer au menu
+                setTimeout(() => {
+                    this.cleanupForm();
+                    this.showReturnToMenuButton();
+                }, 2000);
+            } else {
+                statusMessage.textContent = "❌ Erreur lors de la sauvegarde";
+                statusMessage.style.color = "#FF0000";
+                saveButton.disabled = false;
+                skipButton.disabled = false;
+                input.disabled = false;
+            }
+        };
+
+        // Événements
+        saveButton.addEventListener("click", handleSave);
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                handleSave();
+            }
+        });
+        skipButton.addEventListener("click", () => {
+            this.cleanupForm();
+            this.showReturnToMenuButton();
+        });
+    }
+
+    /**
+     * Retourne le suffixe ordinal (er, ème)
+     */
+    getOrdinalSuffix(rank: number): string {
+        if (rank === 1) return "er";
+        return "ème";
+    }
+
+    /**
+     * Nettoie le formulaire HTML
+     */
+    cleanupForm() {
+        const formContainer = document.getElementById("name-input-container");
+        if (formContainer) {
+            formContainer.remove();
+        }
+    }
+
+    /**
+     * Affiche le bouton pour retourner au menu
+     */
+    showReturnToMenuButton() {
+        // Afficher le rang si le score a été sauvegardé
+        if (this.scoreSaved && this.playerRank) {
+            const rankText = this.add.text(
+                512,
+                500,
+                `🏆 Vous êtes ${this.playerRank}${this.getOrdinalSuffix(
+                    this.playerRank
+                )} au classement !`,
+                {
+                    fontFamily: "Arial",
+                    fontSize: "24px",
+                    color: "#FFD700",
+                    stroke: "#000000",
+                    strokeThickness: 3,
+                    align: "center",
+                }
+            );
+            rankText.setOrigin(0.5);
+        }
+
+        // Instructions pour retourner au menu
+        const instructionsText = this.add.text(
+            512,
+            580,
+            "Appuyez sur ESPACE ou cliquez pour retourner au menu",
+            {
+                fontFamily: "Arial",
+                fontSize: "20px",
+                color: "#cccccc",
+                stroke: "#000000",
+                strokeThickness: 2,
+                align: "center",
+            }
+        );
+        instructionsText.setOrigin(0.5);
+
+        // Animation de pulsation pour les instructions
+        this.tweens.add({
+            targets: instructionsText,
+            alpha: 0.3,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+        });
+
+        // Touche espace pour retourner au menu
+        this.input.keyboard?.on("keydown-SPACE", () => {
+            this.changeScene();
+        });
+
+        // Clic pour retourner au menu
+        this.input.on("pointerdown", () => {
+            this.changeScene();
+        });
+    }
+
+    changeScene() {
+        this.cleanupForm();
+        this.scene.start("MainMenu");
+    }
+
+    /**
+     * Nettoyage quand on quitte la scène
+     */
+    shutdown() {
+        this.cleanupForm();
+    }
+
+    /* END-USER-CODE */
 }
 
 /* END OF COMPILED CODE */
 
 // You can write more code here
+
