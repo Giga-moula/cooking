@@ -71,11 +71,47 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("grandma-front", "assets/grandma_blue.png");
         this.load.image("grandma-back", "assets/grandma_blue_back.png");
         this.load.image("grandma-side", "assets/grandma_blue_side.png");
+
+        // Charger les tuiles de table
+        this.load.image("table-mono", "assets/table/table-mono.png");
+        this.load.image("table-open-left", "assets/table/table-open-left.png");
+        this.load.image("table-open-right", "assets/table/table-open-right.png");
+        this.load.image("table-open-left-top", "assets/table/table-open-left-top.png");
+        this.load.image("table-open-right-left", "assets/table/table-open-right-left.png");
+        this.load.image("table-open-right-left-top", "assets/table/table-open-right-left-top.png");
+        this.load.image("table-open-right-top", "assets/table/table-open-right-top.png");
+        this.load.image("table-open-bottom", "assets/table/table-open-bottom.png");
+        this.load.image("table-open-left-bottom", "assets/table/table-open-left-bottom.png");
+        this.load.image("table-open-right-bottom", "assets/table/table-open-right-bottom.png");
+        this.load.image("table-open-left-top-bottom", "assets/table/table-open-left-top-bottom.png");
+        this.load.image("table-open-right-top-bottom", "assets/table/table-open-right-top-bottom.png");
+        this.load.image("table-open-right-left-top-bottom", "assets/table/table-open-right-left-top-bottom.png");
+        this.load.image("table-open-top-bottom", "assets/table/table-open-top-bottom.png");
     }
 
     create() {
         //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
         //  For example, you can define global animations here, so we can use them in other scenes.
+
+        // Vérifier le chargement des textures de table
+        console.log('🔍 Vérification des textures de table chargées:');
+        const tableTextures = [
+            'table-mono', 'table-open-left', 'table-open-right', 'table-open-left-top',
+            'table-open-right-left', 'table-open-right-left-top', 'table-open-right-top',
+            'table-open-bottom', 'table-open-left-bottom', 'table-open-right-bottom',
+            'table-open-left-top-bottom', 'table-open-right-top-bottom', 'table-open-right-left-top-bottom',
+            'table-open-top-bottom'
+        ];
+        
+        tableTextures.forEach(key => {
+            const texture = this.textures.get(key);
+            if (texture) {
+                const frame = texture.getSourceImage();
+                console.log(`  ${key}: ${frame.width}x${frame.height}px`);
+            } else {
+                console.error(`  ❌ ${key}: NON CHARGÉE`);
+            }
+        });
 
         //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
         this.scene.start("MainMenu");

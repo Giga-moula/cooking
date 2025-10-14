@@ -18,7 +18,7 @@ export default class Game extends Phaser.Scene {
     private mapOffsetX: number = 272;
     private mapOffsetY: number = 144;
 
-    // Managers
+    // Managers1
     private playerManager?: PlayerManager;
     private mapManager?: MapManager;
     private inventoryManager?: InventoryManager;

@@ -2,6 +2,8 @@
  * Utilitaires pour la conversion de coordonnées de grille
  */
 
+import { TableTileManager } from "../managers/TableTileManager";
+
 export class IsometricUtils {
     // Taille des tiles en pixels (carrés)
     static TILE_WIDTH = 48;
@@ -49,6 +51,7 @@ export class IsometricMap {
     private solidTiles: Map<string, Phaser.Physics.Arcade.Sprite>;
     private counterTiles: Map<string, Phaser.Physics.Arcade.Sprite>;
     private mapData: number[][];
+    private tableTileManager?: TableTileManager;
     
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -68,12 +71,37 @@ export class IsometricMap {
     createMap(mapData: number[][], tileTextures: { [key: number]: string }, offsetX: number = 0, offsetY: number = 0) {
         this.mapData = mapData;
         
+        // Initialiser le gestionnaire de tables
+        this.tableTileManager = new TableTileManager(mapData);
+        const tableConfigs = this.tableTileManager.generateTableConfigurations();
+        
+        // Afficher les configurations pour débogage
+        this.tableTileManager.debugConfigurations(tableConfigs);
+        
+        // Créer une map des configurations de tables pour accès rapide
+        const tableConfigMap = new Map<string, string>();
+        tableConfigs.forEach(config => {
+            tableConfigMap.set(`${config.gridX},${config.gridY}`, config.texture);
+        });
+        
+        // Créer les tiles
         for (let y = 0; y < mapData.length; y++) {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs), 9 = poubelle (impassable mais interactive)
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6);
+                    const key = `${x},${y}`;
+                    
+                    // Si c'est une table (type 5), utiliser la configuration calculée
+                    if (tileType === 5 && tableConfigMap.has(key)) {
+                        const texture = tableConfigMap.get(key)!;
+                        
+                        // Créer la table (une seule couche maintenant)
+                        this.createTile(x, y, texture, offsetX, offsetY, true);
+                    } else {
+                        // Autres tiles normales
+                        // 4 = mur solide (impassable), 6,7,8 = tiles d'ingrédients (impassables mais interactifs), 9 = poubelle (impassable mais interactive), 10 = zone de livraison
+                        this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType >= 6);
+                    }
                 }
             }
         }
@@ -99,15 +127,46 @@ export class IsometricMap {
             body.setSize(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
             
             // Différencier les murs des plans de travail et des boîtes d'ingrédients
-            if (texture === 'table-bottom') {
-                // Plan de travail : impassable mais interactif
-                // Ajuster la taille pour qu'il remplisse bien la tile
+            if (texture.startsWith('table-')) {
+                // Plan de travail (nouvelle gestion avec tuiles modulaires)
+                console.log(`🔍 Création table avec pieds:`, {
+                    position: `(${gridX}, ${gridY})`,
+                    texture,
+                    tileWidth: tile.width,
+                    tileHeight: tile.height,
+                    textureKey: tile.texture.key
+                });
+                
+                // Ajuster la taille pour qu'elle remplisse complètement la tile
                 const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
-                const scale = targetSize / Math.max(tile.width, tile.height);
+                const baseScale = targetSize / Math.max(tile.width, tile.height);
+                
+                // Agrandir les tables pour qu'elles remplissent mieux la tile (x2)
+                const scale = baseScale * 1.01;
+                
+                // Vérifier si le scale est valide
+                if (isNaN(scale) || !isFinite(scale) || scale === 0) {
+                    console.error(`❌ Scale invalide pour ${texture}:`, scale);
+                    tile.setScale(1);
+                } else {
+                    tile.setScale(scale);
+                }
+                
+                // Hitbox ajustée pour une meilleure précision
+                const hitboxSize = IsometricUtils.TILE_WIDTH * 0.7; // 70% de la taille de tile (33.6 pixels)
+                body.setSize(hitboxSize, hitboxSize);
+                
+                this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
+                
+                console.log(`✅ Plan de travail créé à la position (${gridX}, ${gridY}): ${texture} (scale: ${scale.toFixed(2)}, hitbox: ${hitboxSize}, visible: ${tile.visible})`);
+            } else if (texture === 'table-bottom') {
+                // Ancien système (pour compatibilité)
+                const targetSize = Math.max(IsometricUtils.TILE_WIDTH, IsometricUtils.TILE_HEIGHT);
+                const baseScale = targetSize / Math.max(tile.width, tile.height);
+                const scale = baseScale * 1.01; // Agrandir pour remplir la tile
                 tile.setScale(scale);
                 
-                // Hitbox ajustée pour une meilleure précision (même taille que les boîtes)
-                const hitboxSize = IsometricUtils.TILE_WIDTH * 0.7; // 70% de la taille de tile (33.6 pixels)
+                const hitboxSize = IsometricUtils.TILE_WIDTH * 0.7;
                 body.setSize(hitboxSize, hitboxSize);
                 
                 this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
@@ -161,6 +220,7 @@ export class IsometricMap {
         
         return tile;
     }
+
 
     /**
      * Récupère un tile à une position de grille donnée
