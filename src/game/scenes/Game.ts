@@ -5,6 +5,15 @@ import Phaser from "phaser";
 import { EventBus } from "../EventBus";
 import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
+
+// Interface pour les boîtes de recettes
+interface RecipeBox {
+    container: Phaser.GameObjects.Container;
+    colorBar: Phaser.GameObjects.Graphics;
+    dishIcon: Phaser.GameObjects.Image;
+    ingredientIcons: Phaser.GameObjects.Image[];
+    orderId: string | null;
+}
 /* END-USER-IMPORTS */
 
 export default class Game extends Phaser.Scene {
@@ -31,7 +40,16 @@ export default class Game extends Phaser.Scene {
     private carriedItem?: Phaser.GameObjects.Image; // Objet porté visible au-dessus du joueur
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private ingredientManager?: IngredientInteractionManager; // Gestionnaire de combinaisons d'ingrédients
-	private ingredientTiles: Map<string, string> = new Map(); // Mappage des tiles d'ingrédients (clé = position, valeur = type d'ingrédient)
+    private ingredientTiles: Map<string, string> = new Map(); // Mappage des tiles d'ingrédients (clé = position, valeur = type d'ingrédient)
+
+    // Système d'affichage des recettes
+    private recipeBoxes: RecipeBox[] = []; // Conteneurs des boîtes de recettes
+    private activeOrders: string[] = []; // Commandes actives (plats à réaliser)
+    private maxOrders: number = 4; // Nombre maximum de commandes simultanées
+
+    // Système de livraison
+    private deliveryZone: { x: number; y: number } = { x: 8, y: 8 }; // Position de la zone de livraison
+    private deliveryZoneGraphics?: Phaser.GameObjects.Graphics; // Visualisation de la zone
 
     constructor() {
         super("Game");
@@ -56,34 +74,35 @@ export default class Game extends Phaser.Scene {
         // Créer les tiles procéduralement
         this.createIsometricTiles();
 
-		// Créer la carte en grille
-		this.isoMap = new IsometricMap(this);
-		
-		// Exemple de carte (10x10)
-		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 0 = vide
-		const mapData = [
-			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-			[4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
-			[4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
-			[4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
-			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-			[4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
-			[4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
-			[4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
-			[4, 7, 8, 1, 1, 1, 1, 1, 2, 4],
-			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-		];
+        // Créer la carte en grille
+        this.isoMap = new IsometricMap(this);
 
-		const tileTextures = {
-			1: 'iso-grass',
-			2: 'iso-dirt',
-			3: 'iso-water',
-			4: 'iso-wall',
-			5: 'iso-counter',
-			6: 'iso-ingredient-chocolate',
-			7: 'iso-ingredient-butter',
-			8: 'iso-ingredient-wheat'
-		};
+        // Exemple de carte (10x10)
+        // 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 9 = zone de livraison, 0 = vide
+        const mapData = [
+            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+            [4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
+            [4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
+            [4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
+            [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
+            [4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
+            [4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
+            [4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
+            [4, 7, 8, 1, 1, 1, 1, 1, 9, 4],
+            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+        ];
+
+        const tileTextures = {
+            1: "iso-grass",
+            2: "iso-dirt",
+            3: "iso-water",
+            4: "iso-wall",
+            5: "iso-counter",
+            6: "iso-ingredient-chocolate",
+            7: "iso-ingredient-butter",
+            8: "iso-ingredient-wheat",
+            9: "iso-delivery-zone",
+        };
 
         // Créer la carte directement avec l'offset
         this.isoMap.createMap(
@@ -107,15 +126,22 @@ export default class Game extends Phaser.Scene {
             }
         }
 
-		// Placer un cookie sur un plan de travail
-		this.placeItemOnCounter(5, 2, 'cookie'); // Placer un cookie sur le plan de travail (5,2)
+        // Placer un cookie sur un plan de travail
+        this.placeItemOnCounter(5, 2, "cookie"); // Placer un cookie sur le plan de travail (5,2)
 
-		// Initialiser les tiles d'ingrédients
-		this.initializeIngredientTiles();
+        // Initialiser les tiles d'ingrédients
+        this.initializeIngredientTiles();
 
-		// Initialiser le gestionnaire d'ingrédients
-		this.ingredientManager = new IngredientInteractionManager();
-		this.ingredientManager.printDebugInfo();
+        // Initialiser le gestionnaire d'ingrédients
+        this.ingredientManager = new IngredientInteractionManager();
+        this.ingredientManager.printDebugInfo();
+
+        // Initialiser le système d'affichage des recettes
+        this.initializeRecipeDisplay();
+        this.generateNewOrders();
+
+        // Initialiser le système de livraison
+        this.initializeDeliveryZone();
 
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
@@ -124,9 +150,10 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             10,
-            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner | Espace : Menu\n" +
+            "Flèches : Déplacer | E : Ramasser/Déposer/Combiner/Livrer | Espace : Menu\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Ramasse un ingrédient et dépose-le sur un autre pour les combiner !",
+                "💡 Réalisez les commandes et livrez-les dans la zone rouge !\n" +
+                "🔍 DEBUG: Zone livraison = (8,8) - Regardez la console !",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -177,19 +204,36 @@ export default class Game extends Phaser.Scene {
         EventBus.emit("current-scene-ready", this);
     }
 
-	createIsometricTiles() {
-		// Créer des tiles carrés style Stardew Valley
-		const tileSize = 48; // Taille du carré
-		const tiles = [
-			{ key: 'iso-grass', color: 0x5CB85C, darkColor: 0x4A9D4A }, // Vert herbe
-			{ key: 'iso-dirt', color: 0x8B7355, darkColor: 0x6D5A43 },  // Marron terre
-			{ key: 'iso-water', color: 0x4A90E2, darkColor: 0x3A75C4 }, // Bleu eau
-			{ key: 'iso-wall', color: 0x666666, darkColor: 0x444444 },  // Gris mur
-			{ key: 'iso-counter', color: 0xD2691E, darkColor: 0xB8860B }, // Marron bois
-			{ key: 'iso-ingredient-chocolate', color: 0x8B4513, darkColor: 0x654321 }, // Marron chocolat
-			{ key: 'iso-ingredient-butter', color: 0xFFD700, darkColor: 0xDDAA00 }, // Jaune beurre
-			{ key: 'iso-ingredient-wheat', color: 0xF5DEB3, darkColor: 0xD2B48C }, // Beige farine
-		];
+    createIsometricTiles() {
+        // Créer des tiles carrés style Stardew Valley
+        const tileSize = 48; // Taille du carré
+        const tiles = [
+            { key: "iso-grass", color: 0x5cb85c, darkColor: 0x4a9d4a }, // Vert herbe
+            { key: "iso-dirt", color: 0x8b7355, darkColor: 0x6d5a43 }, // Marron terre
+            { key: "iso-water", color: 0x4a90e2, darkColor: 0x3a75c4 }, // Bleu eau
+            { key: "iso-wall", color: 0x666666, darkColor: 0x444444 }, // Gris mur
+            { key: "iso-counter", color: 0xd2691e, darkColor: 0xb8860b }, // Marron bois
+            {
+                key: "iso-ingredient-chocolate",
+                color: 0x8b4513,
+                darkColor: 0x654321,
+            }, // Marron chocolat
+            {
+                key: "iso-ingredient-butter",
+                color: 0xffd700,
+                darkColor: 0xddaa00,
+            }, // Jaune beurre
+            {
+                key: "iso-ingredient-wheat",
+                color: 0xf5deb3,
+                darkColor: 0xd2b48c,
+            }, // Beige farine
+            {
+                key: "iso-delivery-zone",
+                color: 0xff6b6b,
+                darkColor: 0xe53e3e,
+            }, // Rouge zone de livraison
+        ];
 
         tiles.forEach(({ key, color, darkColor }) => {
             const graphics = this.add.graphics();
@@ -220,10 +264,10 @@ export default class Game extends Phaser.Scene {
             graphics.destroy();
         });
 
-		// Les sprites de grand-mère sont déjà chargés dans le préchargeur
-		// Pas besoin de générer de texture, on utilise directement les images
-		// La texture de pâte (dough.png) est déjà chargée dans le préchargeur
-	}
+        // Les sprites de grand-mère sont déjà chargés dans le préchargeur
+        // Pas besoin de générer de texture, on utilise directement les images
+        // La texture de pâte (dough.png) est déjà chargée dans le préchargeur
+    }
 
     createPlayer() {
         // Positionner le joueur sur un tile d'herbe (case 2,2) pour éviter les bordures
@@ -659,121 +703,161 @@ export default class Game extends Phaser.Scene {
     interactWithCounter() {
         if (!this.isoMap || !this.player) return;
 
-		// Utiliser directement playerGridX et playerGridY qui sont déjà calculés
-		// dans updatePlayerGridPosition() basé sur la hitbox
-		
-		// Calculer la tile adjacente dans la direction regardée
-		let targetX = this.playerGridX + this.lastDirection.x;
-		let targetY = this.playerGridY + this.lastDirection.y;
-		
-		// Si le joueur est sur un plan de travail ou une tile d'ingrédient, interagir avec cette même position
-		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY) || this.isIngredientTile(this.playerGridX, this.playerGridY)) {
-			targetX = this.playerGridX;
-			targetY = this.playerGridY;
-			console.log(`Joueur sur tile interactive, interaction sur la même position (${targetX}, ${targetY})`);
-		}
-		
-		console.log(`Position joueur grille: (${this.playerGridX}, ${this.playerGridY}), Direction: (${this.lastDirection.x}, ${this.lastDirection.y}), Cible: (${targetX}, ${targetY})`);
-		
-		// Vérifier d'abord si c'est une tile d'ingrédient
-		if (this.isIngredientTile(targetX, targetY)) {
-			console.log(`Interaction avec tile d'ingrédient à la position (${targetX}, ${targetY})`);
-			
-			if (this.inventory.length === 0) {
-				// Récupérer l'ingrédient (inventaire vide)
-				const ingredientType = this.getIngredientFromTile(targetX, targetY);
-				if (ingredientType) {
-					this.inventory.push(ingredientType);
-					this.createCarriedItem(ingredientType); // Créer l'objet porté visible
-					console.log(`Récupéré: ${ingredientType}`);
-				}
-		} else {
-			console.log('Inventaire plein (limite: 1 objet), ne peut pas récupérer d\'ingrédient');
-		}
-		}
-		// Sinon, vérifier si c'est un plan de travail
-		else if (this.isoMap.isCounter(targetX, targetY)) {
-			console.log(`Interaction avec le plan de travail à la position (${targetX}, ${targetY})`);
-			
-			// Vérifier s'il y a un objet sur ce plan de travail
-			const hasItem = this.hasItemOnCounter(targetX, targetY);
-			console.log(`Objet sur comptoir: ${hasItem}, Inventaire: ${this.inventory.length}`);
-			
-			if (hasItem && this.inventory.length === 0) {
-				// Ramasser l'objet (inventaire vide)
-				const itemType = this.removeItemFromCounter(targetX, targetY);
-				if (itemType) {
-					this.inventory.push(itemType);
-					this.createCarriedItem(itemType); // Créer l'objet porté visible
-					console.log(`Ramassé: ${itemType}`);
-				}
-			} else if (!hasItem && this.inventory.length > 0) {
-				// Poser l'objet (inventaire contient un objet)
-				const itemType = this.inventory.pop()!;
-				this.placeItemOnCounter(targetX, targetY, itemType);
-				this.removeCarriedItem(); // Supprimer l'objet porté visible
-				console.log(`Posé: ${itemType}`);
-			} else if (hasItem && this.inventory.length > 0) {
-				// Tenter une combinaison : ingrédient dans l'inventaire + ingrédient sur le comptoir
-				const itemInHand = this.inventory[0];
-				const itemOnCounter = this.getItemTypeOnCounter(targetX, targetY);
+        // Utiliser directement playerGridX et playerGridY qui sont déjà calculés
+        // dans updatePlayerGridPosition() basé sur la hitbox
 
-				if (itemOnCounter && this.ingredientManager) {
-					const resultId = this.ingredientManager
-						.getRecipeManager()
-						.combineIngredients(itemInHand, itemOnCounter);
+        // Calculer la tile adjacente dans la direction regardée
+        let targetX = this.playerGridX + this.lastDirection.x;
+        let targetY = this.playerGridY + this.lastDirection.y;
 
-					if (resultId) {
-						// Combinaison réussie !
-						console.log(
-							`✨ Combinaison réussie : ${itemInHand} + ${itemOnCounter} = ${resultId}`
-						);
+        // Si le joueur est sur un plan de travail, une tile d'ingrédient ou une zone de livraison, interagir avec cette même position
+        if (
+            this.isoMap.isCounter(this.playerGridX, this.playerGridY) ||
+            this.isIngredientTile(this.playerGridX, this.playerGridY) ||
+            this.isDeliveryZone(this.playerGridX, this.playerGridY)
+        ) {
+            targetX = this.playerGridX;
+            targetY = this.playerGridY;
+            console.log(
+                `Joueur sur tile interactive, interaction sur la même position (${targetX}, ${targetY})`
+            );
+        }
 
-						// Retirer l'ingrédient de l'inventaire
-						this.inventory.pop();
-						this.removeCarriedItem();
+        console.log(
+            `Position joueur grille: (${this.playerGridX}, ${this.playerGridY}), Direction: (${this.lastDirection.x}, ${this.lastDirection.y}), Cible: (${targetX}, ${targetY})`
+        );
 
-						// Retirer l'ingrédient du comptoir
-						this.removeItemFromCounter(targetX, targetY);
+        // Vérifier d'abord si c'est une tile d'ingrédient
+        if (this.isIngredientTile(targetX, targetY)) {
+            console.log(
+                `Interaction avec tile d'ingrédient à la position (${targetX}, ${targetY})`
+            );
 
-						// Créer le résultat au même endroit
-						this.placeItemOnCounter(targetX, targetY, resultId);
+            if (this.inventory.length === 0) {
+                // Récupérer l'ingrédient (inventaire vide)
+                const ingredientType = this.getIngredientFromTile(
+                    targetX,
+                    targetY
+                );
+                if (ingredientType) {
+                    this.inventory.push(ingredientType);
+                    this.createCarriedItem(ingredientType); // Créer l'objet porté visible
+                    console.log(`Récupéré: ${ingredientType}`);
+                }
+            } else {
+                console.log(
+                    "Inventaire plein (limite: 1 objet), ne peut pas récupérer d'ingrédient"
+                );
+            }
+        }
+        // Sinon, vérifier si c'est une zone de livraison
+        else if (this.isDeliveryZone(targetX, targetY)) {
+            console.log(
+                `Interaction avec la zone de livraison à la position (${targetX}, ${targetY})`
+            );
+            this.processDelivery();
+        }
+        // Sinon, vérifier si c'est un plan de travail
+        else if (this.isoMap.isCounter(targetX, targetY)) {
+            console.log(
+                `Interaction avec le plan de travail à la position (${targetX}, ${targetY})`
+            );
 
-						// Effet visuel et message
-						this.playFusionEffect(targetX, targetY);
-						const ingredient = this.ingredientManager
-							.getRecipeManager()
-							.getIngredient(resultId);
-						if (ingredient) {
-							this.showCombinationMessage(
-								`✨ ${ingredient.name} créé !`,
-								targetX,
-								targetY
-							);
-						}
-					} else {
-						// Pas de recette valide
-						console.log(
-							`❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
-						);
-						this.showCombinationMessage(
-							"❌ Pas de recette",
-							targetX,
-							targetY
-						);
-					}
-				} else {
-					console.log('Inventaire plein (limite: 1 objet), ne peut pas ramasser');
-				}
-			} else if (hasItem && this.inventory.length === 0) {
-				console.log('Erreur: objet détecté mais inventaire vide');
-			} else {
-				console.log('Aucun objet sur le plan de travail, inventaire vide');
-			}
-		} else {
-			console.log(`Aucune tile interactive à la position (${targetX}, ${targetY})`);
-		}
-	}
+            // Vérifier s'il y a un objet sur ce plan de travail
+            const hasItem = this.hasItemOnCounter(targetX, targetY);
+            console.log(
+                `Objet sur comptoir: ${hasItem}, Inventaire: ${this.inventory.length}`
+            );
+
+            if (hasItem && this.inventory.length === 0) {
+                // Ramasser l'objet (inventaire vide)
+                const itemType = this.removeItemFromCounter(targetX, targetY);
+                if (itemType) {
+                    this.inventory.push(itemType);
+                    this.createCarriedItem(itemType); // Créer l'objet porté visible
+                    console.log(`Ramassé: ${itemType}`);
+                }
+            } else if (!hasItem && this.inventory.length > 0) {
+                // Poser l'objet (inventaire contient un objet)
+                const itemType = this.inventory.pop()!;
+                this.placeItemOnCounter(targetX, targetY, itemType);
+                this.removeCarriedItem(); // Supprimer l'objet porté visible
+                console.log(`Posé: ${itemType}`);
+            } else if (hasItem && this.inventory.length > 0) {
+                // Tenter une combinaison : ingrédient dans l'inventaire + ingrédient sur le comptoir
+                const itemInHand = this.inventory[0];
+                const itemOnCounter = this.getItemTypeOnCounter(
+                    targetX,
+                    targetY
+                );
+
+                if (itemOnCounter && this.ingredientManager) {
+                    const resultId = this.ingredientManager
+                        .getRecipeManager()
+                        .combineIngredients(itemInHand, itemOnCounter);
+
+                    if (resultId) {
+                        // Combinaison réussie !
+                        console.log(
+                            `✨ Combinaison réussie : ${itemInHand} + ${itemOnCounter} = ${resultId}`
+                        );
+
+                        // Retirer l'ingrédient de l'inventaire
+                        this.inventory.pop();
+                        this.removeCarriedItem();
+
+                        // Retirer l'ingrédient du comptoir
+                        this.removeItemFromCounter(targetX, targetY);
+
+                        // Créer le résultat au même endroit
+                        this.placeItemOnCounter(targetX, targetY, resultId);
+
+                        // Effet visuel et message
+                        this.playFusionEffect(targetX, targetY);
+                        const ingredient = this.ingredientManager
+                            .getRecipeManager()
+                            .getIngredient(resultId);
+                        if (ingredient) {
+                            this.showCombinationMessage(
+                                `✨ ${ingredient.name} créé !`,
+                                targetX,
+                                targetY
+                            );
+                        }
+
+                        // Note: La validation des commandes se fait maintenant lors de la livraison
+                        console.log(
+                            `✨ ${resultId} créé - à livrer dans la zone rouge !`
+                        );
+                    } else {
+                        // Pas de recette valide
+                        console.log(
+                            `❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
+                        );
+                        this.showCombinationMessage(
+                            "❌ Pas de recette",
+                            targetX,
+                            targetY
+                        );
+                    }
+                } else {
+                    console.log(
+                        "Inventaire plein (limite: 1 objet), ne peut pas ramasser"
+                    );
+                }
+            } else if (hasItem && this.inventory.length === 0) {
+                console.log("Erreur: objet détecté mais inventaire vide");
+            } else {
+                console.log(
+                    "Aucun objet sur le plan de travail, inventaire vide"
+                );
+            }
+        } else {
+            console.log(
+                `Aucune tile interactive à la position (${targetX}, ${targetY})`
+            );
+        }
+    }
 
     placeItemOnCounter(gridX: number, gridY: number, itemType: string) {
         if (!this.isoMap || !this.isoMap.isCounter(gridX, gridY)) return false;
@@ -923,37 +1007,503 @@ export default class Game extends Phaser.Scene {
         }
     }
 
-	removeCarriedItem() {
-		if (this.carriedItem) {
-			this.carriedItem.destroy();
-			this.carriedItem = undefined;
-		}
-	}
+    removeCarriedItem() {
+        if (this.carriedItem) {
+            this.carriedItem.destroy();
+            this.carriedItem = undefined;
+        }
+    }
 
-	initializeIngredientTiles() {
-		// Mapper les positions des tiles d'ingrédients selon la carte
-		// Position (1,1) = chocolat
-		this.ingredientTiles.set('1,1', 'chocolate');
-		// Position (1,8) = beurre  
-		this.ingredientTiles.set('1,8', 'butter');
-		// Position (2,8) = farine
-		this.ingredientTiles.set('2,8', 'wheat_floor');
-		
-		console.log('Tiles d\'ingrédients initialisées:', Array.from(this.ingredientTiles.entries()));
-	}
+    initializeIngredientTiles() {
+        // Mapper les positions des tiles d'ingrédients selon la carte
+        // Position (1,1) = chocolat
+        this.ingredientTiles.set("1,1", "chocolate");
+        // Position (1,8) = beurre
+        this.ingredientTiles.set("1,8", "butter");
+        // Position (2,8) = farine
+        this.ingredientTiles.set("2,8", "wheat_floor");
 
-	isIngredientTile(gridX: number, gridY: number): boolean {
-		const key = `${gridX},${gridY}`;
-		return this.ingredientTiles.has(key);
-	}
+        console.log(
+            "Tiles d'ingrédients initialisées:",
+            Array.from(this.ingredientTiles.entries())
+        );
+    }
 
-	getIngredientFromTile(gridX: number, gridY: number): string | null {
-		const key = `${gridX},${gridY}`;
-		return this.ingredientTiles.get(key) || null;
-	}
+    isIngredientTile(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        return this.ingredientTiles.has(key);
+    }
+
+    getIngredientFromTile(gridX: number, gridY: number): string | null {
+        const key = `${gridX},${gridY}`;
+        return this.ingredientTiles.get(key) || null;
+    }
 
     changeScene() {
         this.scene.start("GameOver");
+    }
+
+    /**
+     * Initialise l'affichage des recettes en haut à droite
+     */
+    initializeRecipeDisplay() {
+        // Créer un conteneur pour toutes les boîtes de recettes
+        const recipeContainer = this.add.container(
+            this.cameras.main.width - 20,
+            20
+        );
+        recipeContainer.setScrollFactor(0); // Fixe à l'écran
+        recipeContainer.setDepth(2000); // Au-dessus de tout
+
+        // Créer les boîtes de recettes
+        for (let i = 0; i < this.maxOrders; i++) {
+            this.createRecipeBox(recipeContainer, i);
+        }
+    }
+
+    /**
+     * Crée une boîte de recette individuelle
+     */
+    createRecipeBox(parent: Phaser.GameObjects.Container, index: number) {
+        const boxWidth = 120;
+        const boxHeight = 140;
+        const spacing = 10;
+        const x = -(index * (boxWidth + spacing) + boxWidth); // Positionner de droite à gauche
+        const y = 0;
+
+        // Créer le conteneur de la boîte
+        const boxContainer = this.add.container(x, y);
+        parent.add(boxContainer);
+
+        // Fond de la boîte (style Overcooked)
+        const background = this.add.graphics();
+        background.fillStyle(0xf0f0f0, 1); // Gris clair
+        background.fillRoundedRect(0, 0, boxWidth, boxHeight, 8);
+        background.lineStyle(2, 0x333333, 1); // Bordure noire
+        background.strokeRoundedRect(0, 0, boxWidth, boxHeight, 8);
+        boxContainer.add(background);
+
+        // Barre de couleur en haut (sera mise à jour selon le type de plat)
+        const colorBar = this.add.graphics();
+        colorBar.fillStyle(0x4caf50, 1); // Vert par défaut
+        colorBar.fillRoundedRect(2, 2, boxWidth - 4, 8, 4);
+        boxContainer.add(colorBar);
+
+        // Zone du plat fini (partie supérieure)
+        const dishArea = this.add.graphics();
+        dishArea.fillStyle(0xffffff, 1); // Blanc
+        dishArea.fillRoundedRect(5, 15, boxWidth - 10, 60, 4);
+        dishArea.lineStyle(1, 0xcccccc, 1);
+        dishArea.strokeRoundedRect(5, 15, boxWidth - 10, 60, 4);
+        boxContainer.add(dishArea);
+
+        // Zone des ingrédients (partie inférieure)
+        const ingredientArea = this.add.graphics();
+        ingredientArea.fillStyle(0xe3f2fd, 1); // Bleu très clair
+        ingredientArea.fillRoundedRect(5, 80, boxWidth - 10, 55, 4);
+        ingredientArea.lineStyle(1, 0xcccccc, 1);
+        ingredientArea.strokeRoundedRect(5, 80, boxWidth - 10, 55, 4);
+        boxContainer.add(ingredientArea);
+
+        // Icône du plat fini (sera mise à jour)
+        const dishIcon = this.add.image(boxWidth / 2, 45, "cookie"); // Par défaut
+        dishIcon.setScale(1.5);
+        boxContainer.add(dishIcon);
+
+        // Icônes des ingrédients (seront mises à jour) - AGRANDIES
+        const ingredientIcons: Phaser.GameObjects.Image[] = [];
+        for (let i = 0; i < 3; i++) {
+            const icon = this.add.image(35 + i * 50, 110, "chocolate"); // Écart augmenté de 25 à 35
+            icon.setScale(1.2); // Plus grandes que l'original (0.4)
+            icon.setVisible(false); // Caché par défaut
+            boxContainer.add(icon);
+            ingredientIcons.push(icon);
+        }
+
+        // Stocker les références pour les mises à jour
+        const recipeBox: RecipeBox = {
+            container: boxContainer,
+            colorBar: colorBar,
+            dishIcon: dishIcon,
+            ingredientIcons: ingredientIcons,
+            orderId: null,
+        };
+
+        this.recipeBoxes.push(recipeBox);
+    }
+
+    /**
+     * Génère de nouvelles commandes
+     */
+    generateNewOrders() {
+        if (!this.ingredientManager) return;
+
+        const recipeManager = this.ingredientManager.getRecipeManager();
+        const dishes = recipeManager.getDishes(); // Récupérer uniquement les plats finis
+
+        // Nettoyer les commandes existantes
+        this.activeOrders = [];
+        this.recipeBoxes.forEach((box) => {
+            box.orderId = null;
+            box.dishIcon.setVisible(false);
+            box.ingredientIcons.forEach((icon) => icon.setVisible(false));
+        });
+
+        // Générer de nouvelles commandes (2-4 commandes)
+        const numOrders = Phaser.Math.Between(2, this.maxOrders);
+        const availableDishes = [...dishes];
+
+        for (let i = 0; i < numOrders && availableDishes.length > 0; i++) {
+            const randomIndex = Phaser.Math.Between(
+                0,
+                availableDishes.length - 1
+            );
+            const dish = availableDishes[randomIndex];
+            availableDishes.splice(randomIndex, 1); // Éviter les doublons
+
+            this.activeOrders.push(dish.id);
+            this.updateRecipeBoxForDish(i, dish);
+        }
+    }
+
+    /**
+     * Met à jour une boîte de recette avec les données d'un plat fini
+     */
+    updateRecipeBoxForDish(boxIndex: number, dish: any) {
+        if (boxIndex >= this.recipeBoxes.length) return;
+
+        // Trouver la recette qui produit ce plat
+        const recipeManager = this.ingredientManager?.getRecipeManager();
+        if (!recipeManager) return;
+
+        const allRecipes = recipeManager.getAllRecipes();
+        const recipe = allRecipes.find((r) => r.result === dish.id);
+
+        if (!recipe) {
+            console.warn(`Aucune recette trouvée pour le plat: ${dish.id}`);
+            return;
+        }
+
+        this.updateRecipeBox(boxIndex, recipe);
+    }
+
+    /**
+     * Met à jour une boîte de recette avec les données d'une recette
+     */
+    updateRecipeBox(boxIndex: number, recipe: any) {
+        if (boxIndex >= this.recipeBoxes.length) return;
+
+        const box = this.recipeBoxes[boxIndex];
+        box.orderId = recipe.result;
+
+        // Mettre à jour la couleur de la barre selon le type de plat
+        let color = 0x4caf50; // Vert par défaut
+        switch (recipe.result) {
+            case "cookie":
+                color = 0xff9800; // Orange
+                break;
+            case "dough":
+                color = 0x8bc34a; // Vert clair
+                break;
+            default:
+                color = 0x4caf50; // Vert
+        }
+        box.colorBar.clear();
+        box.colorBar.fillStyle(color, 1);
+        box.colorBar.fillRoundedRect(2, 2, 116, 8, 4);
+
+        // Mettre à jour l'icône du plat fini
+        box.dishIcon.setTexture(recipe.result);
+        box.dishIcon.setVisible(true);
+
+        // Mettre à jour les icônes des ingrédients (utiliser ingredient1 et ingredient2)
+        const ingredients = [recipe.ingredient1, recipe.ingredient2];
+        box.ingredientIcons.forEach((icon, index) => {
+            if (index < ingredients.length) {
+                icon.setTexture(ingredients[index]);
+                icon.setVisible(true);
+            } else {
+                icon.setVisible(false);
+            }
+        });
+    }
+
+    /**
+     * Vérifie si un plat réalisé correspond à une commande
+     */
+    checkOrderCompletion(dishId: string): boolean {
+        const orderIndex = this.activeOrders.indexOf(dishId);
+        if (orderIndex !== -1) {
+            // Commande complétée !
+            this.completeOrder(orderIndex);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Marque une commande comme complétée
+     */
+    completeOrder(orderIndex: number) {
+        if (orderIndex >= this.activeOrders.length) return;
+
+        // Supprimer la commande de la liste
+        this.activeOrders.splice(orderIndex, 1);
+
+        // Effacer la boîte de recette
+        const box = this.recipeBoxes[orderIndex];
+        box.orderId = null;
+        box.dishIcon.setVisible(false);
+        box.ingredientIcons.forEach((icon) => icon.setVisible(false));
+
+        // Effet visuel de succès
+        this.showOrderCompleteEffect(orderIndex);
+
+        // Générer une nouvelle commande après un délai
+        this.time.delayedCall(2000, () => {
+            this.generateNewOrders();
+        });
+    }
+
+    /**
+     * Affiche un effet visuel quand une commande est complétée
+     */
+    showOrderCompleteEffect(orderIndex: number) {
+        const box = this.recipeBoxes[orderIndex];
+        const x = box.container.x + 60; // Centre de la boîte
+        const y = box.container.y + 70;
+
+        // Effet de particules
+        try {
+            const particles = this.add.particles(x, y, "star", {
+                speed: { min: -50, max: 50 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 0.3, end: 0 },
+                lifespan: 800,
+                quantity: 10,
+                blendMode: "ADD",
+            });
+
+            this.time.delayedCall(800, () => {
+                particles.destroy();
+            });
+        } catch (e) {
+            console.log("Effet de particules non disponible");
+        }
+
+        // Message de succès
+        const message = this.add.text(x, y - 20, "✓ Commande terminée !", {
+            fontFamily: "Arial",
+            fontSize: "16px",
+            color: "#4CAF50",
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+        message.setOrigin(0.5);
+        message.setScrollFactor(0);
+        message.setDepth(3000);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 40,
+            alpha: 0,
+            duration: 1500,
+            ease: "Cubic.easeOut",
+            onComplete: () => message.destroy(),
+        });
+    }
+
+    /**
+     * Initialise la zone de livraison
+     */
+    initializeDeliveryZone() {
+        // Créer une visualisation de la zone de livraison
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        this.deliveryZoneGraphics = this.add.graphics();
+        this.deliveryZoneGraphics.fillStyle(0xff6b6b, 0.3); // Rouge semi-transparent
+        this.deliveryZoneGraphics.fillRoundedRect(x - 24, y - 24, 48, 48, 8);
+        this.deliveryZoneGraphics.lineStyle(3, 0xff6b6b, 0.8);
+        this.deliveryZoneGraphics.strokeRoundedRect(x - 24, y - 24, 48, 48, 8);
+        this.deliveryZoneGraphics.setDepth(100);
+
+        // Ajouter un texte "LIVRAISON"
+        const deliveryText = this.add.text(x, y - 30, "LIVRAISON", {
+            fontFamily: "Arial",
+            fontSize: "12px",
+            color: "#FF6B6B",
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+        deliveryText.setOrigin(0.5);
+        deliveryText.setDepth(101);
+    }
+
+    /**
+     * Vérifie si le joueur est dans la zone de livraison
+     */
+    isInDeliveryZone(): boolean {
+        return (
+            this.playerGridX === this.deliveryZone.x &&
+            this.playerGridY === this.deliveryZone.y
+        );
+    }
+
+    /**
+     * Vérifie si une position est une zone de livraison
+     */
+    isDeliveryZone(gridX: number, gridY: number): boolean {
+        const isDelivery =
+            gridX === this.deliveryZone.x && gridY === this.deliveryZone.y;
+        console.log(
+            `🔍 isDeliveryZone(${gridX}, ${gridY}) = ${isDelivery} (zone configurée: ${this.deliveryZone.x}, ${this.deliveryZone.y})`
+        );
+        return isDelivery;
+    }
+
+    /**
+     * Vérifie si le joueur regarde vers la zone de livraison
+     */
+    isLookingAtDeliveryZone(): boolean {
+        const targetX = this.playerGridX + this.lastDirection.x;
+        const targetY = this.playerGridY + this.lastDirection.y;
+        const isLooking = this.isDeliveryZone(targetX, targetY);
+        console.log(
+            `👀 isLookingAtDeliveryZone() = ${isLooking} (regarde vers ${targetX}, ${targetY})`
+        );
+        return isLooking;
+    }
+
+    /**
+     * Traite la livraison d'un plat
+     */
+    processDelivery() {
+        console.log(
+            `🚚 processDelivery appelé - Position joueur: (${this.playerGridX}, ${this.playerGridY}), Zone: (${this.deliveryZone.x}, ${this.deliveryZone.y}), Inventaire: ${this.inventory.length}`
+        );
+
+        // Vérifier si le joueur est dans la zone OU regarde vers la zone
+        const isInZone = this.isInDeliveryZone();
+        const isLookingAtZone = this.isLookingAtDeliveryZone();
+
+        if ((!isInZone && !isLookingAtZone) || this.inventory.length === 0) {
+            console.log(
+                `❌ Conditions non remplies - Dans zone: ${isInZone}, Regarde zone: ${isLookingAtZone}, Inventaire vide: ${
+                    this.inventory.length === 0
+                }`
+            );
+            return;
+        }
+
+        const carriedItem = this.inventory[0];
+
+        // Vérifier si c'est un plat fini
+        if (this.ingredientManager?.getRecipeManager().isDish(carriedItem)) {
+            // Vérifier si ce plat correspond à une commande
+            if (this.checkOrderCompletion(carriedItem)) {
+                // Supprimer l'objet de l'inventaire
+                this.inventory.pop();
+                this.removeCarriedItem();
+
+                console.log(`🎉 Plat livré avec succès : ${carriedItem}`);
+                this.showDeliverySuccessEffect();
+            } else {
+                console.log(
+                    `❌ Ce plat n'est pas dans les commandes : ${carriedItem}`
+                );
+                this.showDeliveryErrorEffect();
+            }
+        } else {
+            console.log(`❌ Ce n'est pas un plat fini : ${carriedItem}`);
+            this.showDeliveryErrorEffect();
+        }
+    }
+
+    /**
+     * Affiche un effet de succès pour la livraison
+     */
+    showDeliverySuccessEffect() {
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        // Effet de particules
+        try {
+            const particles = this.add.particles(x, y, "star", {
+                speed: { min: -100, max: 100 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 0.5, end: 0 },
+                lifespan: 1000,
+                quantity: 20,
+                blendMode: "ADD",
+            });
+
+            this.time.delayedCall(1000, () => {
+                particles.destroy();
+            });
+        } catch (e) {
+            console.log("Effet de particules non disponible");
+        }
+
+        // Message de succès
+        const message = this.add.text(x, y - 50, "✓ Livré !", {
+            fontFamily: "Arial",
+            fontSize: "20px",
+            color: "#4CAF50",
+            stroke: "#ffffff",
+            strokeThickness: 3,
+        });
+        message.setOrigin(0.5);
+        message.setDepth(3000);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 80,
+            alpha: 0,
+            duration: 2000,
+            ease: "Cubic.easeOut",
+            onComplete: () => message.destroy(),
+        });
+    }
+
+    /**
+     * Affiche un effet d'erreur pour la livraison
+     */
+    showDeliveryErrorEffect() {
+        const screenPos = IsometricUtils.gridToScreen(
+            this.deliveryZone.x,
+            this.deliveryZone.y
+        );
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY;
+
+        // Message d'erreur
+        const message = this.add.text(x, y - 50, "❌ Pas de commande", {
+            fontFamily: "Arial",
+            fontSize: "16px",
+            color: "#FF6B6B",
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+        message.setOrigin(0.5);
+        message.setDepth(3000);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 80,
+            alpha: 0,
+            duration: 1500,
+            ease: "Cubic.easeOut",
+            onComplete: () => message.destroy(),
+        });
     }
 
     /**
