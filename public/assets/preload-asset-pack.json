@@ -15,6 +15,21 @@
                 "url": "assets/cookie.png",
                 "type": "image",
                 "key": "cookie"
+            },
+            {
+                "url": "assets/chocolate.png",
+                "type": "image",
+                "key": "chocolate"
+            },
+            {
+                "url": "assets/butter.png",
+                "type": "image",
+                "key": "butter"
+            },
+            {
+                "url": "assets/wheat_floor.png",
+                "type": "image",
+                "key": "wheat_floor"
             }
         ]
     },

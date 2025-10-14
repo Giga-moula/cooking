@@ -29,6 +29,7 @@ export default class Game extends Phaser.Scene {
 	private itemsOnCounters: Map<string, Phaser.GameObjects.Image> = new Map(); // Objets posés sur les plans de travail
 	private carriedItem?: Phaser.GameObjects.Image; // Objet porté visible au-dessus du joueur
 	private lastDirection: { x: number, y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
+	private ingredientTiles: Map<string, string> = new Map(); // Mappage des tiles d'ingrédients (clé = position, valeur = type d'ingrédient)
 
 	constructor() {
 		super("Game");
@@ -57,17 +58,17 @@ export default class Game extends Phaser.Scene {
 		this.isoMap = new IsometricMap(this);
 		
 		// Exemple de carte (10x10)
-		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 0 = vide
+		// 1 = herbe, 2 = terre, 3 = eau, 4 = mur, 5 = plan de travail, 6 = récupérateur chocolat, 7 = récupérateur beurre, 8 = récupérateur farine, 0 = vide
 		const mapData = [
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-			[4, 1, 2, 2, 1, 1, 1, 3, 3, 4],
+			[4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
 			[4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
 			[4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
 			[4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
 			[4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
 			[4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
 			[4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
-			[4, 1, 1, 1, 1, 1, 1, 1, 2, 4],
+			[4, 7, 8, 1, 1, 1, 1, 1, 2, 4],
 			[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 		];
 
@@ -76,7 +77,10 @@ export default class Game extends Phaser.Scene {
 			2: 'iso-dirt',
 			3: 'iso-water',
 			4: 'iso-wall',
-			5: 'iso-counter'
+			5: 'iso-counter',
+			6: 'iso-ingredient-chocolate',
+			7: 'iso-ingredient-butter',
+			8: 'iso-ingredient-wheat'
 		};
 
 		// Créer la carte directement avec l'offset
@@ -99,12 +103,15 @@ export default class Game extends Phaser.Scene {
 		// Placer un cookie sur un plan de travail
 		this.placeItemOnCounter(5, 2, 'cookie'); // Placer un cookie sur le plan de travail (5,2)
 
+		// Initialiser les tiles d'ingrédients
+		this.initializeIngredientTiles();
+
 		// Configurer les contrôles
 		this.cursors = this.input.keyboard?.createCursorKeys();
 
 		// Texte d'aide
 		const helpText = this.add.text(10, 10, 
-			'Utilise les flèches pour te déplacer librement\nE pour interagir avec les plans de travail\nEspace pour revenir au menu', 
+			'Utilise les flèches pour te déplacer librement\nE pour interagir avec les plans de travail et récupérer des ingrédients\nEspace pour revenir au menu', 
 			{
 				fontFamily: 'Arial',
 				fontSize: '16px',
@@ -164,6 +171,9 @@ export default class Game extends Phaser.Scene {
 			{ key: 'iso-water', color: 0x4A90E2, darkColor: 0x3A75C4 }, // Bleu eau
 			{ key: 'iso-wall', color: 0x666666, darkColor: 0x444444 },  // Gris mur
 			{ key: 'iso-counter', color: 0xD2691E, darkColor: 0xB8860B }, // Marron bois
+			{ key: 'iso-ingredient-chocolate', color: 0x8B4513, darkColor: 0x654321 }, // Marron chocolat
+			{ key: 'iso-ingredient-butter', color: 0xFFD700, darkColor: 0xDDAA00 }, // Jaune beurre
+			{ key: 'iso-ingredient-wheat', color: 0xF5DEB3, darkColor: 0xD2B48C }, // Beige farine
 		];
 
 		tiles.forEach(({ key, color, darkColor }) => {
@@ -577,16 +587,33 @@ export default class Game extends Phaser.Scene {
 		let targetX = this.playerGridX + this.lastDirection.x;
 		let targetY = this.playerGridY + this.lastDirection.y;
 		
-		// Si le joueur est sur un plan de travail, interagir avec ce même plan
-		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY)) {
+		// Si le joueur est sur un plan de travail ou une tile d'ingrédient, interagir avec cette même position
+		if (this.isoMap.isCounter(this.playerGridX, this.playerGridY) || this.isIngredientTile(this.playerGridX, this.playerGridY)) {
 			targetX = this.playerGridX;
 			targetY = this.playerGridY;
-			console.log(`Joueur sur plan de travail, interaction sur la même position (${targetX}, ${targetY})`);
+			console.log(`Joueur sur tile interactive, interaction sur la même position (${targetX}, ${targetY})`);
 		}
 		
 		console.log(`Position joueur grille: (${this.playerGridX}, ${this.playerGridY}), Direction: (${this.lastDirection.x}, ${this.lastDirection.y}), Cible: (${targetX}, ${targetY})`);
 		
-		if (this.isoMap.isCounter(targetX, targetY)) {
+		// Vérifier d'abord si c'est une tile d'ingrédient
+		if (this.isIngredientTile(targetX, targetY)) {
+			console.log(`Interaction avec tile d'ingrédient à la position (${targetX}, ${targetY})`);
+			
+			if (this.inventory.length === 0) {
+				// Récupérer l'ingrédient (inventaire vide)
+				const ingredientType = this.getIngredientFromTile(targetX, targetY);
+				if (ingredientType) {
+					this.inventory.push(ingredientType);
+					this.createCarriedItem(ingredientType); // Créer l'objet porté visible
+					console.log(`Récupéré: ${ingredientType}`);
+				}
+			} else {
+				console.log('Inventaire plein (limite: 1 objet), ne peut pas récupérer d\'ingrédient');
+			}
+		}
+		// Sinon, vérifier si c'est un plan de travail
+		else if (this.isoMap.isCounter(targetX, targetY)) {
 			console.log(`Interaction avec le plan de travail à la position (${targetX}, ${targetY})`);
 			
 			// Vérifier s'il y a un objet sur ce plan de travail
@@ -614,20 +641,8 @@ export default class Game extends Phaser.Scene {
 			} else {
 				console.log('Aucun objet sur le plan de travail, inventaire vide');
 			}
-			
-			// Effet visuel sur le plan de travail (supprimé pour éviter l'animation lors de la pose)
-			// const counterTile = this.isoMap.getCounter(targetX, targetY);
-			// if (counterTile) {
-			// 	this.tweens.add({
-			// 		targets: counterTile,
-			// 		alpha: 0.5,
-			// 		duration: 200,
-			// 		yoyo: true,
-			// 		repeat: 1
-			// 	});
-			// }
 		} else {
-			console.log(`Aucun plan de travail à la position (${targetX}, ${targetY})`);
+			console.log(`Aucune tile interactive à la position (${targetX}, ${targetY})`);
 		}
 	}
 
@@ -726,6 +741,28 @@ export default class Game extends Phaser.Scene {
 			this.carriedItem.destroy();
 			this.carriedItem = undefined;
 		}
+	}
+
+	initializeIngredientTiles() {
+		// Mapper les positions des tiles d'ingrédients selon la carte
+		// Position (1,1) = chocolat
+		this.ingredientTiles.set('1,1', 'chocolate');
+		// Position (1,8) = beurre  
+		this.ingredientTiles.set('1,8', 'butter');
+		// Position (2,8) = farine
+		this.ingredientTiles.set('2,8', 'wheat_floor');
+		
+		console.log('Tiles d\'ingrédients initialisées:', Array.from(this.ingredientTiles.entries()));
+	}
+
+	isIngredientTile(gridX: number, gridY: number): boolean {
+		const key = `${gridX},${gridY}`;
+		return this.ingredientTiles.has(key);
+	}
+
+	getIngredientFromTile(gridX: number, gridY: number): string | null {
+		const key = `${gridX},${gridY}`;
+		return this.ingredientTiles.get(key) || null;
 	}
 
 	changeScene() {

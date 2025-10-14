@@ -72,8 +72,8 @@ export class IsometricMap {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif)
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5);
+                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs)
+                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6);
                 }
             }
         }
