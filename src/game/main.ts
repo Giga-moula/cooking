@@ -18,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
         default: "arcade",
         arcade: {
             gravity: { x: 0, y: 0 },
-            debug: true, // Affiche les hitboxes avec des bordures
+            debug: false, // Affiche les hitboxes avec des bordures
         },
     },
     scene: [Boot, Preloader, MainMenu, MainGame, GameOver, Leaderboard],
