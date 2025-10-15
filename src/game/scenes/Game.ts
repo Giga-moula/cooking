@@ -202,19 +202,19 @@ export default class Game extends Phaser.Scene {
             this.waveManager?.completeRecipe();
         });
 
-        // Démarrer la première vague
-        this.waveManager.startWave(1);
+        // Connecter le callback d'expiration pour décrémenter le compteur de commandes actives
+        this.orderDisplayManager.setOrderExpiredCallback(() => {
+            this.waveManager?.expireOrder();
+        });
 
-        // Initialiser le timer AVANT InteractionSystem
+        // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
         this.timerManager = new TimerManager(this);
         this.timerManager.initializeTimerDisplay(
             GameConfig.TIMER.DISPLAY_X,
             GameConfig.TIMER.DISPLAY_Y
         );
-        this.timerManager.start(GameConfig.TIMER.GAME_DURATION, () => {
-            // Callback quand le temps est écoulé
-            this.endGame();
-        });
+
+        // NE PAS démarrer immédiatement - attendre le countdown
 
         // Créer le système d'interaction orienté objet (APRÈS tous les managers)
         this.interactionSystem = new InteractionSystem(
@@ -235,6 +235,83 @@ export default class Game extends Phaser.Scene {
         });
 
         EventBus.emit("current-scene-ready", this);
+
+        // Démarrer le countdown de 3 secondes avant de commencer le jeu
+        this.startCountdown();
+    }
+
+    /**
+     * Affiche un countdown de 3 secondes avant de démarrer le jeu
+     */
+    private startCountdown(): void {
+        // Créer un texte de countdown au centre de l'écran
+        const countdownText = this.add.text(512, 384, "3", {
+            fontFamily: "Arial Black",
+            fontSize: "120px",
+            color: "#FFD700",
+            stroke: "#8B4513",
+            strokeThickness: 12,
+        });
+        countdownText.setOrigin(0.5);
+        countdownText.setDepth(10000);
+        countdownText.setScrollFactor(0);
+
+        let count = 3;
+
+        // Timer pour le countdown
+        const countdownTimer = this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                count--;
+                if (count > 0) {
+                    countdownText.setText(count.toString());
+                    // Animation de pulsation
+                    countdownText.setScale(1.5);
+                    this.tweens.add({
+                        targets: countdownText,
+                        scaleX: 1,
+                        scaleY: 1,
+                        duration: 500,
+                        ease: "Back.easeOut",
+                    });
+                } else {
+                    // Afficher "GO!"
+                    countdownText.setText("GO!");
+                    countdownText.setScale(2);
+                    this.tweens.add({
+                        targets: countdownText,
+                        scaleX: 0,
+                        scaleY: 0,
+                        alpha: 0,
+                        duration: 800,
+                        ease: "Back.easeIn",
+                        onComplete: () => {
+                            countdownText.destroy();
+                        },
+                    });
+
+                    // DÉMARRER LE JEU !
+                    this.startGame();
+                }
+            },
+            repeat: 3,
+        });
+    }
+
+    /**
+     * Démarre réellement le jeu après le countdown
+     */
+    private startGame(): void {
+        // Démarrer la première vague
+        this.waveManager?.startWave(1);
+
+        // Démarrer le timer du jeu
+        this.timerManager?.start(GameConfig.TIMER.GAME_DURATION, () => {
+            // Callback quand le temps est écoulé
+            this.endGame();
+        });
+
+        console.log("🎮 JEU DÉMARRÉ !");
     }
 
     /**

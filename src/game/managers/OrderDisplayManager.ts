@@ -178,7 +178,7 @@ export class OrderDisplayManager {
     /**
      * Nettoie toutes les boîtes existantes
      */
-    private clearAllBoxes(): void {
+    public clearAllBoxes(): void {
         // Détruire toutes les boîtes existantes
         this.recipeBoxes.forEach((box) => {
             box.destroy();
@@ -207,10 +207,22 @@ export class OrderDisplayManager {
     private onOrderCompleted?: () => void;
 
     /**
+     * Callback appelé quand une commande expire (pour le système de vagues)
+     */
+    private onOrderExpired?: () => void;
+
+    /**
      * Définit le callback de complétion de commande
      */
     public setOrderCompletedCallback(callback: () => void): void {
         this.onOrderCompleted = callback;
+    }
+
+    /**
+     * Définit le callback d'expiration de commande
+     */
+    public setOrderExpiredCallback(callback: () => void): void {
+        this.onOrderExpired = callback;
     }
 
     /**
@@ -270,6 +282,62 @@ export class OrderDisplayManager {
     public stopAllTimers(): void {
         this.recipeBoxes.forEach((box) => {
             box.stopTimer();
+        });
+    }
+
+    /**
+     * Ajoute une nouvelle commande progressivement (pour le système d'apparition progressive)
+     */
+    public addNewOrder(recipe: any): void {
+        if (!this.recipeContainer) return;
+
+        // Créer une nouvelle boîte à la fin
+        const newIndex = this.recipeBoxes.length;
+        
+        // Créer la boîte
+        this.createRecipeBox(newIndex);
+
+        // Ajouter la commande à la liste active
+        this.activeOrders.push(recipe.result);
+
+        // Mettre à jour la boîte avec la recette
+        const box = this.recipeBoxes[newIndex];
+        box.updateWithRecipe(recipe);
+
+        // Définir le callback d'expiration
+        box.onExpired = () => {
+            console.log(`⏰ Commande expirée: ${recipe.result}`);
+            // Retirer de la liste des commandes actives
+            const expiredIndex = this.activeOrders.indexOf(recipe.result);
+            if (expiredIndex !== -1) {
+                this.activeOrders.splice(expiredIndex, 1);
+            }
+            
+            // Notifier le système de vagues
+            if (this.onOrderExpired) {
+                this.onOrderExpired();
+            }
+
+            // Supprimer la boîte avec animation
+            const boxIndex = this.recipeBoxes.indexOf(box);
+            if (boxIndex !== -1) {
+                this.removeBoxWithAnimation(boxIndex);
+            }
+        };
+
+        // Démarrer le timer
+        box.startTimer(this.orderDuration);
+
+        // Animation d'apparition
+        box.container.setAlpha(0);
+        box.container.setScale(0.8);
+        this.scene.tweens.add({
+            targets: box.container,
+            alpha: 1,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 300,
+            ease: "Back.easeOut",
         });
     }
 }
