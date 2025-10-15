@@ -40,7 +40,7 @@ export class PlayerManager {
         this.mapOffsetY = mapOffsetY;
         this.playerNumber = playerNumber;
         this.controls = this.initializeControls(playerNumber);
-        this.inventory = new InventoryManager(scene); // ✅ Initialiser l'inventaire
+        this.inventory = new InventoryManager(scene);
 
         if (playerNumber === 1) {
             this.playerColor = "blue";
@@ -60,10 +60,9 @@ export class PlayerManager {
 
     update(): void {
         this.handleMovement();
-        // this.updateGridPosition();
-        this.updateCarriedItemPosition(); // ✅ Mettre à jour l'objet porté
-        this.updatePlayerDepth(); // ✅ Mettre à jour la profondeur
-        this.handleInventory();
+        this.updateGridPosition();
+        this.updateCarriedItemPosition();
+        this.updatePlayerDepth();
     }
 
     /**
