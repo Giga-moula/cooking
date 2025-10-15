@@ -1,14 +1,7 @@
 import Phaser from "phaser";
 import { IngredientInteractionManager } from "./IngredientInteractionManager";
-
-// Interface pour les boîtes de recettes
-interface RecipeBox {
-    container: Phaser.GameObjects.Container;
-    colorBar: Phaser.GameObjects.Graphics;
-    dishIcon: Phaser.GameObjects.Image;
-    ingredientIcons: Phaser.GameObjects.Image[];
-    orderId: string | null;
-}
+import { OrderVisualEffects } from "./OrderVisualEffects";
+import { RecipeBox } from "./RecipeBox";
 
 /**
  * Gestionnaire de l'affichage des commandes (recettes)
@@ -19,6 +12,9 @@ export class OrderDisplayManager {
     private activeOrders: string[] = [];
     private maxOrders: number = 4;
     private ingredientManager: IngredientInteractionManager;
+    private orderDuration: number = 60; // Durée par défaut des commandes
+    private recipeContainer?: Phaser.GameObjects.Container;
+    private visualEffects: OrderVisualEffects;
 
     constructor(
         scene: Phaser.Scene,
@@ -26,6 +22,7 @@ export class OrderDisplayManager {
     ) {
         this.scene = scene;
         this.ingredientManager = ingredientManager;
+        this.visualEffects = new OrderVisualEffects(scene);
     }
 
     /**
@@ -33,84 +30,28 @@ export class OrderDisplayManager {
      */
     initializeRecipeDisplay(): void {
         // Créer un conteneur pour toutes les boîtes de recettes
-        const recipeContainer = this.scene.add.container(20, 20);
-        recipeContainer.setScrollFactor(0);
-        recipeContainer.setDepth(2000);
+        this.recipeContainer = this.scene.add.container(20, 20);
+        this.recipeContainer.setScrollFactor(0);
+        this.recipeContainer.setDepth(2000);
 
-        // Créer les boîtes de recettes
-        for (let i = 0; i < this.maxOrders; i++) {
-            this.createRecipeBox(recipeContainer, i);
-        }
+        // Ne pas créer de boîtes ici - elles seront créées dynamiquement selon la vague
+        console.log(
+            "📦 Système de boîtes de recettes initialisé - création dynamique selon les vagues"
+        );
     }
 
     /**
      * Crée une boîte de recette individuelle
      */
-    private createRecipeBox(
-        parent: Phaser.GameObjects.Container,
-        index: number
-    ): void {
-        const boxWidth = 120;
-        const boxHeight = 140;
-        const spacing = 10;
-        const x = index * (boxWidth + spacing);
-        const y = 0;
+    private createRecipeBox(index: number): void {
+        if (!this.recipeContainer) return;
 
-        const boxContainer = this.scene.add.container(x, y);
-        parent.add(boxContainer);
-
-        // Fond de la boîte
-        const background = this.scene.add.graphics();
-        background.fillStyle(0xf0f0f0, 1);
-        background.fillRoundedRect(0, 0, boxWidth, boxHeight, 8);
-        background.lineStyle(2, 0x333333, 1);
-        background.strokeRoundedRect(0, 0, boxWidth, boxHeight, 8);
-        boxContainer.add(background);
-
-        // Barre de couleur en haut
-        const colorBar = this.scene.add.graphics();
-        colorBar.fillStyle(0x4caf50, 1);
-        colorBar.fillRoundedRect(2, 2, boxWidth - 4, 8, 4);
-        boxContainer.add(colorBar);
-
-        // Zone du plat fini
-        const dishArea = this.scene.add.graphics();
-        dishArea.fillStyle(0xffffff, 1);
-        dishArea.fillRoundedRect(5, 15, boxWidth - 10, 60, 4);
-        dishArea.lineStyle(1, 0xcccccc, 1);
-        dishArea.strokeRoundedRect(5, 15, boxWidth - 10, 60, 4);
-        boxContainer.add(dishArea);
-
-        // Zone des ingrédients
-        const ingredientArea = this.scene.add.graphics();
-        ingredientArea.fillStyle(0xe3f2fd, 1);
-        ingredientArea.fillRoundedRect(5, 80, boxWidth - 10, 55, 4);
-        ingredientArea.lineStyle(1, 0xcccccc, 1);
-        ingredientArea.strokeRoundedRect(5, 80, boxWidth - 10, 55, 4);
-        boxContainer.add(ingredientArea);
-
-        // Icône du plat fini
-        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie");
-        dishIcon.setScale(1.5);
-        boxContainer.add(dishIcon);
-
-        // Icônes des ingrédients
-        const ingredientIcons: Phaser.GameObjects.Image[] = [];
-        for (let i = 0; i < 3; i++) {
-            const icon = this.scene.add.image(35 + i * 50, 110, "chocolate");
-            icon.setScale(1.2);
-            icon.setVisible(false);
-            boxContainer.add(icon);
-            ingredientIcons.push(icon);
-        }
-
-        const recipeBox: RecipeBox = {
-            container: boxContainer,
-            colorBar: colorBar,
-            dishIcon: dishIcon,
-            ingredientIcons: ingredientIcons,
-            orderId: null,
-        };
+        const recipeBox = new RecipeBox(
+            this.scene,
+            index,
+            this.recipeContainer
+        );
+        recipeBox.onExpired = () => this.handleRecipeExpired(recipeBox);
 
         this.recipeBoxes.push(recipeBox);
     }
@@ -125,9 +66,7 @@ export class OrderDisplayManager {
         // Nettoyer les commandes existantes
         this.activeOrders = [];
         this.recipeBoxes.forEach((box) => {
-            box.orderId = null;
-            box.dishIcon.setVisible(false);
-            box.ingredientIcons.forEach((icon) => icon.setVisible(false));
+            box.clear();
         });
 
         // Générer de nouvelles commandes (2-4 commandes)
@@ -143,67 +82,22 @@ export class OrderDisplayManager {
             availableDishes.splice(randomIndex, 1);
 
             this.activeOrders.push(dish.id);
-            this.updateRecipeBoxForDish(i, dish);
+            this.assignRecipeToBox(i, dish);
         }
     }
 
     /**
-     * Met à jour une boîte de recette avec les données d'un plat fini
+     * Gère l'expiration d'une recette
      */
-    private updateRecipeBoxForDish(boxIndex: number, dish: any): void {
-        if (boxIndex >= this.recipeBoxes.length) return;
-
-        const recipeManager = this.ingredientManager.getRecipeManager();
-        const allRecipes = recipeManager.getAllRecipes();
-        const recipe = allRecipes.find((r) => r.result === dish.id);
-
-        if (!recipe) {
-            console.warn(`Aucune recette trouvée pour le plat: ${dish.id}`);
-            return;
+    private handleRecipeExpired(recipeBox: RecipeBox): void {
+        // Supprimer la commande de la liste active
+        const orderIndex = this.activeOrders.indexOf(recipeBox.orderId!);
+        if (orderIndex !== -1) {
+            this.activeOrders.splice(orderIndex, 1);
         }
 
-        this.updateRecipeBox(boxIndex, recipe);
-    }
-
-    /**
-     * Met à jour une boîte de recette avec les données d'une recette
-     */
-    private updateRecipeBox(boxIndex: number, recipe: any): void {
-        if (boxIndex >= this.recipeBoxes.length) return;
-
-        const box = this.recipeBoxes[boxIndex];
-        box.orderId = recipe.result;
-
-        // Couleur de la barre selon le type de plat
-        let color = 0x4caf50;
-        switch (recipe.result) {
-            case "cookie":
-                color = 0xff9800;
-                break;
-            case "dough":
-                color = 0x8bc34a;
-                break;
-            default:
-                color = 0x4caf50;
-        }
-        box.colorBar.clear();
-        box.colorBar.fillStyle(color, 1);
-        box.colorBar.fillRoundedRect(2, 2, 116, 8, 4);
-
-        // Icône du plat fini
-        box.dishIcon.setTexture(recipe.result);
-        box.dishIcon.setVisible(true);
-
-        // Icônes des ingrédients
-        const ingredients = [recipe.ingredient1, recipe.ingredient2];
-        box.ingredientIcons.forEach((icon, index) => {
-            if (index < ingredients.length) {
-                icon.setTexture(ingredients[index]);
-                icon.setVisible(true);
-            } else {
-                icon.setVisible(false);
-            }
-        });
+        // Effet visuel d'expiration
+        this.visualEffects.showRecipeExpiredEffect(recipeBox);
     }
 
     /**
@@ -224,75 +118,172 @@ export class OrderDisplayManager {
     private completeOrder(orderIndex: number): void {
         if (orderIndex >= this.activeOrders.length) return;
 
-        // Supprimer la commande de la liste
-        this.activeOrders.splice(orderIndex, 1);
+        const recipeBox = this.recipeBoxes[orderIndex];
 
-        // Effacer la boîte de recette
-        const box = this.recipeBoxes[orderIndex];
-        box.orderId = null;
-        box.dishIcon.setVisible(false);
-        box.ingredientIcons.forEach((icon) => icon.setVisible(false));
+        // Effet visuel de succès avant de faire disparaître la boîte
+        this.visualEffects.showOrderCompleteEffect(recipeBox);
 
-        // Effet visuel de succès
-        this.showOrderCompleteEffect(orderIndex);
+        // Faire disparaître la boîte avec animation
+        this.removeBoxWithAnimation(orderIndex);
 
-        // Générer une nouvelle commande après un délai
-        this.scene.time.delayedCall(2000, () => {
-            this.generateNewOrders();
+        // Notifier le système de vagues qu'une recette est complétée
+        if (this.onOrderCompleted) {
+            this.onOrderCompleted();
+        }
+    }
+
+    /**
+     * Supprime une boîte avec animation et décale les autres
+     */
+    private removeBoxWithAnimation(boxIndex: number): void {
+        if (boxIndex >= this.recipeBoxes.length) return;
+
+        const box = this.recipeBoxes[boxIndex];
+
+        // Animation de disparition
+        box.animateDisappearance(() => {
+            // Détruire la boîte
+            box.destroy();
+
+            // Supprimer la boîte du tableau
+            this.recipeBoxes.splice(boxIndex, 1);
+
+            // Décale les boîtes restantes vers la gauche
+            this.shiftRemainingBoxes(boxIndex);
         });
     }
 
     /**
-     * Affiche un effet visuel quand une commande est complétée
+     * Décale les boîtes restantes vers la gauche
      */
-    private showOrderCompleteEffect(orderIndex: number): void {
-        const box = this.recipeBoxes[orderIndex];
-        const x = box.container.x + 60;
-        const y = box.container.y + 70;
+    private shiftRemainingBoxes(removedIndex: number): void {
+        const boxWidth = 120;
+        const spacing = 10;
 
-        // Effet de particules
-        try {
-            const particles = this.scene.add.particles(x, y, "star", {
-                speed: { min: -50, max: 50 },
-                angle: { min: 0, max: 360 },
-                scale: { start: 0.3, end: 0 },
-                lifespan: 800,
-                quantity: 10,
-                blendMode: "ADD",
-            });
+        // Décale toutes les boîtes après l'index supprimé
+        for (let i = removedIndex; i < this.recipeBoxes.length; i++) {
+            const box = this.recipeBoxes[i];
+            const newX = i * (boxWidth + spacing);
 
-            this.scene.time.delayedCall(800, () => {
-                particles.destroy();
-            });
-        } catch (e) {
-            console.log("Effet de particules non disponible");
+            // Animation de décalage
+            box.animateToPosition(newX, i);
+        }
+    }
+
+    /**
+     * Définit le nombre maximum de commandes simultanées
+     */
+    public setMaxOrders(maxOrders: number): void {
+        this.maxOrders = maxOrders;
+    }
+
+    /**
+     * Crée le nombre exact de boîtes nécessaires pour la vague
+     */
+    public createBoxesForWave(numberOfRecipes: number): void {
+        // Nettoyer les boîtes existantes
+        this.clearAllBoxes();
+
+        // Créer exactement le nombre de boîtes nécessaires
+        for (let i = 0; i < numberOfRecipes; i++) {
+            this.createRecipeBox(i);
         }
 
-        // Message de succès
-        const message = this.scene.add.text(
-            x,
-            y - 20,
-            "✓ Commande terminée !",
-            {
-                fontFamily: "Arial",
-                fontSize: "16px",
-                color: "#4CAF50",
-                stroke: "#ffffff",
-                strokeThickness: 2,
-            }
-        );
-        message.setOrigin(0.5);
-        message.setScrollFactor(0);
-        message.setDepth(3000);
+        console.log(`📦 Créé ${numberOfRecipes} boîtes pour la vague`);
+    }
 
-        this.scene.tweens.add({
-            targets: message,
-            y: y - 40,
-            alpha: 0,
-            duration: 1500,
-            ease: "Cubic.easeOut",
-            onComplete: () => message.destroy(),
+    /**
+     * Nettoie toutes les boîtes existantes
+     */
+    private clearAllBoxes(): void {
+        // Détruire toutes les boîtes existantes
+        this.recipeBoxes.forEach((box) => {
+            box.destroy();
         });
+
+        // Vider les tableaux
+        this.recipeBoxes = [];
+        this.activeOrders = [];
+
+        // Vider le conteneur
+        if (this.recipeContainer) {
+            this.recipeContainer.removeAll(true);
+        }
+    }
+
+    /**
+     * Obtient le nombre de commandes actives
+     */
+    public getActiveOrderCount(): number {
+        return this.activeOrders.length;
+    }
+
+    /**
+     * Callback appelé quand une commande est complétée (pour le système de vagues)
+     */
+    private onOrderCompleted?: () => void;
+
+    /**
+     * Définit le callback de complétion de commande
+     */
+    public setOrderCompletedCallback(callback: () => void): void {
+        this.onOrderCompleted = callback;
+    }
+
+    /**
+     * Marque une commande comme complétée (version publique pour le WaveManager)
+     */
+    public completeOrderPublic(dishId: string): boolean {
+        const success = this.checkOrderCompletion(dishId);
+        if (success && this.onOrderCompleted) {
+            this.onOrderCompleted();
+        }
+        return success;
+    }
+
+    /**
+     * Définit la durée des commandes
+     */
+    public setOrderDuration(duration: number): void {
+        this.orderDuration = duration;
+    }
+
+    /**
+     * Nettoie toutes les commandes existantes
+     */
+    public clearAllOrders(): void {
+        this.activeOrders = [];
+        this.recipeBoxes.forEach((box) => {
+            box.stopTimer();
+            box.clear();
+        });
+    }
+
+    /**
+     * Assigne une recette à une boîte spécifique
+     */
+    public assignRecipeToBox(boxIndex: number, dish: any): void {
+        if (boxIndex >= this.recipeBoxes.length) return;
+
+        const recipeManager = this.ingredientManager.getRecipeManager();
+        const allRecipes = recipeManager.getAllRecipes();
+        const recipe = allRecipes.find((r) => r.result === dish.id);
+
+        if (!recipe) {
+            console.warn(`Aucune recette trouvée pour le plat: ${dish.id}`);
+            return;
+        }
+
+        const box = this.recipeBoxes[boxIndex];
+
+        // Ajouter la commande à la liste active
+        this.activeOrders.push(dish.id);
+
+        // Mettre à jour la boîte avec la recette
+        box.updateWithRecipe(recipe);
+
+        // Démarrer le timer
+        box.startTimer(this.orderDuration);
     }
 }
 
