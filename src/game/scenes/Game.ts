@@ -134,8 +134,8 @@ export default class Game extends Phaser.Scene {
         this.inventoryManager.initializeInventoryDisplay();
 
         // Initialiser et démarrer le timer (20 secondes)
-        this.timerManager = new TimerManager(this, 20);
-        this.timerManager.initializeTimerDisplay(20, 20);
+        this.timerManager = new TimerManager(this, 300);
+        this.timerManager.initializeTimerDisplay(800, 20);
         this.timerManager.start(() => {
             // Quand le temps est écoulé, aller à GameOver
             this.endGame();
