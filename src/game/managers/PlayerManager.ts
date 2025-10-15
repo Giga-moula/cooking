@@ -321,4 +321,12 @@ export class PlayerManager {
             y: this.playerGridY + this.lastDirection.y
         };
     }
+
+    /**
+     * Définit la position en grille du joueur
+     */
+    setGridPosition(gridX: number, gridY: number): void {
+        this.playerGridX = gridX;
+        this.playerGridY = gridY;
+    }
 }

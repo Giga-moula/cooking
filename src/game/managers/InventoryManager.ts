@@ -171,5 +171,12 @@ export class InventoryManager {
     getCarriedItem(): Phaser.GameObjects.Image | undefined {
         return this.carriedItem;
     }
+
+    /**
+     * Récupère tous les ingrédients de l'inventaire
+     */
+    getAllIngredients(): string[] {
+        return [...this.inventory];
+    }
 }
 

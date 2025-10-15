@@ -12,7 +12,7 @@ export class GameConfig {
     static readonly PLAYER_SPEED = 150;
     static readonly PLAYER_START_POSITIONS = {
         PLAYER_1: { x: 2, y: 2 },
-        PLAYER_2: { x: 4, y: 4 },
+        PLAYER_2: { x: 6, y: 4 },
     };
 
     // Configuration des objets
