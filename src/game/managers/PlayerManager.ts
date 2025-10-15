@@ -3,6 +3,7 @@ import { IsometricUtils } from "../utils/IsometricUtils";
 import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
 import { GameConfig } from "../config/GameConfig";
+import { CraftActions, CraftDirection } from "../actions/CraftActions";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -25,6 +26,7 @@ export class PlayerManager {
     private controls: PlayerControls;
 
     private inventory: InventoryManager;
+    private craftActions: CraftActions;
 
     constructor(
         scene: Phaser.Scene,
@@ -38,6 +40,7 @@ export class PlayerManager {
         this.playerNumber = playerNumber;
         this.controls = this.initializeControls(playerNumber);
         this.inventory = new InventoryManager(scene);
+        this.craftActions = new CraftActions(scene, this, playerNumber);
 
         if (playerNumber === 1) {
             this.playerColor = GameConfig.COLORS.PLAYER_1;
@@ -64,6 +67,7 @@ export class PlayerManager {
         this.updateGridPosition();
         this.updateCarriedItemPosition();
         this.updatePlayerDepth();
+        this.handleCraftActions();
     }
 
     /**
@@ -318,7 +322,51 @@ export class PlayerManager {
     getTargetPosition(): { x: number; y: number } {
         return {
             x: this.playerGridX + this.lastDirection.x,
-            y: this.playerGridY + this.lastDirection.y
+            y: this.playerGridY + this.lastDirection.y,
         };
+    }
+
+    /**
+     * Gère les actions de craft (affichage et input)
+     */
+    private handleCraftActions(): void {
+        // Vérifier si la touche craft est maintenue
+        if (this.controls.craftKey.isDown) {
+            if (!this.craftActions.isActive()) {
+                this.craftActions.startCrafting();
+            } else {
+                // Mettre à jour la position de l'interface
+                this.craftActions.updatePosition();
+
+                // Vérifier les inputs de direction pour le craft
+                if (Phaser.Input.Keyboard.JustDown(this.controls.craftUpKey)) {
+                    this.craftActions.processDirectionInput("up");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftDownKey)
+                ) {
+                    this.craftActions.processDirectionInput("down");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftLeftKey)
+                ) {
+                    this.craftActions.processDirectionInput("left");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftRightKey)
+                ) {
+                    this.craftActions.processDirectionInput("right");
+                }
+            }
+        } else {
+            // Arrêter le craft si la touche n'est plus maintenue
+            if (this.craftActions.isActive()) {
+                this.craftActions.stopCrafting();
+            }
+        }
+    }
+
+    /**
+     * Récupère l'instance CraftActions (pour debug ou usage externe)
+     */
+    public getCraftActions(): CraftActions {
+        return this.craftActions;
     }
 }

@@ -62,13 +62,19 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("butter", "assets/ingredients/butter.png");
         this.load.image("flour", "assets/ingredients/wheat_floor.png");
         this.load.image("chocolate", "assets/ingredients/chocolate.png");
-        this.load.image("chocolate-chunks", "assets/ingredients/chocolate-chunks.png");
+        this.load.image(
+            "chocolate-chunks",
+            "assets/ingredients/chocolate-chunks.png"
+        );
         this.load.image("cookie-mix", "assets/ingredients/cookie-mix.png");
-        this.load.image("molten_butter", "assets/ingredients/molten_butter.png");
+        this.load.image(
+            "molten_butter",
+            "assets/ingredients/molten_butter.png"
+        );
         this.load.image("dough", "assets/crafted/dough.png");
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("favicon", "assets/favicon.png");
-        
+
         // Charger les objets du jeu
         this.load.image("oven", "assets/oven.png");
         this.load.image("craft_plan", "assets/craft_plan.png");
@@ -102,6 +108,21 @@ export default class Preloader extends Phaser.Scene {
         this.load.image(
             "red-grandma-side",
             "assets/grandma/red/grandma_red_side.png"
+        );
+
+        // Charger les assets de craft
+        this.load.image("controlsBox", "assets/craftActions/controlsBox.png");
+        this.load.image("arrow-up", "assets/craftActions/arrow-up.png");
+        this.load.image("arrow-down", "assets/craftActions/arrow-down.png");
+        this.load.image("arrow-left", "assets/craftActions/arrow-left.png");
+        this.load.image("arrow-right", "assets/craftActions/arrow-right.png");
+        this.load.image(
+            "spinning-arrow",
+            "assets/craftActions/spinning-arrow.png"
+        );
+        this.load.image(
+            "reverse-spinning-arrow",
+            "assets/craftActions/reverse-spinning-arrow.png"
         );
 
         // Charger les tuiles de table
