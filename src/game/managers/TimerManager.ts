@@ -2,36 +2,32 @@ import Phaser from "phaser";
 
 /**
  * Gestionnaire du timer de jeu
+ * Gère le compte à rebours et affiche le temps restant
  */
 export class TimerManager {
     private scene: Phaser.Scene;
-    private timeRemaining: number; // En secondes
     private timerText?: Phaser.GameObjects.Text;
-    private isActive: boolean = false;
+    private timeRemaining: number = 0; // En secondes
+    private timerEvent?: Phaser.Time.TimerEvent;
+    private isRunning: boolean = false;
     private onTimeUp?: () => void;
 
-    constructor(scene: Phaser.Scene, duration: number = 120) {
-        // 120 secondes = 2 minutes
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        this.timeRemaining = duration;
     }
 
     /**
      * Initialise l'affichage du timer
      */
-    initializeTimerDisplay(x: number = 20, y: number = 20): void {
-        this.timerText = this.scene.add.text(
-            x,
-            y,
-            this.formatTime(this.timeRemaining),
-            {
-                fontFamily: "Arial",
-                fontSize: "32px",
-                color: "#ffffff",
-                stroke: "#000000",
-                strokeThickness: 4,
-            }
-        );
+    public initializeTimerDisplay(x: number = 512, y: number = 20): void {
+        this.timerText = this.scene.add.text(x, y, "⏱️ 5:00", {
+            fontFamily: "Arial Black",
+            fontSize: "32px",
+            color: "#FFFFFF",
+            stroke: "#000000",
+            strokeThickness: 4,
+        });
+        this.timerText.setOrigin(0.5, 0);
         this.timerText.setScrollFactor(0);
         this.timerText.setDepth(2000);
     }
@@ -39,37 +35,39 @@ export class TimerManager {
     /**
      * Démarre le timer
      */
-    start(onTimeUpCallback?: () => void): void {
-        this.isActive = true;
-        this.onTimeUp = onTimeUpCallback;
+    public start(durationInSeconds: number, onTimeUp?: () => void): void {
+        this.timeRemaining = durationInSeconds;
+        this.onTimeUp = onTimeUp;
+        this.isRunning = true;
 
-        // Créer un événement qui se répète chaque seconde
-        this.scene.time.addEvent({
+        // Créer un événement de timer qui se déclenche toutes les secondes
+        this.timerEvent = this.scene.time.addEvent({
             delay: 1000, // 1 seconde
             callback: this.tick,
             callbackScope: this,
             loop: true,
         });
+
+        this.updateTimerDisplay();
     }
 
     /**
-     * Appelé chaque seconde pour décrémenter le timer
+     * Appelé chaque seconde
      */
     private tick(): void {
-        if (!this.isActive) return;
+        if (!this.isRunning) return;
 
         this.timeRemaining--;
+        this.updateTimerDisplay();
 
-        // Mettre à jour l'affichage
-        this.updateDisplay();
+        // Changer la couleur quand il reste moins de 30 secondes
+        if (this.timeRemaining <= 30 && this.timeRemaining > 10) {
+            this.timerText?.setColor("#FFA500"); // Orange
+        } else if (this.timeRemaining <= 10) {
+            this.timerText?.setColor("#FF0000"); // Rouge
 
-        // Changer la couleur quand il reste peu de temps
-        if (this.timeRemaining <= 30 && this.timerText) {
-            // Rouge pour les 30 dernières secondes
-            this.timerText.setColor("#FF0000");
-
-            // Effet de pulsation
-            if (this.timeRemaining <= 10) {
+            // Animation de pulsation dans les 10 dernières secondes
+            if (this.timerText) {
                 this.scene.tweens.add({
                     targets: this.timerText,
                     scaleX: 1.2,
@@ -79,9 +77,6 @@ export class TimerManager {
                     ease: "Cubic.easeInOut",
                 });
             }
-        } else if (this.timeRemaining <= 60 && this.timerText) {
-            // Orange pour la dernière minute
-            this.timerText.setColor("#FFA500");
         }
 
         // Temps écoulé
@@ -94,58 +89,56 @@ export class TimerManager {
     }
 
     /**
-     * Arrête le timer
+     * Met à jour l'affichage du timer
      */
-    stop(): void {
-        this.isActive = false;
+    private updateTimerDisplay(): void {
+        if (!this.timerText) return;
+
+        const minutes = Math.floor(this.timeRemaining / 60);
+        const seconds = this.timeRemaining % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+        this.timerText.setText(`⏱️ ${formattedTime}`);
     }
 
     /**
-     * Met à jour l'affichage du timer
+     * Arrête le timer
      */
-    private updateDisplay(): void {
-        if (this.timerText) {
-            this.timerText.setText(this.formatTime(this.timeRemaining));
+    public stop(): void {
+        this.isRunning = false;
+        if (this.timerEvent) {
+            this.timerEvent.remove();
+            this.timerEvent = undefined;
         }
     }
 
     /**
-     * Formate le temps en MM:SS
+     * Met le timer en pause
      */
-    private formatTime(seconds: number): string {
-        const minutes = Math.floor(Math.max(0, seconds) / 60);
-        const secs = Math.max(0, seconds) % 60;
-        return `⏱️ ${minutes.toString().padStart(2, "0")}:${secs
-            .toString()
-            .padStart(2, "0")}`;
+    public pause(): void {
+        this.isRunning = false;
     }
 
     /**
-     * Retourne le temps restant en secondes
+     * Reprend le timer
      */
-    getTimeRemaining(): number {
-        return this.timeRemaining;
+    public resume(): void {
+        this.isRunning = true;
     }
 
     /**
-     * Retourne si le timer est actif
+     * Ajoute du temps au timer
      */
-    isTimerActive(): boolean {
-        return this.isActive;
-    }
-
-    /**
-     * Ajoute du temps au timer (bonus)
-     */
-    addTime(seconds: number): void {
+    public addTime(seconds: number): void {
         this.timeRemaining += seconds;
-        this.updateDisplay();
+        this.updateTimerDisplay();
 
-        // Effet visuel pour le bonus de temps
+        // Effet visuel pour montrer l'ajout de temps
         if (this.timerText) {
+            // Créer un texte flottant
             const bonusText = this.scene.add.text(
-                this.timerText.x + 150,
-                this.timerText.y,
+                this.timerText.x,
+                this.timerText.y + 40,
                 `+${seconds}s`,
                 {
                     fontFamily: "Arial",
@@ -155,9 +148,11 @@ export class TimerManager {
                     strokeThickness: 3,
                 }
             );
+            bonusText.setOrigin(0.5);
             bonusText.setScrollFactor(0);
             bonusText.setDepth(3000);
 
+            // Animation de montée et disparition
             this.scene.tweens.add({
                 targets: bonusText,
                 y: bonusText.y - 30,
@@ -166,7 +161,26 @@ export class TimerManager {
                 ease: "Cubic.easeOut",
                 onComplete: () => bonusText.destroy(),
             });
+
+            // Animation de pulsation du timer
+            this.scene.tweens.add({
+                targets: this.timerText,
+                scaleX: 1.3,
+                scaleY: 1.3,
+                duration: 200,
+                yoyo: true,
+                ease: "Cubic.easeInOut",
+            });
         }
+    }
+
+    // Getters
+    public getTimeRemaining(): number {
+        return this.timeRemaining;
+    }
+
+    public isTimerRunning(): boolean {
+        return this.isRunning;
     }
 }
 

@@ -12,7 +12,7 @@ export const RECIPES: Recipe[] = [
         result: "dough",
     },
     {
-        name: "Cookie au Chocolat",
+        name: "Pâte à Cookie chocolatée",
         ingredients: ["chocolate", "dough"],
         result: "cookie",
     },
@@ -24,4 +24,3 @@ export const RECIPES: Recipe[] = [
         result: "favicon",
     },
 ];
-

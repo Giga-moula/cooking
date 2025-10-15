@@ -1,12 +1,17 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
+import { InventoryManager } from "./InventoryManager";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
  */
 export class PlayerManager {
     private scene: Phaser.Scene;
+
     private player?: Phaser.Physics.Arcade.Sprite;
+    private playerColor: string = "blue"; // Couleur par défaut
+    private playerNumber: number; // 1 ou 2
     private playerSpeed: number = 150; // Pixels par seconde
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
     private lastPlayerY: number = 0;
@@ -16,16 +21,61 @@ export class PlayerManager {
     private mapOffsetX: number;
     private mapOffsetY: number;
 
+    private controls: PlayerControls;
+
+    private inventory: InventoryManager;
+
     // Debug
     private debugCircle?: Phaser.GameObjects.Graphics;
     private debugText?: Phaser.GameObjects.Text;
 
-    constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
+    constructor(
+        scene: Phaser.Scene,
+        mapOffsetX: number,
+        mapOffsetY: number,
+        playerNumber: number
+    ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+        this.playerNumber = playerNumber;
+        this.controls = this.initializeControls(playerNumber);
+        this.inventory = new InventoryManager(scene);
+
+        if (playerNumber === 1) {
+            this.playerColor = "blue";
+        } else {
+            this.playerColor = "red";
+        }
     }
 
+    private initializeControls(playerNumber: number): PlayerControls {
+        const controlsManager = new ControlsManager(this.scene);
+        if (playerNumber === 1) {
+            return controlsManager.getPlayer1Controls();
+        } else {
+            return controlsManager.getPlayer2Controls();
+        }
+    }
+
+    update(): void {
+        this.handleMovement();
+        this.updateGridPosition();
+        this.updateCarriedItemPosition();
+        this.updatePlayerDepth();
+    }
+
+    /**
+     * Vérifie si la touche d'interaction vient d'être pressée
+     * Utilise JustDown pour éviter les répétitions
+     */
+    public isInteractionPressed(): boolean {
+        return Phaser.Input.Keyboard.JustDown(this.controls.interactKey);
+    }
+
+    private handleInventory(): void {
+        if (!this.player) return;
+    }
     /**
      * Crée le joueur à la position initiale
      */
@@ -48,7 +98,7 @@ export class PlayerManager {
         this.player = this.scene.physics.add.sprite(
             startX,
             startY,
-            "grandma-front"
+            `${this.playerColor}-grandma-front`
         );
         this.player.setOrigin(0.5, 0.5); // Centré pour la rotation
 
@@ -75,46 +125,39 @@ export class PlayerManager {
         return this.player;
     }
 
-    /**
-     * Met à jour le mouvement du joueur basé sur les contrôles
-     */
-    updateMovement(cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
+    handleMovement(): void {
         if (!this.player) return;
 
         let velocityX = 0;
         let velocityY = 0;
 
-        // Déplacement fluide avec les flèches
-        if (cursors.up!.isDown) {
+        if (this.controls.upKey.isDown) {
             velocityY = -this.playerSpeed;
-            this.lastDirection = { x: 0, y: -1 }; // Haut
-            this.updatePlayerSprite("grandma-back", false); // Vue de dos
-        } else if (cursors.down!.isDown) {
+            this.lastDirection = { x: 0, y: -1 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-back`, false);
+        } else if (this.controls.downKey.isDown) {
             velocityY = this.playerSpeed;
-            this.lastDirection = { x: 0, y: 1 }; // Bas
-            this.updatePlayerSprite("grandma-front", false); // Vue de face
+            this.lastDirection = { x: 0, y: 1 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-front`, false);
         }
 
-        if (cursors.left!.isDown) {
+        if (this.controls.leftKey.isDown) {
             velocityX = -this.playerSpeed;
-            this.lastDirection = { x: -1, y: 0 }; // Gauche
-            this.updatePlayerSprite("grandma-side", true); // Vue de côté (gauche, retournée)
-        } else if (cursors.right!.isDown) {
+            this.lastDirection = { x: -1, y: 0 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-side`, true);
+        } else if (this.controls.rightKey.isDown) {
             velocityX = this.playerSpeed;
-            this.lastDirection = { x: 1, y: 0 }; // Droite
-            this.updatePlayerSprite("grandma-side", false); // Vue de côté (droite, normale)
+            this.lastDirection = { x: 1, y: 0 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-side`, false);
         }
 
-        // Normaliser la vitesse en diagonale
         if (velocityX !== 0 && velocityY !== 0) {
             velocityX *= this.DIAGONAL_FACTOR;
             velocityY *= this.DIAGONAL_FACTOR;
         }
 
-        // Appliquer la vélocité
         this.player.setVelocity(velocityX, velocityY);
     }
-
     /**
      * Met à jour la position en grille du joueur
      */
@@ -153,7 +196,7 @@ export class PlayerManager {
     /**
      * Met à jour la profondeur du joueur pour le rendu isométrique
      */
-    updatePlayerDepth(carriedItem?: Phaser.GameObjects.Image): void {
+    updatePlayerDepth(): void {
         if (!this.player) return;
 
         // Utiliser directement la position Y du joueur
@@ -161,6 +204,7 @@ export class PlayerManager {
         this.lastPlayerY = this.player.y;
 
         // Mettre à jour la profondeur de l'objet porté
+        const carriedItem = this.inventory.getCarriedItem();
         if (carriedItem) {
             if (this.lastDirection.y === -1) {
                 carriedItem.setDepth(this.player.depth - 1); // Derrière (vers le haut)
@@ -168,6 +212,48 @@ export class PlayerManager {
                 carriedItem.setDepth(this.player.depth + 1); // Devant (autres directions)
             }
         }
+    }
+
+    /**
+     * Met à jour la position de l'objet porté
+     */
+    private updateCarriedItemPosition(): void {
+        if (!this.player || !this.inventory) return;
+
+        const carriedItem = this.inventory.getCarriedItem();
+        if (carriedItem) {
+            this.inventory.updateCarriedItemPosition(
+                this.player.x,
+                this.player.y,
+                this.lastDirection
+            );
+        }
+    }
+
+    /**
+     * Met à jour l'objet porté (crée ou détruit selon l'inventaire)
+     */
+    public updateCarriedItem(): void {
+        if (!this.player || !this.inventory) return;
+
+        const item = this.inventory.peekItem();
+        if (item) {
+            this.inventory.createCarriedItem(
+                item,
+                this.player.x,
+                this.player.y,
+                this.lastDirection,
+                this.player.depth
+            );
+        }
+    }
+
+    /**
+     * Supprime l'objet porté visuellement
+     */
+    public removeCarriedItem(): void {
+        if (!this.inventory) return;
+        this.inventory.removeCarriedItem();
     }
 
     /**
@@ -319,5 +405,16 @@ export class PlayerManager {
     hasPlayerMoved(): boolean {
         return this.player ? this.player.y !== this.lastPlayerY : false;
     }
-}
 
+    getInventory(): InventoryManager {
+        return this.inventory;
+    }
+
+    getPlayerNumber(): number {
+        return this.playerNumber;
+    }
+
+    getPlayerColor(): string {
+        return this.playerColor;
+    }
+}
