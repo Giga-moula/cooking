@@ -83,7 +83,7 @@ export default class MainMenu extends Phaser.Scene {
             const x = Phaser.Math.Between(0, 1024);
             const y = Phaser.Math.Between(-100, -50);
 
-            const cookie = this.add.image(x, y, "cookie");
+            const cookie = this.add.image(x, y, "cookie-choco");
 
             // Taille aléatoire pour varier l'effet
             const scale = Phaser.Math.FloatBetween(1.8, 3.0);

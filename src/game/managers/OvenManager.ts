@@ -1,5 +1,7 @@
 import Phaser from "phaser";
+import { OVEN_COOKING } from "../data/recipes";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { RecipeManager } from "./RecipeManager";
 
 /**
  * Gestionnaire des interactions avec le four
@@ -10,22 +12,27 @@ export class OvenManager {
     private itemsInOven: Map<string, Phaser.GameObjects.Image> = new Map();
     private mapOffsetX: number;
     private mapOffsetY: number;
+    private recipeManager: RecipeManager;
 
-    constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
+    constructor(
+        scene: Phaser.Scene,
+        mapOffsetX: number,
+        mapOffsetY: number,
+        recipeManager: RecipeManager
+    ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+        this.recipeManager = recipeManager;
     }
 
     /**
      * Place un objet dans le four
      */
-    placeItemInOven(
-        gridX: number,
-        gridY: number,
-        itemType: string
-    ): boolean {
-        console.log(`placeItemInOven appelée pour (${gridX}, ${gridY}) avec ${itemType}`);
+    placeItemInOven(gridX: number, gridY: number, itemType: string): boolean {
+        console.log(
+            `placeItemInOven appelée pour (${gridX}, ${gridY}) avec ${itemType}`
+        );
         const key = `${gridX},${gridY}`;
 
         // Vérifier s'il n'y a pas déjà un objet dans le four
@@ -47,7 +54,9 @@ export class OvenManager {
         item.setScale(1.2);
         item.setDepth(y + 100);
         this.itemsInOven.set(key, item);
-        console.log(`Objet ${itemType} placé avec succès dans le four (${gridX}, ${gridY})`);
+        console.log(
+            `Objet ${itemType} placé avec succès dans le four (${gridX}, ${gridY})`
+        );
         return true;
     }
 
@@ -100,16 +109,19 @@ export class OvenManager {
         if (!item) return false;
 
         const currentType = item.texture.key;
-        
-        // Cuisson 1: Beurre → Beurre fondu
-        if (currentType === "butter") {
-            this.cookItem(gridX, gridY, "molten_butter", "🔥 Beurre → Beurre fondu");
-            return true;
-        }
-        
-        // Cuisson 2: Cookie Mix → Cookie
-        if (currentType === "cookie-mix") {
-            this.cookItem(gridX, gridY, "cookie", "🍪 Cookie Mix → Cookie");
+
+        // Chercher une recette de cuisson correspondante
+        const cookingRecipe = OVEN_COOKING.find(
+            (recipe) => recipe.from === currentType
+        );
+
+        if (cookingRecipe) {
+            this.cookItem(
+                gridX,
+                gridY,
+                cookingRecipe.to,
+                `🔥 ${cookingRecipe.name}`
+            );
             return true;
         }
 
@@ -119,10 +131,15 @@ export class OvenManager {
     /**
      * Cuit un item en un autre
      */
-    private cookItem(gridX: number, gridY: number, newType: string, message: string): void {
+    private cookItem(
+        gridX: number,
+        gridY: number,
+        newType: string,
+        message: string
+    ): void {
         const key = `${gridX},${gridY}`;
         const item = this.itemsInOven.get(key);
-        
+
         if (item) {
             // Changer la texture
             item.setTexture(newType);
@@ -140,7 +157,7 @@ export class OvenManager {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
-        
+
         // Effet de particules orange/rouge pour simuler le feu
         const particles = this.scene.add.particles(x, y, "star", {
             speed: { min: -50, max: 50 },
@@ -185,3 +202,4 @@ export class OvenManager {
         });
     }
 }
+

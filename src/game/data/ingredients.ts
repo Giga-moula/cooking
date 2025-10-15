@@ -110,10 +110,5 @@ export const INGREDIENTS: Ingredient[] = [
     },
 ];
 
-/**
- * Transformation des transformations spéciales (1 ingrédient → 1 autre ingrédient)
- */
-export const SPECIAL_TRANSFORMATIONS: { [key: string]: string } = {
-    chocolate: "chocolate-chunks",
-};
+// Les transformations spéciales sont maintenant dans src/game/data/recipes.ts
 

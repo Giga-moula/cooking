@@ -1,5 +1,5 @@
 /**
- * Configuration des recettes du jeu
+ * Configuration des recettes, transformations et cuissons du jeu
  */
 
 export interface Recipe {
@@ -7,6 +7,18 @@ export interface Recipe {
     ingredient1: string;
     ingredient2: string;
     result: string;
+    name: string;
+}
+
+export interface SpecialTransformation {
+    from: string;
+    to: string;
+    name: string;
+}
+
+export interface OvenCooking {
+    from: string;
+    to: string;
     name: string;
 }
 
@@ -55,6 +67,49 @@ export const RECIPES: Recipe[] = [
         ingredient2: "chocolate",
         result: "cookie-mix-choco-cara",
         name: "Cookie Mix avec caramel et chocolat",
+    },
+];
+
+/**
+ * Liste de toutes les transformations spéciales disponibles dans le jeu
+ * (1 ingrédient → 1 autre ingrédient)
+ */
+export const SPECIAL_TRANSFORMATIONS: SpecialTransformation[] = [
+    {
+        from: "chocolate",
+        to: "chocolate-chunks",
+        name: "Chocolat en chunks",
+    },
+];
+
+/**
+ * Liste de toutes les cuissons au four disponibles dans le jeu
+ */
+export const OVEN_COOKING: OvenCooking[] = [
+    {
+        from: "butter",
+        to: "molten_butter",
+        name: "Beurre fondu",
+    },
+    {
+        from: "sugar",
+        to: "caramel",
+        name: "Sucre → Caramel",
+    },
+    {
+        from: "cookie-mix-choco",
+        to: "cookie-choco",
+        name: "Cookie chocolat",
+    },
+    {
+        from: "cookie-mix-cara",
+        to: "cookie-cara",
+        name: "Cookie caramel",
+    },
+    {
+        from: "cookie-mix-choco-cara",
+        to: "cookie-choco-cara",
+        name: "Cookie chocolat caramel",
     },
 ];
 

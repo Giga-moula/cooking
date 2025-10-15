@@ -76,7 +76,7 @@ export class WaveManager {
                 difficulty: "easy",
                 unlockedRecipe: "dough",
                 description: "Apprenez les bases de la cuisine !",
-                specificRecipes: ["cookie"],
+                specificRecipes: ["cookie-choco"],
             },
             {
                 waveNumber: 2,
@@ -85,9 +85,9 @@ export class WaveManager {
                 orderCount: 2,
                 orderDuration: 35,
                 difficulty: "easy",
-                unlockedRecipe: "cookie",
+                unlockedRecipe: "cookie-choco",
                 description: "Le rush commence !",
-                specificRecipes: ["cookie", "cookie"],
+                specificRecipes: ["cookie-choco", "cookie-choco"],
             },
         ];
     }

@@ -2,12 +2,15 @@
  * Gestionnaire de recettes pour les combinaisons d'ingrédients
  */
 
+import { INGREDIENTS, type Ingredient } from "../data/ingredients";
 import {
-    INGREDIENTS,
+    OVEN_COOKING,
+    RECIPES,
     SPECIAL_TRANSFORMATIONS,
-    type Ingredient,
-} from "../data/ingredients";
-import { RECIPES, type Recipe } from "../data/recipes";
+    type OvenCooking,
+    type Recipe,
+    type SpecialTransformation,
+} from "../data/recipes";
 
 export class RecipeManager {
     private ingredients: Map<string, Ingredient> = new Map();
@@ -88,7 +91,10 @@ export class RecipeManager {
      * Utilisé pour les transformations comme chocolat → chunks
      */
     public performSpecialTransformation(ingredientId: string): string | null {
-        return SPECIAL_TRANSFORMATIONS[ingredientId] || null;
+        const transformation = SPECIAL_TRANSFORMATIONS.find(
+            (t) => t.from === ingredientId
+        );
+        return transformation ? transformation.to : null;
     }
 
     /**
@@ -122,6 +128,34 @@ export class RecipeManager {
     public isDish(id: string): boolean {
         const ingredient = this.getIngredient(id);
         return ingredient ? ingredient.isDish : false;
+    }
+
+    /**
+     * Récupère toutes les transformations spéciales disponibles
+     */
+    public getAllSpecialTransformations(): SpecialTransformation[] {
+        return SPECIAL_TRANSFORMATIONS;
+    }
+
+    /**
+     * Récupère toutes les cuissons au four disponibles
+     */
+    public getAllOvenCooking(): OvenCooking[] {
+        return OVEN_COOKING;
+    }
+
+    /**
+     * Trouve une cuisson au four pour un ingrédient donné
+     */
+    public getOvenCooking(ingredientId: string): OvenCooking | undefined {
+        return OVEN_COOKING.find((cooking) => cooking.from === ingredientId);
+    }
+
+    /**
+     * Vérifie si un ingrédient peut être cuit au four
+     */
+    public canCookInOven(ingredientId: string): boolean {
+        return this.getOvenCooking(ingredientId) !== undefined;
     }
 }
 

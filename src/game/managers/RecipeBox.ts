@@ -78,7 +78,7 @@ export class RecipeBox {
         boxContainer.add(ingredientArea);
 
         // Icône du plat fini
-        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie");
+        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie-choco");
         dishIcon.setScale(1.5);
         boxContainer.add(dishIcon);
 
@@ -157,7 +157,7 @@ export class RecipeBox {
      */
     private getRecipeColor(result: string): number {
         switch (result) {
-            case "cookie":
+            case "cookie-choco":
                 return 0xff9800;
             case "dough":
                 return 0x8bc34a;

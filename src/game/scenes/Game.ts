@@ -2,6 +2,7 @@
 
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
+import { GameConfig } from "../config/GameConfig";
 import { EventBus } from "../EventBus";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
@@ -9,12 +10,11 @@ import { IngredientInteractionManager } from "../managers/IngredientInteractionM
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
+import { OvenManager } from "../managers/OvenManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
-import { OvenManager } from "../managers/OvenManager";
 import { WaveManager } from "../managers/WaveManager";
-import { GameConfig } from "../config/GameConfig";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -108,7 +108,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
-        
+
         this.deliveryManager = new DeliveryManager(
             this,
             this.mapOffsetX,
@@ -121,11 +121,14 @@ export default class Game extends Phaser.Scene {
         this.ovenManager = new OvenManager(
             this,
             this.mapOffsetX,
-            this.mapOffsetY
+            this.mapOffsetY,
+            this.ingredientManager.getRecipeManager()
         );
 
         // Passer le RecipeManager partagé au CounterInteractionManager
-        this.counterManager.setRecipeManager(this.ingredientManager.getRecipeManager());
+        this.counterManager.setRecipeManager(
+            this.ingredientManager.getRecipeManager()
+        );
 
         // Créer les tiles procéduralement
         this.mapManager.createIsometricTiles();
@@ -161,7 +164,6 @@ export default class Game extends Phaser.Scene {
 
         // Initialiser les tiles d'ingrédients
         this.mapManager.initializeIngredientTiles();
-
 
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
@@ -255,7 +257,6 @@ export default class Game extends Phaser.Scene {
     changeScene() {
         this.endGame();
     }
-
 
     /**
      * Termine la partie et passe à l'écran GameOver
