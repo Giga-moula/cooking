@@ -106,14 +106,20 @@ export class OrderDisplayManager {
     private completeOrder(orderIndex: number): void {
         if (orderIndex >= this.activeOrders.length) return;
 
+        const dishId = this.activeOrders[orderIndex];
         const recipeBox = this.recipeBoxes[orderIndex];
+
+        console.log(`📋 OrderDisplayManager.completeOrder() - dishId: ${dishId}, index: ${orderIndex}`);
 
         // Faire disparaître la boîte avec animation
         this.removeBoxWithAnimation(orderIndex);
 
         // Notifier le système de vagues qu'une recette est complétée
-        if (this.onOrderCompleted) {
-            this.onOrderCompleted();
+        if (this.onOrderCompleted && dishId) {
+            console.log(`🔔 Appel du callback onOrderCompleted avec dishId: ${dishId}`);
+            this.onOrderCompleted(dishId);
+        } else {
+            console.warn(`⚠️ Callback non appelé - onOrderCompleted: ${!!this.onOrderCompleted}, dishId: ${dishId}`);
         }
     }
 
@@ -204,7 +210,7 @@ export class OrderDisplayManager {
     /**
      * Callback appelé quand une commande est complétée (pour le système de vagues)
      */
-    private onOrderCompleted?: () => void;
+    private onOrderCompleted?: (dishId: string) => void;
 
     /**
      * Callback appelé quand une commande expire (pour le système de vagues)
@@ -214,7 +220,7 @@ export class OrderDisplayManager {
     /**
      * Définit le callback de complétion de commande
      */
-    public setOrderCompletedCallback(callback: () => void): void {
+    public setOrderCompletedCallback(callback: (dishId: string) => void): void {
         this.onOrderCompleted = callback;
     }
 
@@ -231,7 +237,7 @@ export class OrderDisplayManager {
     public completeOrderPublic(dishId: string): boolean {
         const success = this.checkOrderCompletion(dishId);
         if (success && this.onOrderCompleted) {
-            this.onOrderCompleted();
+            this.onOrderCompleted(dishId);
         }
         return success;
     }

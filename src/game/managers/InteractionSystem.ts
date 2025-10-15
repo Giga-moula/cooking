@@ -236,9 +236,10 @@ export class InteractionSystem {
                     this.scoreManager.calculateRecipePoints(carriedItem);
                 this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
 
-                // Bonus de temps : +15 secondes par livraison
+                // Bonus de temps : +15 secondes par livraison + bonus des upgrades
                 if (this.timerManager && this.timerManager.isTimerRunning()) {
                     this.timerManager.addTime(15);
+                    this.timerManager.addDeliveryBonus(); // Ajouter le bonus d'upgrade
                 }
 
                 console.log(`🎉 Plat livré avec succès: ${carriedItem} (+15s bonus)`);

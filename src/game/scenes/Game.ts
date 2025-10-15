@@ -18,6 +18,8 @@ import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
 import { WaveManager } from "../managers/WaveManager";
+import { CurrencyManager } from "../managers/CurrencyManager";
+import { UpgradeManager } from "../managers/UpgradeManager";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -45,6 +47,8 @@ export default class Game extends Phaser.Scene {
 
     private ovenManager?: OvenManager;
     private waveManager?: WaveManager;
+    private currencyManager?: CurrencyManager;
+    private upgradeManager?: UpgradeManager;
     constructor() {
         super("Game");
 
@@ -188,6 +192,13 @@ export default class Game extends Phaser.Scene {
         this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
 
+        // Initialiser le système de monnaie et d'upgrades
+        this.currencyManager = new CurrencyManager(this, 100);
+        this.upgradeManager = new UpgradeManager();
+
+        // Initialiser l'affichage de la monnaie
+        this.currencyManager.initializeCoinDisplay(850, 20);
+
         // Initialiser le système de vagues
         this.waveManager = new WaveManager(
             this,
@@ -198,8 +209,8 @@ export default class Game extends Phaser.Scene {
         this.waveManager.initializeWaveDisplay();
 
         // Connecter le système de vagues avec OrderDisplayManager
-        this.orderDisplayManager.setOrderCompletedCallback(() => {
-            this.waveManager?.completeRecipe();
+        this.orderDisplayManager.setOrderCompletedCallback((dishId: string) => {
+            this.waveManager?.completeRecipe(dishId);
         });
 
         // Connecter le callback d'expiration pour décrémenter le compteur de commandes actives
@@ -211,6 +222,11 @@ export default class Game extends Phaser.Scene {
         this.waveManager.setGameOverCallback(() => {
             console.log("💀 GAME OVER - Une commande a expiré !");
             this.endGame("expired");
+        });
+
+        // Connecter le callback de vague complétée pour ouvrir le shop
+        this.waveManager.setWaveCompletedCallback((waveNumber, timeSpent, recipeIds) => {
+            this.openShop(waveNumber, timeSpent, recipeIds);
         });
 
         // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
@@ -308,6 +324,9 @@ export default class Game extends Phaser.Scene {
      * Démarre réellement le jeu après le countdown
      */
     private startGame(): void {
+        // Appliquer les upgrades au démarrage
+        this.applyUpgrades();
+
         // Démarrer la première vague
         this.waveManager?.startWave(1);
 
@@ -463,6 +482,100 @@ export default class Game extends Phaser.Scene {
      */
     changeScene() {
         this.endGame();
+    }
+
+    /**
+     * Applique tous les effets des upgrades achetés
+     */
+    private applyUpgrades(): void {
+        if (!this.upgradeManager) return;
+
+        const effects = this.upgradeManager.getActiveEffects();
+        console.log("🔧 Application des upgrades:", effects);
+
+        // Vitesse de déplacement des joueurs
+        if (this.player1) {
+            this.player1.applySpeedMultiplier(effects.speedMultiplier);
+        }
+        if (this.player2) {
+            this.player2.applySpeedMultiplier(effects.speedMultiplier);
+        }
+
+        // Vitesse de cuisson du four
+        if (this.ovenManager) {
+            this.ovenManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+        }
+
+        // Multiplicateur de score
+        if (this.scoreManager) {
+            this.scoreManager.applyScoreMultiplier(effects.scoreMultiplier);
+        }
+
+        // Bonus de temps par livraison
+        if (this.timerManager) {
+            this.timerManager.setBonusTimePerDelivery(effects.bonusTimePerDelivery);
+        }
+
+        // Temps supplémentaire au démarrage (appliqué une seule fois au début)
+        if (effects.extraTime > 0 && this.timerManager && this.timerManager.isTimerRunning()) {
+            this.timerManager.addTime(effects.extraTime);
+        }
+
+        // Nombre maximum de commandes simultanées
+        if (this.orderDisplayManager && effects.maxOrders !== 4) {
+            this.orderDisplayManager.setMaxOrders(effects.maxOrders);
+        }
+    }
+
+    /**
+     * Ouvre le shop entre les vagues
+     */
+    private openShop(waveNumber: number, timeSpent: number, recipeIds: string[]): void {
+        if (!this.currencyManager || !this.upgradeManager || !this.waveManager) return;
+
+        // Calculer les gains de la vague
+        const waveConfig = this.waveManager.getCurrentWaveConfig();
+        if (!waveConfig) return;
+
+        console.log(`📊 Données pour le calcul des gains:`);
+        console.log(`  - Recettes complétées: ${recipeIds.length}`, recipeIds);
+        console.log(`  - Temps passé: ${timeSpent.toFixed(2)}s`);
+        console.log(`  - Temps max: ${waveConfig.targetRecipes * waveConfig.orderDuration}s`);
+        console.log(`  - Difficulté: ${waveConfig.difficulty}`);
+
+        const earnings = this.currencyManager.calculateWaveEarnings(
+            recipeIds.length,
+            timeSpent,
+            waveConfig.targetRecipes * waveConfig.orderDuration,
+            recipeIds,
+            waveConfig.difficulty
+        );
+
+        // Ajouter les coins gagnés
+        this.currencyManager.addCoins(earnings.total);
+
+        console.log(`💰 Gains de la vague ${waveNumber}:`, earnings);
+
+        // Mettre le jeu en pause
+        this.scene.pause();
+
+        // Ouvrir la scène Shop en overlay
+        this.scene.launch("Shop", {
+            currencyManager: this.currencyManager,
+            upgradeManager: this.upgradeManager,
+            coinsEarned: earnings.total,
+            waveNumber: waveNumber,
+            onClose: () => {
+                // Reprendre le jeu
+                this.scene.resume();
+                
+                // Appliquer les upgrades achetés
+                this.applyUpgrades();
+                
+                // Démarrer la vague suivante
+                this.waveManager?.startNextWave();
+            },
+        });
     }
 
     /**

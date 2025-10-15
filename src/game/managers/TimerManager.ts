@@ -11,6 +11,7 @@ export class TimerManager {
     private timerEvent?: Phaser.Time.TimerEvent;
     private isRunning: boolean = false;
     private onTimeUp?: () => void;
+    private bonusTimePerDelivery: number = 0; // Bonus de temps par livraison (upgrade)
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -181,6 +182,23 @@ export class TimerManager {
 
     public isTimerRunning(): boolean {
         return this.isRunning;
+    }
+
+    /**
+     * Définit le bonus de temps par livraison (depuis les upgrades)
+     */
+    public setBonusTimePerDelivery(bonus: number): void {
+        this.bonusTimePerDelivery = bonus;
+        console.log(`⏳ Bonus de temps par livraison: +${bonus}s`);
+    }
+
+    /**
+     * Ajoute le bonus de temps pour une livraison
+     */
+    public addDeliveryBonus(): void {
+        if (this.bonusTimePerDelivery > 0 && this.isRunning) {
+            this.addTime(this.bonusTimePerDelivery);
+        }
     }
 }
 

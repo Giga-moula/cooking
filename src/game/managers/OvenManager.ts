@@ -13,6 +13,7 @@ export class OvenManager {
     private mapOffsetX: number;
     private mapOffsetY: number;
     private recipeManager: RecipeManager;
+    private cookingSpeedMultiplier: number = 1.0;
 
     constructor(
         scene: Phaser.Scene,
@@ -94,6 +95,15 @@ export class OvenManager {
         const key = `${gridX},${gridY}`;
         const item = this.itemsInOven.get(key);
         return item ? item.texture.key : null;
+    }
+
+    /**
+     * Applique un multiplicateur de vitesse de cuisson (depuis les upgrades)
+     * Note: Pour l'instant, la cuisson est instantanée. Cette méthode est prête pour une future implémentation.
+     */
+    applyCookingSpeedMultiplier(multiplier: number): void {
+        this.cookingSpeedMultiplier = multiplier;
+        console.log(`🔥 Vitesse de cuisson: x${multiplier}`);
     }
 
     /**

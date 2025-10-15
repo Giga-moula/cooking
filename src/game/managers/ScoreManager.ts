@@ -8,6 +8,7 @@ export class ScoreManager {
     private score: number = 0;
     private scoreText?: Phaser.GameObjects.Text;
     private totalDeliveries: number = 0;
+    private scoreMultiplier: number = 1.0; // Multiplicateur de score (upgrade)
     private scoreMultiplier: number = 1;
 
     constructor(scene: Phaser.Scene) {
@@ -102,7 +103,16 @@ export class ScoreManager {
             cookie: 100,
         };
 
-        return basePoints[dishId] || 50;
+        const points = basePoints[dishId] || 50;
+        return Math.floor(points * this.scoreMultiplier);
+    }
+
+    /**
+     * Applique un multiplicateur de score (depuis les upgrades)
+     */
+    applyScoreMultiplier(multiplier: number): void {
+        this.scoreMultiplier = multiplier;
+        console.log(`⭐ Multiplicateur de score: x${multiplier}`);
     }
 
     // Getters

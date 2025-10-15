@@ -27,6 +27,7 @@ interface WaveState {
     completedWaves: number[];
     pendingOrderIndex: number; // Index de la prochaine commande à faire apparaître
     currentActiveOrders: number; // Nombre de commandes actuellement affichées
+    completedRecipeIds: string[]; // IDs des recettes complétées dans cette vague
 }
 
 /**
@@ -64,6 +65,7 @@ export class WaveManager {
             completedWaves: [],
             pendingOrderIndex: 0,
             currentActiveOrders: 0,
+            completedRecipeIds: [],
         };
 
         this.initializeWaves();
@@ -78,7 +80,7 @@ export class WaveManager {
             {
                 waveNumber: 1,
                 name: "Premier cookie",
-                targetRecipes: 3,
+                targetRecipes: 1,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
                 orderDuration: 60,
                 difficulty: "easy",
@@ -251,6 +253,7 @@ export class WaveManager {
         this.waveState.startTime = this.scene.time.now;
         this.waveState.pendingOrderIndex = 0;
         this.waveState.currentActiveOrders = 0;
+        this.waveState.completedRecipeIds = []; // Réinitialiser les recettes complétées
 
         // Configurer l'OrderDisplayManager selon la vague
         this.orderDisplayManager.setOrderDuration(waveConfig.orderDuration);
@@ -370,14 +373,23 @@ export class WaveManager {
     /**
      * Marque une recette comme complétée
      */
-    public completeRecipe(): void {
+    public completeRecipe(recipeId?: string): void {
         if (!this.waveState.isActive || !this.currentWaveConfig) return;
 
         this.waveState.completedRecipes++;
         this.waveState.currentActiveOrders--;
 
+        // Enregistrer l'ID de la recette complétée pour le calcul des gains
+        if (recipeId) {
+            this.waveState.completedRecipeIds.push(recipeId);
+            console.log(`📝 Recette enregistrée: ${recipeId}`);
+        } else {
+            console.warn(`⚠️ completeRecipe() appelé sans recipeId !`);
+        }
+
         console.log(
-            `✅ Recette complétée (${this.waveState.completedRecipes}/${this.currentWaveConfig.targetRecipes})`
+            `✅ Recette complétée (${this.waveState.completedRecipes}/${this.currentWaveConfig.targetRecipes})`,
+            `IDs enregistrés:`, this.waveState.completedRecipeIds
         );
 
         // Tenter de faire apparaître une nouvelle commande immédiatement
@@ -425,10 +437,22 @@ export class WaveManager {
     private onGameOverByExpiration?: () => void;
 
     /**
+     * Callback appelé quand une vague est terminée (pour ouvrir le shop)
+     */
+    private onWaveCompleted?: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void;
+
+    /**
      * Définit le callback de Game Over par expiration
      */
     public setGameOverCallback(callback: () => void): void {
         this.onGameOverByExpiration = callback;
+    }
+
+    /**
+     * Définit le callback de complétion de vague (pour le shop)
+     */
+    public setWaveCompletedCallback(callback: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void): void {
+        this.onWaveCompleted = callback;
     }
 
     /**
@@ -450,18 +474,30 @@ export class WaveManager {
         const waveScore = this.calculateWaveScore();
         this.scoreManager.addScore(waveScore);
 
+        // Calculer le temps passé sur la vague
+        const timeSpent = (this.scene.time.now - this.waveState.startTime) / 1000;
+
         console.log(`🎉 Vague ${this.currentWaveConfig.waveNumber} terminée! Score: +${waveScore}`);
 
-        // Passer à la vague suivante après un délai
-        this.scene.time.delayedCall(3000, () => {
-            this.startNextWave();
-        });
+        // Appeler le callback pour ouvrir le shop
+        if (this.onWaveCompleted) {
+            this.onWaveCompleted(
+                this.currentWaveConfig.waveNumber,
+                timeSpent,
+                this.waveState.completedRecipeIds
+            );
+        }
+
+        // Passer à la vague suivante sera déclenché par le shop au lieu d'ici
+        // this.scene.time.delayedCall(3000, () => {
+        //     this.startNextWave();
+        // });
     }
 
     /**
      * Démarre la vague suivante
      */
-    private startNextWave(): void {
+    public startNextWave(): void {
         const nextWaveNumber = this.waveState.currentWave + 1;
         const nextWave = this.waves.find(
             (w) => w.waveNumber === nextWaveNumber
@@ -560,6 +596,7 @@ export class WaveManager {
             completedWaves: [],
             pendingOrderIndex: 0,
             currentActiveOrders: 0,
+            completedRecipeIds: [],
         };
         this.currentWaveConfig = null;
     }
