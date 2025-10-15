@@ -1,6 +1,68 @@
 import Phaser from "phaser";
 import { IngredientInteractionManager } from "./IngredientInteractionManager";
 
+// Constantes de configuration
+const CONFIG = {
+    // Dimensions des boîtes de recettes
+    BOX_WIDTH: 120,
+    BOX_HEIGHT: 140,
+    BOX_SPACING: 10,
+    BOX_POSITION: { x: 20, y: 20 },
+
+    // Dimensions de la barre de progression
+    BAR_WIDTH: 116,
+    BAR_HEIGHT: 8,
+    BAR_PADDING: 2,
+
+    // Zones dans la boîte
+    DISH_AREA: { x: 5, y: 15, width: 110, height: 60 },
+    INGREDIENT_AREA: { x: 5, y: 80, width: 110, height: 55 },
+
+    // Positions des icônes
+    DISH_ICON: { x: 60, y: 45, scale: 1.5, defaultTexture: "cookie" },
+    INGREDIENT_ICONS: {
+        startX: 35,
+        spacing: 50,
+        y: 110,
+        scale: 1.2,
+        maxCount: 3,
+        defaultTexture: "chocolate",
+    },
+
+    // Couleurs
+    COLORS: {
+        BACKGROUND: 0xf0f0f0,
+        BORDER: 0x333333,
+        DISH_AREA: 0xffffff,
+        INGREDIENT_AREA: 0xe3f2fd,
+        BORDER_LIGHT: 0xcccccc,
+        GREEN: 0x4caf50,
+        YELLOW: 0xffeb3b,
+        ORANGE: 0xff9800,
+        RED: 0xf44336,
+        SUCCESS: "#4CAF50",
+        ERROR: "#F44336",
+    },
+
+    // Animation
+    ANIMATION_FPS: 16, // 60 FPS
+    PULSE_DURATION: 500,
+    MESSAGE_DURATION: 1500,
+    SHAKE_DURATION: 100,
+    SHAKE_REPEAT: 3,
+
+    // Délais
+    NEW_ORDER_DELAY: 2000,
+    PARTICLE_LIFESPAN: 800,
+
+    // Seuils de progression
+    PROGRESS_THRESHOLDS: {
+        YELLOW: 0.75,
+        ORANGE: 0.5,
+        RED: 0.25,
+    },
+} as const;
+
 // Interface pour les boîtes de recettes
 interface RecipeBox {
     container: Phaser.GameObjects.Container;
@@ -13,6 +75,8 @@ interface RecipeBox {
     maxTime: number;
     currentBarWidth: number;
     targetBarWidth: number;
+    startTime: number;
+    isPulsating: boolean;
 }
 
 /**
@@ -39,7 +103,10 @@ export class OrderDisplayManager {
      */
     initializeRecipeDisplay(): void {
         // Créer un conteneur pour toutes les boîtes de recettes
-        const recipeContainer = this.scene.add.container(20, 20);
+        const recipeContainer = this.scene.add.container(
+            CONFIG.BOX_POSITION.x,
+            CONFIG.BOX_POSITION.y
+        );
         recipeContainer.setScrollFactor(0);
         recipeContainer.setDepth(2000);
 
@@ -56,59 +123,29 @@ export class OrderDisplayManager {
         parent: Phaser.GameObjects.Container,
         index: number
     ): void {
-        const boxWidth = 120;
-        const boxHeight = 140;
-        const spacing = 10;
-        const x = index * (boxWidth + spacing);
+        const x = index * (CONFIG.BOX_WIDTH + CONFIG.BOX_SPACING);
         const y = 0;
 
         const boxContainer = this.scene.add.container(x, y);
         parent.add(boxContainer);
 
-        // Fond de la boîte
-        const background = this.scene.add.graphics();
-        background.fillStyle(0xf0f0f0, 1);
-        background.fillRoundedRect(0, 0, boxWidth, boxHeight, 8);
-        background.lineStyle(2, 0x333333, 1);
-        background.strokeRoundedRect(0, 0, boxWidth, boxHeight, 8);
-        boxContainer.add(background);
+        // Créer les éléments graphiques
+        const background = this.createBoxBackground();
+        const colorBar = this.createColorBar();
+        const dishArea = this.createDishArea();
+        const ingredientArea = this.createIngredientArea();
+        const dishIcon = this.createDishIcon();
+        const ingredientIcons = this.createIngredientIcons();
 
-        // Barre de couleur en haut
-        const colorBar = this.scene.add.graphics();
-        colorBar.fillStyle(0x4caf50, 1);
-        colorBar.fillRoundedRect(2, 2, boxWidth - 4, 8, 4);
-        boxContainer.add(colorBar);
-
-        // Zone du plat fini
-        const dishArea = this.scene.add.graphics();
-        dishArea.fillStyle(0xffffff, 1);
-        dishArea.fillRoundedRect(5, 15, boxWidth - 10, 60, 4);
-        dishArea.lineStyle(1, 0xcccccc, 1);
-        dishArea.strokeRoundedRect(5, 15, boxWidth - 10, 60, 4);
-        boxContainer.add(dishArea);
-
-        // Zone des ingrédients
-        const ingredientArea = this.scene.add.graphics();
-        ingredientArea.fillStyle(0xe3f2fd, 1);
-        ingredientArea.fillRoundedRect(5, 80, boxWidth - 10, 55, 4);
-        ingredientArea.lineStyle(1, 0xcccccc, 1);
-        ingredientArea.strokeRoundedRect(5, 80, boxWidth - 10, 55, 4);
-        boxContainer.add(ingredientArea);
-
-        // Icône du plat fini
-        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie");
-        dishIcon.setScale(1.5);
-        boxContainer.add(dishIcon);
-
-        // Icônes des ingrédients
-        const ingredientIcons: Phaser.GameObjects.Image[] = [];
-        for (let i = 0; i < 3; i++) {
-            const icon = this.scene.add.image(35 + i * 50, 110, "chocolate");
-            icon.setScale(1.2);
-            icon.setVisible(false);
-            boxContainer.add(icon);
-            ingredientIcons.push(icon);
-        }
+        // Ajouter tous les éléments au conteneur
+        [
+            background,
+            colorBar,
+            dishArea,
+            ingredientArea,
+            dishIcon,
+            ...ingredientIcons,
+        ].forEach((element) => boxContainer.add(element));
 
         const recipeBox: RecipeBox = {
             container: boxContainer,
@@ -119,11 +156,136 @@ export class OrderDisplayManager {
             timerEvent: undefined,
             timeRemaining: 0,
             maxTime: 0,
-            currentBarWidth: 116,
-            targetBarWidth: 116,
+            currentBarWidth: CONFIG.BAR_WIDTH,
+            targetBarWidth: CONFIG.BAR_WIDTH,
+            startTime: 0,
+            isPulsating: false,
         };
 
         this.recipeBoxes.push(recipeBox);
+    }
+
+    /**
+     * Crée le fond de la boîte de recette
+     */
+    private createBoxBackground(): Phaser.GameObjects.Graphics {
+        const background = this.scene.add.graphics();
+        background.fillStyle(CONFIG.COLORS.BACKGROUND, 1);
+        background.fillRoundedRect(
+            0,
+            0,
+            CONFIG.BOX_WIDTH,
+            CONFIG.BOX_HEIGHT,
+            8
+        );
+        background.lineStyle(2, CONFIG.COLORS.BORDER, 1);
+        background.strokeRoundedRect(
+            0,
+            0,
+            CONFIG.BOX_WIDTH,
+            CONFIG.BOX_HEIGHT,
+            8
+        );
+        return background;
+    }
+
+    /**
+     * Crée la barre de couleur de progression
+     */
+    private createColorBar(): Phaser.GameObjects.Graphics {
+        const colorBar = this.scene.add.graphics();
+        colorBar.fillStyle(CONFIG.COLORS.GREEN, 1);
+        colorBar.fillRoundedRect(
+            CONFIG.BAR_PADDING,
+            CONFIG.BAR_PADDING,
+            CONFIG.BAR_WIDTH,
+            CONFIG.BAR_HEIGHT,
+            4
+        );
+        return colorBar;
+    }
+
+    /**
+     * Crée la zone d'affichage du plat fini
+     */
+    private createDishArea(): Phaser.GameObjects.Graphics {
+        const dishArea = this.scene.add.graphics();
+        dishArea.fillStyle(CONFIG.COLORS.DISH_AREA, 1);
+        dishArea.fillRoundedRect(
+            CONFIG.DISH_AREA.x,
+            CONFIG.DISH_AREA.y,
+            CONFIG.DISH_AREA.width,
+            CONFIG.DISH_AREA.height,
+            4
+        );
+        dishArea.lineStyle(1, CONFIG.COLORS.BORDER_LIGHT, 1);
+        dishArea.strokeRoundedRect(
+            CONFIG.DISH_AREA.x,
+            CONFIG.DISH_AREA.y,
+            CONFIG.DISH_AREA.width,
+            CONFIG.DISH_AREA.height,
+            4
+        );
+        return dishArea;
+    }
+
+    /**
+     * Crée la zone d'affichage des ingrédients
+     */
+    private createIngredientArea(): Phaser.GameObjects.Graphics {
+        const ingredientArea = this.scene.add.graphics();
+        ingredientArea.fillStyle(CONFIG.COLORS.INGREDIENT_AREA, 1);
+        ingredientArea.fillRoundedRect(
+            CONFIG.INGREDIENT_AREA.x,
+            CONFIG.INGREDIENT_AREA.y,
+            CONFIG.INGREDIENT_AREA.width,
+            CONFIG.INGREDIENT_AREA.height,
+            4
+        );
+        ingredientArea.lineStyle(1, CONFIG.COLORS.BORDER_LIGHT, 1);
+        ingredientArea.strokeRoundedRect(
+            CONFIG.INGREDIENT_AREA.x,
+            CONFIG.INGREDIENT_AREA.y,
+            CONFIG.INGREDIENT_AREA.width,
+            CONFIG.INGREDIENT_AREA.height,
+            4
+        );
+        return ingredientArea;
+    }
+
+    /**
+     * Crée l'icône du plat fini
+     */
+    private createDishIcon(): Phaser.GameObjects.Image {
+        const dishIcon = this.scene.add.image(
+            CONFIG.DISH_ICON.x,
+            CONFIG.DISH_ICON.y,
+            CONFIG.DISH_ICON.defaultTexture // Texture par défaut configurable
+        );
+        dishIcon.setScale(CONFIG.DISH_ICON.scale);
+        dishIcon.setVisible(false); // Caché par défaut jusqu'à ce qu'une recette soit assignée
+        return dishIcon;
+    }
+
+    /**
+     * Crée les icônes des ingrédients
+     */
+    private createIngredientIcons(): Phaser.GameObjects.Image[] {
+        const ingredientIcons: Phaser.GameObjects.Image[] = [];
+
+        for (let i = 0; i < CONFIG.INGREDIENT_ICONS.maxCount; i++) {
+            const icon = this.scene.add.image(
+                CONFIG.INGREDIENT_ICONS.startX +
+                    i * CONFIG.INGREDIENT_ICONS.spacing,
+                CONFIG.INGREDIENT_ICONS.y,
+                CONFIG.INGREDIENT_ICONS.defaultTexture // Texture par défaut configurable
+            );
+            icon.setScale(CONFIG.INGREDIENT_ICONS.scale);
+            icon.setVisible(false);
+            ingredientIcons.push(icon);
+        }
+
+        return ingredientIcons;
     }
 
     /**
@@ -134,18 +296,7 @@ export class OrderDisplayManager {
         const dishes = recipeManager.getDishes();
 
         // Nettoyer les commandes existantes
-        this.activeOrders = [];
-        this.recipeBoxes.forEach((box) => {
-            // Arrêter le timer existant
-            if (box.timerEvent) {
-                box.timerEvent.destroy();
-                box.timerEvent = undefined;
-            }
-
-            box.orderId = null;
-            box.dishIcon.setVisible(false);
-            box.ingredientIcons.forEach((icon) => icon.setVisible(false));
-        });
+        this.clearAllOrders();
 
         // Générer de nouvelles commandes (2-4 commandes)
         const numOrders = Phaser.Math.Between(2, this.maxOrders);
@@ -162,6 +313,165 @@ export class OrderDisplayManager {
             this.activeOrders.push(dish.id);
             this.updateRecipeBoxForDish(i, dish);
         }
+    }
+
+    /**
+     * Nettoie toutes les commandes existantes
+     */
+    private clearAllOrders(): void {
+        this.activeOrders = [];
+        this.recipeBoxes.forEach((box) => this.clearOrderBox(box));
+    }
+
+    /**
+     * Nettoie une boîte de commande spécifique
+     */
+    private clearOrderBox(box: RecipeBox): void {
+        this.stopOrderTimer(box);
+        this.stopPulsationEffect(box);
+        this.hideOrderContent(box);
+    }
+
+    /**
+     * Arrête le timer d'une commande
+     */
+    private stopOrderTimer(box: RecipeBox): void {
+        if (box.timerEvent) {
+            box.timerEvent.destroy();
+            box.timerEvent = undefined;
+        }
+    }
+
+    /**
+     * Arrête l'effet de pulsation
+     */
+    private stopPulsationEffect(box: RecipeBox): void {
+        if (box.isPulsating) {
+            this.scene.tweens.killTweensOf(box.colorBar);
+            box.colorBar.setAlpha(1);
+            box.isPulsating = false;
+        }
+    }
+
+    /**
+     * Cache le contenu d'une commande
+     */
+    private hideOrderContent(box: RecipeBox): void {
+        box.orderId = null;
+        box.dishIcon.setVisible(false);
+        box.ingredientIcons.forEach((icon) => icon.setVisible(false));
+    }
+
+    /**
+     * Obtient la couleur associée à un type de plat
+     */
+    private getDishColor(dishType: string): number {
+        const colorMap: Record<string, number> = {
+            cookie: CONFIG.COLORS.ORANGE,
+            dough: 0x8bc34a, // Vert clair
+            favicon: CONFIG.COLORS.GREEN,
+        };
+        return colorMap[dishType] || CONFIG.COLORS.GREEN;
+    }
+
+    /**
+     * Met à jour l'apparence de la barre de couleur
+     */
+    private updateColorBarAppearance(box: RecipeBox, color: number): void {
+        box.colorBar.clear();
+        box.colorBar.fillStyle(color, 1);
+        box.colorBar.fillRoundedRect(
+            CONFIG.BAR_PADDING,
+            CONFIG.BAR_PADDING,
+            box.currentBarWidth, // Utiliser la largeur dynamique au lieu de CONFIG.BAR_WIDTH
+            CONFIG.BAR_HEIGHT,
+            4
+        );
+    }
+
+    /**
+     * Met à jour les icônes des ingrédients
+     */
+    private updateIngredientIcons(box: RecipeBox, recipe: any): void {
+        const ingredients = [recipe.ingredient1, recipe.ingredient2];
+        box.ingredientIcons.forEach((icon, index) => {
+            if (index < ingredients.length) {
+                icon.setTexture(ingredients[index]);
+                icon.setVisible(true);
+            } else {
+                icon.setVisible(false);
+            }
+        });
+    }
+
+    /**
+     * Obtient la couleur de progression selon le pourcentage
+     */
+    private getProgressColor(progress: number): number {
+        const { YELLOW, ORANGE, RED } = CONFIG.PROGRESS_THRESHOLDS;
+        const {
+            GREEN,
+            YELLOW: YELLOW_COLOR,
+            ORANGE: ORANGE_COLOR,
+            RED: RED_COLOR,
+        } = CONFIG.COLORS;
+
+        if (progress > YELLOW) {
+            // Transition verte vers jaune (100% à 75%)
+            const localProgress = (progress - YELLOW) / (1 - YELLOW);
+            return this.interpolateColor(
+                GREEN,
+                YELLOW_COLOR,
+                1 - localProgress
+            );
+        } else if (progress > ORANGE) {
+            // Transition jaune vers orange (75% à 50%)
+            const localProgress = (progress - ORANGE) / (YELLOW - ORANGE);
+            return this.interpolateColor(
+                YELLOW_COLOR,
+                ORANGE_COLOR,
+                1 - localProgress
+            );
+        } else if (progress > RED) {
+            // Transition orange vers rouge (50% à 25%)
+            const localProgress = (progress - RED) / (ORANGE - RED);
+            return this.interpolateColor(
+                ORANGE_COLOR,
+                RED_COLOR,
+                1 - localProgress
+            );
+        } else {
+            // Rouge pour les 25% restants
+            return RED_COLOR;
+        }
+    }
+
+    /**
+     * Gère l'effet de pulsation selon le pourcentage de progression
+     */
+    private handlePulsationEffect(box: RecipeBox, progress: number): void {
+        const isUrgent = progress <= CONFIG.PROGRESS_THRESHOLDS.RED;
+
+        if (isUrgent && !box.isPulsating) {
+            this.startPulsationEffect(box);
+        } else if (!isUrgent && box.isPulsating) {
+            this.stopPulsationEffect(box);
+        }
+    }
+
+    /**
+     * Démarre l'effet de pulsation
+     */
+    private startPulsationEffect(box: RecipeBox): void {
+        box.isPulsating = true;
+        this.scene.tweens.add({
+            targets: box.colorBar,
+            alpha: 0.5,
+            duration: CONFIG.PULSE_DURATION,
+            yoyo: true,
+            ease: "Cubic.easeInOut",
+            repeat: -1, // Répéter indéfiniment
+        });
     }
 
     /**
@@ -192,35 +502,15 @@ export class OrderDisplayManager {
         box.orderId = recipe.result;
 
         // Couleur de la barre selon le type de plat
-        let color = 0x4caf50;
-        switch (recipe.result) {
-            case "cookie":
-                color = 0xff9800;
-                break;
-            case "dough":
-                color = 0x8bc34a;
-                break;
-            default:
-                color = 0x4caf50;
-        }
-        box.colorBar.clear();
-        box.colorBar.fillStyle(color, 1);
-        box.colorBar.fillRoundedRect(2, 2, 116, 8, 4);
+        const color = this.getDishColor(recipe.result);
+        this.updateColorBarAppearance(box, color);
 
         // Icône du plat fini
         box.dishIcon.setTexture(recipe.result);
         box.dishIcon.setVisible(true);
 
         // Icônes des ingrédients
-        const ingredients = [recipe.ingredient1, recipe.ingredient2];
-        box.ingredientIcons.forEach((icon, index) => {
-            if (index < ingredients.length) {
-                icon.setTexture(ingredients[index]);
-                icon.setVisible(true);
-            } else {
-                icon.setVisible(false);
-            }
-        });
+        this.updateIngredientIcons(box, recipe);
 
         // Démarrer le timer pour cette commande
         this.startOrderTimer(boxIndex);
@@ -256,6 +546,13 @@ export class OrderDisplayManager {
             box.timerEvent = undefined;
         }
 
+        // Arrêter l'effet de pulsation
+        if (box.isPulsating) {
+            this.scene.tweens.killTweensOf(box.colorBar);
+            box.colorBar.setAlpha(1);
+            box.isPulsating = false;
+        }
+
         box.orderId = null;
         box.dishIcon.setVisible(false);
         box.ingredientIcons.forEach((icon) => icon.setVisible(false));
@@ -264,7 +561,7 @@ export class OrderDisplayManager {
         this.showOrderCompleteEffect(orderIndex);
 
         // Générer une nouvelle commande après un délai
-        this.scene.time.delayedCall(2000, () => {
+        this.scene.time.delayedCall(CONFIG.NEW_ORDER_DELAY, () => {
             this.generateNewOrders();
         });
     }
@@ -274,49 +571,65 @@ export class OrderDisplayManager {
      */
     private showOrderCompleteEffect(orderIndex: number): void {
         const box = this.recipeBoxes[orderIndex];
-        const x = box.container.x + 60;
-        const y = box.container.y + 70;
+        const position = this.getBoxCenterPosition(box);
 
-        // Effet de particules
+        this.createParticleEffect(position.x, position.y);
+        this.createSuccessMessage(position.x, position.y - 20);
+    }
+
+    /**
+     * Obtient la position centrale d'une boîte de commande
+     */
+    private getBoxCenterPosition(box: RecipeBox): { x: number; y: number } {
+        return {
+            x: box.container.x + CONFIG.DISH_ICON.x,
+            y: box.container.y + CONFIG.DISH_ICON.y,
+        };
+    }
+
+    /**
+     * Crée un effet de particules
+     */
+    private createParticleEffect(x: number, y: number): void {
         try {
             const particles = this.scene.add.particles(x, y, "star", {
                 speed: { min: -50, max: 50 },
                 angle: { min: 0, max: 360 },
                 scale: { start: 0.3, end: 0 },
-                lifespan: 800,
+                lifespan: CONFIG.PARTICLE_LIFESPAN,
                 quantity: 10,
                 blendMode: "ADD",
             });
 
-            this.scene.time.delayedCall(800, () => {
+            this.scene.time.delayedCall(CONFIG.PARTICLE_LIFESPAN, () => {
                 particles.destroy();
             });
         } catch (e) {
             console.log("Effet de particules non disponible");
         }
+    }
 
-        // Message de succès
-        const message = this.scene.add.text(
-            x,
-            y - 20,
-            "✓ Commande terminée !",
-            {
-                fontFamily: "Arial",
-                fontSize: "16px",
-                color: "#4CAF50",
-                stroke: "#ffffff",
-                strokeThickness: 2,
-            }
-        );
+    /**
+     * Crée un message de succès
+     */
+    private createSuccessMessage(x: number, y: number): void {
+        const message = this.scene.add.text(x, y, "✓ Commande terminée !", {
+            fontFamily: "Arial",
+            fontSize: "16px",
+            color: CONFIG.COLORS.SUCCESS,
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+
         message.setOrigin(0.5);
         message.setScrollFactor(0);
         message.setDepth(3000);
 
         this.scene.tweens.add({
             targets: message,
-            y: y - 40,
+            y: y - 20,
             alpha: 0,
-            duration: 1500,
+            duration: CONFIG.MESSAGE_DURATION,
             ease: "Cubic.easeOut",
             onComplete: () => message.destroy(),
         });
@@ -337,12 +650,15 @@ export class OrderDisplayManager {
         // Initialiser les valeurs du timer
         box.maxTime = this.orderDuration;
         box.timeRemaining = this.orderDuration;
-        box.currentBarWidth = 116;
-        box.targetBarWidth = 116;
+        box.currentBarWidth = CONFIG.BAR_WIDTH;
+        box.targetBarWidth = CONFIG.BAR_WIDTH;
 
-        // Créer un nouvel événement de timer
+        // Enregistrer le temps de début
+        box.startTime = this.scene.time.now;
+
+        // Créer un timer qui se déclenche toutes les 16ms (60 FPS) pour une animation ultra-fluide
         box.timerEvent = this.scene.time.addEvent({
-            delay: 1000, // 1 seconde
+            delay: CONFIG.ANIMATION_FPS,
             callback: () => this.updateOrderTimer(boxIndex),
             callbackScope: this,
             loop: true,
@@ -356,10 +672,12 @@ export class OrderDisplayManager {
         const box = this.recipeBoxes[boxIndex];
         if (!box || !box.orderId) return;
 
-        box.timeRemaining--;
+        // Calculer le temps écoulé depuis le début
+        const elapsedTime = (this.scene.time.now - box.startTime) / 1000; // en secondes
+        box.timeRemaining = Math.max(0, box.maxTime - elapsedTime);
 
-        // Mettre à jour la barre de couleur
-        this.updateColorBar(boxIndex);
+        // Mettre à jour la barre de couleur de manière fluide
+        this.updateColorBarSmooth(boxIndex);
 
         // Vérifier si le temps est écoulé
         if (box.timeRemaining <= 0) {
@@ -391,84 +709,34 @@ export class OrderDisplayManager {
     }
 
     /**
-     * Met à jour la barre de couleur selon le temps restant
+     * Met à jour la barre de couleur de manière ultra-fluide
      */
-    private updateColorBar(boxIndex: number): void {
+    private updateColorBarSmooth(boxIndex: number): void {
         const box = this.recipeBoxes[boxIndex];
         if (!box || !box.orderId) return;
 
         const progress = box.timeRemaining / box.maxTime;
-        const barWidth = 116; // Largeur maximale de la barre
-        const targetWidth = barWidth * progress;
+        const targetWidth = CONFIG.BAR_WIDTH * progress;
 
-        // Mettre à jour la largeur cible
-        box.targetBarWidth = targetWidth;
+        // Mettre à jour directement la largeur actuelle (pas d'animation tween)
+        box.currentBarWidth = targetWidth;
 
-        // Couleurs de référence
-        const green = 0x4caf50;
-        const yellow = 0xffeb3b;
-        const orange = 0xff9800;
-        const red = 0xf44336;
+        // Obtenir la couleur selon le pourcentage de progression
+        const targetColor = this.getProgressColor(progress);
 
-        // Interpolation fluide des couleurs selon le pourcentage
-        let targetColor: number;
-        if (progress > 0.75) {
-            // Transition verte vers jaune (100% à 75%)
-            const localProgress = (progress - 0.75) / 0.25;
-            targetColor = this.interpolateColor(
-                green,
-                yellow,
-                1 - localProgress
-            );
-        } else if (progress > 0.5) {
-            // Transition jaune vers orange (75% à 50%)
-            const localProgress = (progress - 0.5) / 0.25;
-            targetColor = this.interpolateColor(
-                yellow,
-                orange,
-                1 - localProgress
-            );
-        } else if (progress > 0.25) {
-            // Transition orange vers rouge (50% à 25%)
-            const localProgress = (progress - 0.25) / 0.25;
-            targetColor = this.interpolateColor(orange, red, 1 - localProgress);
-        } else {
-            // Rouge pour les 25% restants
-            targetColor = red;
-        }
+        // Redessiner la barre immédiatement (pas d'animation)
+        this.updateColorBarAppearance(box, targetColor);
 
-        // Animation fluide de la largeur de la barre
-        this.scene.tweens.add({
-            targets: box,
-            currentBarWidth: targetWidth,
-            duration: 1000, // 1 seconde pour une transition fluide
-            ease: "Cubic.easeOut",
-            onUpdate: () => {
-                // Redessiner la barre avec la largeur interpolée
-                box.colorBar.clear();
-                box.colorBar.fillStyle(targetColor, 1);
-                box.colorBar.fillRoundedRect(2, 2, box.currentBarWidth, 8, 4);
-            },
-        });
+        // Gérer l'effet de pulsation
+        this.handlePulsationEffect(box, progress);
+    }
 
-        // Effet de pulsation quand il reste peu de temps
-        if (progress <= 0.25) {
-            // Arrêter les animations existantes pour éviter les conflits
-            this.scene.tweens.killTweensOf(box.colorBar);
-
-            this.scene.tweens.add({
-                targets: box.colorBar,
-                alpha: 0.5,
-                duration: 500,
-                yoyo: true,
-                ease: "Cubic.easeInOut",
-                repeat: -1, // Répéter indéfiniment
-            });
-        } else {
-            // Arrêter l'effet de pulsation si on n'est plus en urgence
-            this.scene.tweens.killTweensOf(box.colorBar);
-            box.colorBar.setAlpha(1);
-        }
+    /**
+     * Met à jour la barre de couleur selon le temps restant (ancienne méthode - gardée pour compatibilité)
+     */
+    private updateColorBar(boxIndex: number): void {
+        // Rediriger vers la nouvelle méthode fluide
+        this.updateColorBarSmooth(boxIndex);
     }
 
     /**
@@ -482,6 +750,13 @@ export class OrderDisplayManager {
         if (box.timerEvent) {
             box.timerEvent.destroy();
             box.timerEvent = undefined;
+        }
+
+        // Arrêter l'effet de pulsation
+        if (box.isPulsating) {
+            this.scene.tweens.killTweensOf(box.colorBar);
+            box.colorBar.setAlpha(1);
+            box.isPulsating = false;
         }
 
         // Supprimer la commande de la liste active
@@ -499,7 +774,7 @@ export class OrderDisplayManager {
         this.showOrderExpiredEffect(boxIndex);
 
         // Générer une nouvelle commande après un délai
-        this.scene.time.delayedCall(2000, () => {
+        this.scene.time.delayedCall(CONFIG.NEW_ORDER_DELAY, () => {
             this.generateNewOrders();
         });
     }
@@ -509,42 +784,48 @@ export class OrderDisplayManager {
      */
     private showOrderExpiredEffect(boxIndex: number): void {
         const box = this.recipeBoxes[boxIndex];
-        const x = box.container.x + 60;
-        const y = box.container.y + 70;
+        const position = this.getBoxCenterPosition(box);
 
-        // Message d'expiration
-        const message = this.scene.add.text(
-            x,
-            y - 20,
-            "❌ Commande expirée !",
-            {
-                fontFamily: "Arial",
-                fontSize: "16px",
-                color: "#F44336",
-                stroke: "#ffffff",
-                strokeThickness: 2,
-            }
-        );
+        this.createErrorMessage(position.x, position.y - 20);
+        this.createShakeEffect(box.container);
+    }
+
+    /**
+     * Crée un message d'erreur
+     */
+    private createErrorMessage(x: number, y: number): void {
+        const message = this.scene.add.text(x, y, "❌ Commande expirée !", {
+            fontFamily: "Arial",
+            fontSize: "16px",
+            color: CONFIG.COLORS.ERROR,
+            stroke: "#ffffff",
+            strokeThickness: 2,
+        });
+
         message.setOrigin(0.5);
         message.setScrollFactor(0);
         message.setDepth(3000);
 
         this.scene.tweens.add({
             targets: message,
-            y: y - 40,
+            y: y - 20,
             alpha: 0,
-            duration: 1500,
+            duration: CONFIG.MESSAGE_DURATION,
             ease: "Cubic.easeOut",
             onComplete: () => message.destroy(),
         });
+    }
 
-        // Effet de secousse pour la boîte
+    /**
+     * Crée un effet de secousse
+     */
+    private createShakeEffect(target: Phaser.GameObjects.Container): void {
         this.scene.tweens.add({
-            targets: box.container,
-            x: box.container.x - 5,
-            duration: 100,
+            targets: target,
+            x: target.x - 5,
+            duration: CONFIG.SHAKE_DURATION,
             yoyo: true,
-            repeat: 3,
+            repeat: CONFIG.SHAKE_REPEAT,
             ease: "Cubic.easeInOut",
         });
     }
