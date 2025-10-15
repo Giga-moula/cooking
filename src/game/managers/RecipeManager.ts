@@ -2,20 +2,15 @@
  * Gestionnaire de recettes pour les combinaisons d'ingrédients
  */
 
-export interface Ingredient {
-    id: string;
-    name: string;
-    texture: string;
-    isDish: boolean; // true si c'est un plat fini, false si c'est un ingrédient
-}
-
-export interface Recipe {
-    id: string;
-    ingredient1: string;
-    ingredient2: string;
-    result: string;
-    name: string;
-}
+import { INGREDIENTS, type Ingredient } from "../data/ingredients";
+import {
+    OVEN_COOKING,
+    RECIPES,
+    SPECIAL_TRANSFORMATIONS,
+    type OvenCooking,
+    type Recipe,
+    type SpecialTransformation,
+} from "../data/recipes";
 
 export class RecipeManager {
     private ingredients: Map<string, Ingredient> = new Map();
@@ -27,92 +22,16 @@ export class RecipeManager {
     }
 
     private initializeIngredients() {
-        // Ingrédients de base
-        this.addIngredient({
-            id: "butter",
-            name: "Beurre",
-            texture: "butter",
-            isDish: false,
-        });
-
-        this.addIngredient({
-            id: "flour",
-            name: "Farine",
-            texture: "flour",
-            isDish: false,
-        });
-
-        this.addIngredient({
-            id: "chocolate",
-            name: "Chocolat",
-            texture: "chocolate",
-            isDish: false,
-        });
-
-        // Ingrédients créés par combinaison (intermédiaires)
-        this.addIngredient({
-            id: "dough",
-            name: "Pâte",
-            texture: "dough",
-            isDish: false, // La pâte est un ingrédient intermédiaire, pas un plat fini
-        });
-
-        this.addIngredient({
-            id: "molten_butter",
-            name: "Beurre fondu",
-            texture: "molten_butter",
-            isDish: false, // Le beurre fondu est un ingrédient intermédiaire
-        });
-
-        this.addIngredient({
-            id: "cookie-mix",
-            name: "Cookie Mix",
-            texture: "cookie-mix",
-            isDish: false, // Le cookie mix est un ingrédient intermédiaire
-        });
-
-        // Plats finis
-        this.addIngredient({
-            id: "cookie",
-            name: "Cookie",
-            texture: "cookie",
-            isDish: true, // Le cookie est un plat fini
-        });
-
-        // Ingrédients bonus
-        this.addIngredient({
-            id: "star",
-            name: "Étoile",
-            texture: "star",
-            isDish: false,
-        });
-
-        this.addIngredient({
-            id: "chocolate-chunks",
-            name: "Chunks de chocolat",
-            texture: "chocolate-chunks",
-            isDish: false,
+        // Charger tous les ingrédients depuis le fichier de données
+        INGREDIENTS.forEach((ingredient) => {
+            this.addIngredient(ingredient);
         });
     }
 
     private initializeRecipes() {
-
-        // Beurre fondu + Farine = Pâte (SEULEMENT avec beurre fondu)
-        this.addRecipe({
-            id: "molten_butter_flour_dough",
-            ingredient1: "molten_butter",
-            ingredient2: "flour",
-            result: "dough",
-            name: "Pâte avec beurre fondu",
-        });
-
-        // Pâte + Chunks de chocolat = Cookie Mix
-        this.addRecipe({
-            id: "dough_chocolate_chunks_cookie_mix",
-            ingredient1: "dough",
-            ingredient2: "chocolate-chunks",
-            result: "cookie-mix",
-            name: "Cookie Mix avec chunks",
+        // Charger toutes les recettes depuis le fichier de données
+        RECIPES.forEach((recipe) => {
+            this.addRecipe(recipe);
         });
     }
 
@@ -172,11 +91,10 @@ export class RecipeManager {
      * Utilisé pour les transformations comme chocolat → chunks
      */
     public performSpecialTransformation(ingredientId: string): string | null {
-        const transformations: { [key: string]: string } = {
-            "chocolate": "chocolate-chunks",
-        };
-
-        return transformations[ingredientId] || null;
+        const transformation = SPECIAL_TRANSFORMATIONS.find(
+            (t) => t.from === ingredientId
+        );
+        return transformation ? transformation.to : null;
     }
 
     /**
@@ -210,6 +128,34 @@ export class RecipeManager {
     public isDish(id: string): boolean {
         const ingredient = this.getIngredient(id);
         return ingredient ? ingredient.isDish : false;
+    }
+
+    /**
+     * Récupère toutes les transformations spéciales disponibles
+     */
+    public getAllSpecialTransformations(): SpecialTransformation[] {
+        return SPECIAL_TRANSFORMATIONS;
+    }
+
+    /**
+     * Récupère toutes les cuissons au four disponibles
+     */
+    public getAllOvenCooking(): OvenCooking[] {
+        return OVEN_COOKING;
+    }
+
+    /**
+     * Trouve une cuisson au four pour un ingrédient donné
+     */
+    public getOvenCooking(ingredientId: string): OvenCooking | undefined {
+        return OVEN_COOKING.find((cooking) => cooking.from === ingredientId);
+    }
+
+    /**
+     * Vérifie si un ingrédient peut être cuit au four
+     */
+    public canCookInOven(ingredientId: string): boolean {
+        return this.getOvenCooking(ingredientId) !== undefined;
     }
 }
 

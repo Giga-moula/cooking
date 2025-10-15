@@ -60,23 +60,50 @@ export default class Preloader extends Phaser.Scene {
 
         // Charger les ingrédients
         this.load.image("butter", "assets/ingredients/butter.png");
-        this.load.image("flour", "assets/ingredients/wheat_floor.png");
         this.load.image("chocolate", "assets/ingredients/chocolate.png");
-        this.load.image("chocolate-chunks", "assets/ingredients/chocolate-chunks.png");
-        this.load.image("cookie-mix", "assets/ingredients/cookie-mix.png");
-        this.load.image("molten_butter", "assets/ingredients/molten_butter.png");
+        this.load.image("flour", "assets/ingredients/flour.png");
+        this.load.image("sugar", "assets/ingredients/sugar.png");
+
+        //Charger les objets mélangers
+        this.load.image("caramel", "assets/crafted/caramel.png");
+        this.load.image(
+            "chocolate-chunks",
+            "assets/crafted/chocolate-chunks.png"
+        );
+        this.load.image(
+            "cookie-mix-cara",
+            "assets/crafted/cookie-mix-cara.png"
+        );
+        this.load.image(
+            "cookie-mix-choco-cara",
+            "assets/crafted/cookie-mix-choco-cara.png"
+        );
+        this.load.image(
+            "cookie-mix-choco",
+            "assets/crafted/cookie-mix-choco.png"
+        );
         this.load.image("dough", "assets/crafted/dough.png");
+        this.load.image("molten_butter", "assets/crafted/molten_butter.png");
+
+        //Charger les cookies
         this.load.image("cookie", "assets/meal/cookie.png");
-        this.load.image("favicon", "assets/favicon.png");
-        
+        this.load.image("cookie-cara", "assets/meal/cookie-cara.png");
+        this.load.image("cookie-choco", "assets/meal/cookie-choco.png");
+        this.load.image(
+            "cookie-choco-cara",
+            "assets/meal/cookie-choco-cara.png"
+        );
+        this.load.image("cookie-dead", "assets/meal/cookie-dead.png");
+
         // Charger les objets du jeu
         this.load.image("oven", "assets/oven.png");
         this.load.image("craft_plan", "assets/craft_plan.png");
 
         // Charger les caisses d'ingrédients pour la récupération
-        this.load.image("butter_box", "assets/butter_box.png");
-        this.load.image("flour_box", "assets/flour_box.png");
-        this.load.image("choco_box", "assets/choco_box.png");
+        this.load.image("butter_box", "assets/boxes/butter_box.png");
+        this.load.image("flour_box", "assets/boxes/flour_box.png");
+        this.load.image("choco_box", "assets/boxes/choco_box.png");
+        this.load.image("sugar_box", "assets/boxes/sugar-box.png");
 
         // Charger les sprites de grand-mère
         this.load.image(
@@ -183,3 +210,4 @@ export default class Preloader extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
+
