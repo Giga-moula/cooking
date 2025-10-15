@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
 import { TableTileManager } from "./tableManager";
 import { GameConfig } from "../config/GameConfig";
+import { MapConfig, DEFAULT_MAP_CONFIG } from "../config/MapConfig";
 
 /**
  * Gestionnaire de la carte : tiles, murs, limites
@@ -17,19 +18,22 @@ export class MapManager {
     private ingredientTiles: Map<string, string> = new Map();
     private tableTileManager?: TableTileManager;
     private craftPlanOverlays: Map<string, Phaser.GameObjects.Image> = new Map(); // Track des craft_plans
-
+    private currentMapConfig: MapConfig;
+   
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
         mapOffsetY: number,
-        mapWidth: number = 10,
-        mapHeight: number = 10
+        mapWidth: number = 12,
+        mapHeight: number = 12,
+        mapConfig: MapConfig = DEFAULT_MAP_CONFIG
     ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
+        this.currentMapConfig = mapConfig;
     }
 
     /**
@@ -70,59 +74,69 @@ export class MapManager {
     }
 
     /**
-     * Crée la carte avec les données fournies
+     * Crée la carte avec la configuration fournie
      */
     createMap(): IsometricMap {
         this.isoMap = new IsometricMap(this.scene);
 
-        const mapData = [
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 6, 1, 1, 1, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Table de transformation (pour actions spécifiques)
-            [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 10, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
-            [4, 7, 8, 1, 1, 11, 1, 1, 9, 4], // 11 = Four (pour cuisson)
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-        ];
-
+        const mapData = this.currentMapConfig.mapData;
+        
         // Générer les configurations de tables AVANT de créer la carte
         this.tableTileManager = new TableTileManager(mapData);
         const tableConfigurations = this.tableTileManager.generateTableConfigurations();
 
-        // Créer un mapping des textures avec les bonnes textures de table
-        const tileTextures = this.createTileTexturesWithTables(tableConfigurations);
+        // Créer un mapping des textures basé sur la configuration
+        const tileTextures = this.createTileTexturesFromConfig(tableConfigurations);
 
         this.isoMap.createMap(
             mapData,
             tileTextures,
             this.mapOffsetX,
-            this.mapOffsetY
+            this.mapOffsetY,
+            this.currentMapConfig.tileTypes
         );
 
         // Appliquer les vraies textures de table après la création
         this.applyTableTextures(tableConfigurations);
 
+        // Initialiser automatiquement les tiles d'ingrédients et autres propriétés
+        this.initializeMapProperties();
+
         return this.isoMap;
     }
 
     /**
-     * Crée le mapping des textures de base
+     * Crée le mapping des textures basé sur la configuration
      */
-    private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): { [key: number]: string } {
-        return {
-            1: "planks",
-            4: "iso-wall",
-            5: "table-mono",           // Texture temporaire qui sera remplacée par la bonne texture de table
-            6: "choco_box",            // Caisse de chocolat
-            7: "butter_box",           // Caisse de beurre
-            8: "flour_box",            // Caisse de farine
-            9: "iso-delivery-zone",
-            10: "table-mono",          // Table de transformation - utilise maintenant les vraies tables
-            11: "oven",            // Four (pour cuisson) - utilise l'image oven.png directement
-        };
+    private createTileTexturesFromConfig(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): { [key: number]: string } {
+        const tileTextures: { [key: number]: string } = {};
+        
+        // Utiliser la configuration pour créer le mapping des textures
+        for (const [tileType, config] of Object.entries(this.currentMapConfig.tileTypes)) {
+            tileTextures[parseInt(tileType)] = config.texture;
+        }
+        
+        return tileTextures;
+    }
+
+    /**
+     * Initialise automatiquement les propriétés de la carte basées sur la configuration
+     */
+    private initializeMapProperties(): void {
+        this.ingredientTiles.clear();
+        
+        const mapData = this.currentMapConfig.mapData;
+        
+        for (let y = 0; y < mapData.length; y++) {
+            for (let x = 0; x < mapData[y].length; x++) {
+                const tileType = mapData[y][x];
+                const config = this.currentMapConfig.tileTypes[tileType];
+                
+                if (config?.isIngredient) {
+                    this.ingredientTiles.set(`${x},${y}`, config.isIngredient);
+                }
+            }
+        }
     }
 
     /**
@@ -309,12 +323,35 @@ export class MapManager {
     }
 
     /**
-     * Initialise les tiles d'ingrédients
+     * Change la configuration de carte
      */
-    initializeIngredientTiles(): void {
-        this.ingredientTiles.set("1,1", "chocolate");
-        this.ingredientTiles.set("1,8", "butter");
-        this.ingredientTiles.set("2,8", "flour");
+    setMapConfig(mapConfig: MapConfig): void {
+        this.currentMapConfig = mapConfig;
+    }
+
+    /**
+     * Récupère la configuration actuelle de la carte
+     */
+    getCurrentMapConfig(): MapConfig {
+        return this.currentMapConfig;
+    }
+
+    /**
+     * Récupère le point de spawn d'un joueur
+     */
+    getPlayerSpawnPoint(playerNumber: 1 | 2): { x: number; y: number } {
+        if (playerNumber === 1) {
+            return this.currentMapConfig.spawnPoints.player1;
+        } else {
+            return this.currentMapConfig.spawnPoints.player2;
+        }
+    }
+
+    /**
+     * Récupère tous les points de spawn de la carte
+     */
+    getAllSpawnPoints(): { player1: { x: number; y: number }; player2: { x: number; y: number } } {
+        return this.currentMapConfig.spawnPoints;
     }
 
     /**
@@ -366,6 +403,19 @@ export class MapManager {
         const isOven = tile?.texture.key === 'oven';
         console.log(`isOven(${gridX}, ${gridY}): texture=${tile?.texture.key}, isOven=${isOven}`);
         return isOven;
+    }
+
+    /**
+     * Vérifie si une position est une zone de livraison
+     */
+    isDeliveryZone(gridX: number, gridY: number): boolean {
+        const mapData = this.currentMapConfig.mapData;
+        if (gridY < 0 || gridY >= mapData.length) return false;
+        if (gridX < 0 || gridX >= mapData[gridY].length) return false;
+        
+        const tileType = mapData[gridY][gridX];
+        const config = this.currentMapConfig.tileTypes[tileType];
+        return config?.isDeliveryZone || false;
     }
 
     /**

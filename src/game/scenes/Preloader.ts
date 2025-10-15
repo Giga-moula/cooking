@@ -128,6 +128,10 @@ export default class Preloader extends Phaser.Scene {
             "assets/table/table-open-right-top.png"
         );
         this.load.image(
+            "table-open-top",
+            "assets/table/table-open-top.png"
+        );
+        this.load.image(
             "table-open-bottom",
             "assets/table/table-open-bottom.png"
         );

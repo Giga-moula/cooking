@@ -1,20 +1,29 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { MapManager } from "./MapManager";
 
 /**
  * Gestionnaire du système de livraison
  */
 export class DeliveryManager {
     private scene: Phaser.Scene;
-    private deliveryZone: { x: number; y: number } = { x: 8, y: 8 };
+    private deliveryZone: { x: number; y: number } = { x: 5, y: 6 };
     private deliveryZoneGraphics?: Phaser.GameObjects.Graphics;
     private mapOffsetX: number;
     private mapOffsetY: number;
+    private mapManager?: MapManager;
 
     constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+    }
+
+    /**
+     * Définit le MapManager pour accéder aux informations de la carte
+     */
+    setMapManager(mapManager: MapManager): void {
+        this.mapManager = mapManager;
     }
 
     /**
@@ -61,6 +70,11 @@ export class DeliveryManager {
      * Vérifie si le joueur est dans la zone de livraison
      */
     isInDeliveryZone(playerGridX: number, playerGridY: number): boolean {
+        // Utiliser le MapManager si disponible, sinon utiliser la position par défaut
+        if (this.mapManager) {
+            return this.mapManager.isDeliveryZone(playerGridX, playerGridY);
+        }
+        
         return (
             playerGridX === this.deliveryZone.x &&
             playerGridY === this.deliveryZone.y

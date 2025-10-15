@@ -8,6 +8,7 @@ import { DeliveryManager } from "../managers/DeliveryManager";
 import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
+import { IsometricUtils } from "../utils/IsometricUtils";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
@@ -78,20 +79,12 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             1
         );
-        this.player1.createPlayer(
-            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x,
-            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y
-        );
-
+        
         this.player2 = new PlayerManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY,
             2
-        );
-        this.player2.createPlayer(
-            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.x,
-            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.y
         );
 
         this.playerList = [this.player1, this.player2];
@@ -114,6 +107,9 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
+        
+        // Connecter le DeliveryManager au MapManager
+        this.deliveryManager.setMapManager(this.mapManager);
 
         this.scoreManager = new ScoreManager(this);
         this.ingredientManager = new IngredientInteractionManager();
@@ -132,6 +128,11 @@ export default class Game extends Phaser.Scene {
 
         // Créer la carte en grille
         const isoMap = this.mapManager.createMap();
+
+        // Créer les joueurs avec les points de spawn de la carte
+        const spawnPoints = this.mapManager.getAllSpawnPoints();
+        this.player1.createPlayer(spawnPoints.player1.x, spawnPoints.player1.y);
+        this.player2.createPlayer(spawnPoints.player2.x, spawnPoints.player2.y);
 
         // Créer les murs invisibles autour de la carte
         const walls = this.mapManager.createMapBoundaries();
@@ -159,8 +160,7 @@ export default class Game extends Phaser.Scene {
             }
         }
 
-        // Initialiser les tiles d'ingrédients
-        this.mapManager.initializeIngredientTiles();
+        // Les tiles d'ingrédients sont maintenant initialisées automatiquement par la configuration
 
 
         // Initialiser les systèmes d'affichage
@@ -220,6 +220,42 @@ export default class Game extends Phaser.Scene {
         });
 
         EventBus.emit("current-scene-ready", this);
+    }
+
+    /**
+     * Repositionne les joueurs selon les points de spawn de la carte actuelle
+     */
+    repositionPlayers(): void {
+        const spawnPoints = this.mapManager?.getAllSpawnPoints();
+        if (!spawnPoints) return;
+        
+        // Repositionner le joueur 1
+        if (this.player1) {
+            const player1Sprite = this.player1.getPlayer();
+            if (player1Sprite) {
+                const screenPos1 = IsometricUtils.gridToScreen(spawnPoints.player1.x, spawnPoints.player1.y);
+                player1Sprite.setPosition(
+                    screenPos1.x + this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2,
+                    screenPos1.y + this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2 - 12
+                );
+                // Mettre à jour la position en grille du joueur
+                this.player1.setGridPosition(spawnPoints.player1.x, spawnPoints.player1.y);
+            }
+        }
+        
+        // Repositionner le joueur 2
+        if (this.player2) {
+            const player2Sprite = this.player2.getPlayer();
+            if (player2Sprite) {
+                const screenPos2 = IsometricUtils.gridToScreen(spawnPoints.player2.x, spawnPoints.player2.y);
+                player2Sprite.setPosition(
+                    screenPos2.x + this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2,
+                    screenPos2.y + this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2 - 12
+                );
+                // Mettre à jour la position en grille du joueur
+                this.player2.setGridPosition(spawnPoints.player2.x, spawnPoints.player2.y);
+            }
+        }
     }
 
     update(time: number, delta: number) {

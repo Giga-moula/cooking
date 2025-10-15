@@ -75,15 +75,19 @@ export class IsometricMap {
      * @param offsetX Décalage horizontal de la carte
      * @param offsetY Décalage vertical de la carte
      */
-    createMap(mapData: number[][], tileTextures: { [key: number]: string }, offsetX: number = 0, offsetY: number = 0) {
+    createMap(mapData: number[][], tileTextures: { [key: number]: string }, offsetX: number = 0, offsetY: number = 0, tileConfigs?: { [key: number]: any }) {
         this.mapData = mapData;
         
         for (let y = 0; y < mapData.length; y++) {
             for (let x = 0; x < mapData[y].length; x++) {
                 const tileType = mapData[y][x];
                 if (tileType !== 0) { // 0 = vide
-                    // 4 = mur solide (impassable), 5 = plan de travail (impassable mais interactif), 6,7,8 = tiles d'ingrédients (impassables mais interactifs)
-                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, tileType === 4 || tileType === 5 || tileType >= 6, tileType === 5 || tileType >= 6);
+                    const config = tileConfigs?.[tileType];
+                    const rotation = config?.rotation || 0;
+                    const isSolid = config?.isSolid ?? (tileType === 4 || tileType === 5 || tileType >= 6);
+                    const isCounter = config?.isCounter ?? (tileType === 5 || tileType >= 6);
+                    
+                    this.createTile(x, y, tileTextures[tileType] || 'grass', offsetX, offsetY, isSolid, isCounter, rotation);
                 }
             }
         }
@@ -92,7 +96,7 @@ export class IsometricMap {
     /**
      * Crée un tile individuel
      */
-    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0, isSolid: boolean = false, isCounter: boolean = false): Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite {
+    createTile(gridX: number, gridY: number, texture: string, offsetX: number = 0, offsetY: number = 0, isSolid: boolean = false, isCounter: boolean = false, rotation: number = 0): Phaser.GameObjects.Image | Phaser.Physics.Arcade.Sprite {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const key = `${gridX},${gridY}`;
         
@@ -102,6 +106,11 @@ export class IsometricMap {
             // Créer un sprite avec physique pour les tiles solides
             tile = this.scene.physics.add.sprite(screenPos.x + offsetX, screenPos.y + offsetY, texture);
             tile.setOrigin(0.5, 0.5);
+            
+            // Appliquer la rotation si elle est définie
+            if (rotation !== 0) {
+                tile.setRotation(rotation);
+            }
             
             // Appliquer le scale automatique pour les images (pas les tiles procédurales)
             this.applyAutoScale(tile, texture);
