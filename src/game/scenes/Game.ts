@@ -6,11 +6,11 @@ import { EventBus } from "../EventBus";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
 import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
+import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
-import { PlayerManager } from "../managers/PlayerManager";  
+import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
-import { InteractionSystem } from "../managers/InteractionSystem";
 import { TimerManager } from "../managers/TimerManager";
 
 export default class Game extends Phaser.Scene {
@@ -175,8 +175,7 @@ export default class Game extends Phaser.Scene {
             this.deliveryManager,
             this.ingredientManager,
             this.orderDisplayManager,
-            this.scoreManager,
-            this.timerManager // ✅ Passer le timer au système d'interaction
+            this.scoreManager
         );
 
         // Texte d'aide
@@ -272,3 +271,4 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
+
