@@ -99,8 +99,6 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY
         );
         
-        // Connecter l'inventory manager au counter manager
-        this.counterManager.setInventoryManager(this.player1.getInventory());
         this.deliveryManager = new DeliveryManager(
             this,
             this.mapOffsetX,
@@ -201,10 +199,10 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             650,
-            "🎮 JOUEUR 1 (Bleu): ZQSD + E | JOUEUR 2 (Rouge): IJKL + O | Espace : Menu\n" +
+            "🎮 J1 (Bleu): ZQSD + E (prendre/poser) + R (combiner) | J2 (Rouge): IJKL + O (prendre/poser) + P (combiner)\n" +
+                "💡 TOUTES les recettes se font sur la TABLE BLEUE avec R/P ! Tables normales = stockage uniquement\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
-                "🎯 Coopérez pour gagner plus de points !",
+                "🎯 Réalisez les commandes (en haut à gauche) et livrez dans la zone rouge !",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -231,6 +229,7 @@ export default class Game extends Phaser.Scene {
 
         // Gestion des interactions pour chaque joueur
         if (this.interactionSystem) {
+            // Touche d'interaction normale (E/O) : prendre/poser/combiner
             if (this.player1.isInteractionPressed()) {
                 console.log("🎮 Joueur 1 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player1);
@@ -239,6 +238,17 @@ export default class Game extends Phaser.Scene {
             if (this.player2.isInteractionPressed()) {
                 console.log("🎮 Joueur 2 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player2);
+            }
+
+            // Touche de transformation (R/P) : transformer sur table de transformation
+            if (this.player1.isTransformPressed()) {
+                console.log("⚗️ Joueur 1 transforme");
+                this.interactionSystem.handlePlayerTransformation(this.player1);
+            }
+
+            if (this.player2.isTransformPressed()) {
+                console.log("⚗️ Joueur 2 transforme");
+                this.interactionSystem.handlePlayerTransformation(this.player2);
             }
         }
     }
@@ -256,9 +266,12 @@ export default class Game extends Phaser.Scene {
     displayControls() {
         const controlsText = this.add.text(10, 10, 
             "Contrôles:\n" +
-            "• Flèches: Se déplacer\n" +
-            "• E: Tables normales (poser/prendre)\n" +
-            "• T: Tiles bleues (transformer)\n" +
+            "• JOUEUR 1: ZQSD (déplacement) + E (prendre/poser) + R (combiner/transformer)\n" +
+            "• JOUEUR 2: IJKL (déplacement) + O (prendre/poser) + P (combiner/transformer)\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "• E/O: Poser/Prendre sur TOUTES les tables\n" +
+            "• R/P sur TABLE BLEUE: Combiner/Transformer les ingrédients\n" +
+            "• Tables normales: Stockage temporaire uniquement\n" +
             "• ESPACE: Menu", 
             {
                 fontFamily: "Arial",
