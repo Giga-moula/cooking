@@ -21,6 +21,7 @@ export class RecipeBox {
     private scene: Phaser.Scene;
     private data: RecipeBoxData;
     private timerEvent?: Phaser.Time.TimerEvent;
+    private isDestroyed: boolean = false;
 
     constructor(
         scene: Phaser.Scene,
@@ -123,7 +124,6 @@ export class RecipeBox {
      * Met à jour la boîte avec une recette
      */
     updateWithRecipe(recipe: any): void {
-        console.log("RecipeBox: updateWithRecipe appelée avec:", recipe);
         this.data.orderId = recipe.result;
 
         // Couleur de la barre selon le type de plat
@@ -141,12 +141,8 @@ export class RecipeBox {
             recipe.ingredient1,
             recipe.ingredient2,
         ];
-        console.log("RecipeBox: ingrédients à afficher:", ingredients);
         this.data.ingredientIcons.forEach((icon, index) => {
             if (index < ingredients.length) {
-                console.log(
-                    `RecipeBox: affichage ingrédient ${index}: ${ingredients[index]}`
-                );
                 icon.setTexture(ingredients[index]);
                 icon.setVisible(true);
             } else {
@@ -188,7 +184,6 @@ export class RecipeBox {
      * Démarre le timer pour cette recette
      */
     startTimer(orderDuration: number): void {
-        console.log(`RecipeBox: démarrage timer pour ${orderDuration}s`);
         // Arrêter le timer existant s'il y en a un
         if (this.timerEvent) {
             this.timerEvent.destroy();
@@ -207,7 +202,6 @@ export class RecipeBox {
             callbackScope: this,
             loop: true,
         });
-        console.log("RecipeBox: timer créé et démarré");
     }
 
     /**
@@ -373,7 +367,12 @@ export class RecipeBox {
      * Détruit la boîte
      */
     destroy(): void {
+        this.isDestroyed = true;
         this.stopTimer();
+        
+        // Tuer tous les tweens actifs sur ce container
+        this.scene.tweens.killTweensOf(this.data.container);
+        
         this.data.container.destroy();
     }
 
@@ -405,7 +404,12 @@ export class RecipeBox {
             scaleY: 0.8,
             duration: 300,
             ease: "Cubic.easeOut",
-            onComplete,
+            onComplete: () => {
+                // Ne pas exécuter le callback si la boîte a été détruite
+                if (!this.isDestroyed) {
+                    onComplete();
+                }
+            },
         });
     }
 

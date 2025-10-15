@@ -312,7 +312,6 @@ export class PlayerManager {
     applySpeedMultiplier(multiplier: number): void {
         this.speedMultiplier = multiplier;
         this.playerSpeed = this.baseSpeed * this.speedMultiplier;
-        console.log(`🏃 Vitesse du joueur ${this.playerNumber}: ${this.playerSpeed} (x${multiplier})`);
     }
 
     getPlayerNumber(): number {

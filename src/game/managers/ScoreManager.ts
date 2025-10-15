@@ -8,8 +8,7 @@ export class ScoreManager {
     private score: number = 0;
     private scoreText?: Phaser.GameObjects.Text;
     private totalDeliveries: number = 0;
-    private scoreMultiplier: number = 1.0; // Multiplicateur de score (upgrade)
-    private scoreMultiplier: number = 1;
+    private scoreMultiplier: number = 1.0; 
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -112,7 +111,6 @@ export class ScoreManager {
      */
     applyScoreMultiplier(multiplier: number): void {
         this.scoreMultiplier = multiplier;
-        console.log(`⭐ Multiplicateur de score: x${multiplier}`);
     }
 
     // Getters

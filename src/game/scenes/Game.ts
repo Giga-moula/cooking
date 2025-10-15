@@ -229,7 +229,6 @@ export default class Game extends Phaser.Scene {
 
         // Connecter le callback de Game Over par expiration de commande
         this.waveManager.setGameOverCallback(() => {
-            console.log("💀 GAME OVER - Une commande a expiré !");
             this.endGame("expired");
         });
 
@@ -348,7 +347,6 @@ export default class Game extends Phaser.Scene {
             this.endGame();
         });
 
-        console.log("🎮 JEU DÉMARRÉ !");
     }
 
     /**
@@ -388,22 +386,45 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
+     * Réinitialise les collisions avec la nouvelle carte
+     */
+    private reinitializeCollisions(): void {
+        const isoMap = this.mapManager?.getIsoMap();
+        if (!isoMap || !this.playerList) return;
+
+        const solidTiles = isoMap.getSolidTiles();
+        if (solidTiles.length > 0) {
+            for (const player of this.playerList) {
+                const playerSprite = player.getPlayer();
+                if (playerSprite) {
+                    this.physics.add.collider(playerSprite, solidTiles);
+                }
+            }
+        }
+    }
+
+    /**
      * Met à jour le niveau de vague et génère une nouvelle carte
      */
     updateWaveLevel(waveLevel: number): void {
         if (this.mapManager) {
+            // Nettoyer les fours et casseroles avant de régénérer la carte
+            this.ovenManager?.cleanup();
+            this.casseroleManager?.cleanup();
+            
             this.mapManager.updateWaveLevel(waveLevel);
             
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
+            
+            // Réinitialiser les collisions avec les nouveaux tiles
+            this.reinitializeCollisions();
             
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
             
             // Repositionner les joueurs
             this.repositionPlayers();
-            
-            console.log(`🌊 Vague ${waveLevel} - Nouvelle carte générée`);
         }
     }
 
@@ -412,18 +433,23 @@ export default class Game extends Phaser.Scene {
      */
     updateAvailableActions(actions: number): void {
         if (this.mapManager) {
+            // Nettoyer les fours et casseroles avant de régénérer la carte
+            this.ovenManager?.cleanup();
+            this.casseroleManager?.cleanup();
+            
             this.mapManager.updateAvailableActions(actions);
             
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
+            
+            // Réinitialiser les collisions avec les nouveaux tiles
+            this.reinitializeCollisions();
             
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
             
             // Repositionner les joueurs
             this.repositionPlayers();
-            
-            console.log(`⚡ Actions disponibles: ${actions} - Nouvelle carte générée`);
         }
     }
 
@@ -443,7 +469,6 @@ export default class Game extends Phaser.Scene {
                     // Prendre le premier ingrédient disponible
                     const ingredient = availableIngredients[0];
                     if (this.communicationManager.takeIngredient(player, ingredient, i)) {
-                        console.log(`📥 ${player.getPlayerNumber()} a récupéré ${ingredient} du comptoir de communication`);
                     }
                 } else {
                     // Déposer un ingrédient si le comptoir est vide
@@ -453,7 +478,6 @@ export default class Game extends Phaser.Scene {
                     if (ingredients.length > 0) {
                         const ingredient = ingredients[0];
                         if (this.communicationManager.depositIngredient(player, ingredient, i)) {
-                            console.log(`📤 ${player.getPlayerNumber()} a déposé ${ingredient} sur le comptoir de communication`);
                         }
                     }
                 }
@@ -503,7 +527,6 @@ export default class Game extends Phaser.Scene {
         if (!this.upgradeManager) return;
 
         const effects = this.upgradeManager.getActiveEffects();
-        console.log("🔧 Application des upgrades:", effects);
 
         // Vitesse de déplacement des joueurs
         if (this.player1) {
@@ -554,12 +577,6 @@ export default class Game extends Phaser.Scene {
         const waveConfig = this.waveManager.getCurrentWaveConfig();
         if (!waveConfig) return;
 
-        console.log(`📊 Données pour le calcul des gains:`);
-        console.log(`  - Recettes complétées: ${recipeIds.length}`, recipeIds);
-        console.log(`  - Temps passé: ${timeSpent.toFixed(2)}s`);
-        console.log(`  - Temps max: ${waveConfig.targetRecipes * waveConfig.orderDuration}s`);
-        console.log(`  - Difficulté: ${waveConfig.difficulty}`);
-
         const earnings = this.currencyManager.calculateWaveEarnings(
             recipeIds.length,
             timeSpent,
@@ -570,8 +587,6 @@ export default class Game extends Phaser.Scene {
 
         // Ajouter les coins gagnés
         this.currencyManager.addCoins(earnings.total);
-
-        console.log(`💰 Gains de la vague ${waveNumber}:`, earnings);
 
         // Mettre le jeu en pause
         this.scene.pause();
@@ -603,7 +618,6 @@ export default class Game extends Phaser.Scene {
      * Termine la partie et passe à l'écran GameOver
      */
     endGame(reason: "time" | "expired" = "time") {
-        console.log(`🏁 Fin du jeu ! Raison: ${reason}`);
 
         // Arrêter le timer s'il est actif
         if (this.timerManager) {

@@ -225,9 +225,6 @@ export class WaveManager {
      */
     public initializeWaveDisplay(): void {
         // Plus besoin d'interface séparée - tout se passe dans les boîtes de recettes
-        console.log(
-            "🌊 Système de vagues initialisé - affichage intégré dans les boîtes de recettes"
-        );
     }
 
     /**
@@ -261,13 +258,6 @@ export class WaveManager {
 
         // Nettoyer les boîtes existantes
         this.orderDisplayManager.clearAllBoxes();
-
-        console.log(
-            `🌊 Vague ${waveNumber} démarrée: ${waveConfig.name} - ${waveConfig.targetRecipes} recettes à faire`
-        );
-        console.log(
-            `📦 Apparition progressive: ${waveConfig.ordersPerSpawn || 1} commande(s) toutes les ${waveConfig.orderSpawnDelay || 15}s`
-        );
 
         // Faire apparaître les premières commandes immédiatement
         this.spawnNextOrders();
@@ -305,13 +295,11 @@ export class WaveManager {
         for (let i = 0; i < ordersPerSpawn; i++) {
             // Vérifier qu'on n'a pas atteint la limite de commandes simultanées
             if (this.waveState.currentActiveOrders >= maxSimultaneous) {
-                console.log(`⏸️ Limite de commandes simultanées atteinte (${maxSimultaneous})`);
                 break;
             }
 
             // Vérifier qu'il reste des commandes à faire apparaître
             if (this.waveState.pendingOrderIndex >= this.currentWaveConfig.targetRecipes) {
-                console.log(`✅ Toutes les commandes de la vague sont apparues`);
                 // Arrêter le timer
                 if (this.orderSpawnTimer) {
                     this.orderSpawnTimer.destroy();
@@ -364,7 +352,6 @@ export class WaveManager {
             // Ajouter la commande progressivement
             this.orderDisplayManager.addNewOrder(displayRecipe);
             
-            console.log(`🆕 Nouvelle commande apparue: ${recipeId} (${orderIndex + 1}/${this.currentWaveConfig.targetRecipes})`);
         } else {
             console.warn(`Recette non trouvée pour le plat: ${recipeId}`);
         }
@@ -382,15 +369,9 @@ export class WaveManager {
         // Enregistrer l'ID de la recette complétée pour le calcul des gains
         if (recipeId) {
             this.waveState.completedRecipeIds.push(recipeId);
-            console.log(`📝 Recette enregistrée: ${recipeId}`);
         } else {
             console.warn(`⚠️ completeRecipe() appelé sans recipeId !`);
         }
-
-        console.log(
-            `✅ Recette complétée (${this.waveState.completedRecipes}/${this.currentWaveConfig.targetRecipes})`,
-            `IDs enregistrés:`, this.waveState.completedRecipeIds
-        );
 
         // Tenter de faire apparaître une nouvelle commande immédiatement
         if (this.waveState.pendingOrderIndex < this.currentWaveConfig.targetRecipes) {
@@ -412,10 +393,6 @@ export class WaveManager {
      */
     public expireOrder(): void {
         if (!this.waveState.isActive || !this.currentWaveConfig) return;
-
-        console.log(
-            `💀 COMMANDE EXPIRÉE ! L'équipe a échoué...`
-        );
 
         // Arrêter le timer de spawn
         if (this.orderSpawnTimer) {
@@ -476,8 +453,6 @@ export class WaveManager {
 
         // Calculer le temps passé sur la vague
         const timeSpent = (this.scene.time.now - this.waveState.startTime) / 1000;
-
-        console.log(`🎉 Vague ${this.currentWaveConfig.waveNumber} terminée! Score: +${waveScore}`);
 
         // Appeler le callback pour ouvrir le shop
         if (this.onWaveCompleted) {

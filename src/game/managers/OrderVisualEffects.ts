@@ -54,7 +54,7 @@ export class OrderVisualEffects {
                 particles.destroy();
             });
         } catch (e) {
-            console.log("Effet de particules non disponible");
+            console.warn("Effet de particules non disponible");
         }
     }
 

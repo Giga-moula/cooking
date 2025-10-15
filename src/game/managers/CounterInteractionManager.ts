@@ -160,7 +160,6 @@ export class CounterInteractionManager {
         if (!item) return false;
 
         const currentType = item.texture.key;
-        console.log(`🔍 Transformation sur table: ${currentType}, inventaire:`, playerInventory ? 'présent' : 'absent');
         
         // Vérifier d'abord les transformations spéciales (1 ingrédient → 1 autre)
         if (this.recipeManager) {
@@ -185,18 +184,13 @@ export class CounterInteractionManager {
                             : recipe.ingredient1;
                         
                         // Vérifier si le joueur a l'ingrédient nécessaire
-                        console.log(`🔍 Vérification recette: ${currentType} + ${neededIngredient} = ${recipe.result}`);
                         if (playerInventory.hasItem && playerInventory.hasItem(neededIngredient)) {
-                            console.log(`✅ Ingrédient ${neededIngredient} trouvé dans l'inventaire`);
                             if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem(neededIngredient)) {
                                 const ingredient = this.recipeManager.getIngredient(recipe.result);
                                 const message = ingredient ? `✨ ${ingredient.name}` : `✨ ${recipe.name}`;
-                                console.log(`🎉 Recette réussie: ${message}`);
                                 this.transformItem(gridX, gridY, recipe.result, message);
                                 return true;
                             }
-                        } else {
-                            console.log(`❌ Ingrédient ${neededIngredient} manquant dans l'inventaire`);
                         }
                     }
                 }

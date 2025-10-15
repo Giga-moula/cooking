@@ -31,14 +31,10 @@ export class OvenManager {
      * Place un objet dans le four
      */
     placeItemInOven(gridX: number, gridY: number, itemType: string): boolean {
-        console.log(
-            `placeItemInOven appelée pour (${gridX}, ${gridY}) avec ${itemType}`
-        );
         const key = `${gridX},${gridY}`;
 
         // Vérifier s'il n'y a pas déjà un objet dans le four
         if (this.itemsInOven.has(key)) {
-            console.log(`Objet déjà présent dans le four (${gridX}, ${gridY})`);
             return false;
         }
 
@@ -47,17 +43,12 @@ export class OvenManager {
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
 
-        console.log(`Position écran calculée: (${x}, ${y})`);
-
         // Créer une image simple
         const item = this.scene.add.image(x, y, itemType);
         item.setOrigin(0.5, 0.5);
         item.setScale(1.2);
         item.setDepth(y + 100);
         this.itemsInOven.set(key, item);
-        console.log(
-            `Objet ${itemType} placé avec succès dans le four (${gridX}, ${gridY})`
-        );
         return true;
     }
 
@@ -84,7 +75,6 @@ export class OvenManager {
     hasItemInOven(gridX: number, gridY: number): boolean {
         const key = `${gridX},${gridY}`;
         const hasItem = this.itemsInOven.has(key);
-        console.log(`hasItemInOven(${gridX}, ${gridY}): ${hasItem}`);
         return hasItem;
     }
 
@@ -103,7 +93,6 @@ export class OvenManager {
      */
     applyCookingSpeedMultiplier(multiplier: number): void {
         this.cookingSpeedMultiplier = multiplier;
-        console.log(`🔥 Vitesse de cuisson: x${multiplier}`);
     }
 
     /**
@@ -210,6 +199,18 @@ export class OvenManager {
             ease: "Cubic.easeOut",
             onComplete: () => message.destroy(),
         });
+    }
+
+    /**
+     * Nettoie tous les fours
+     */
+    cleanup(): void {
+        this.itemsInOven.forEach((item) => {
+            if (item && item.scene) {
+                item.destroy();
+            }
+        });
+        this.itemsInOven.clear();
     }
 }
 

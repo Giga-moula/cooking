@@ -51,8 +51,6 @@ export class CurrencyManager {
         recipeTypes: string[],
         difficulty: string
     ): WaveEarnings {
-        console.log(`💵 Calcul des gains - Recettes: ${completedRecipes}, Temps: ${timeSpent}/${maxTime}, Difficulté: ${difficulty}`);
-        
         // Récompense de base : 50 coins par recette
         const baseReward = completedRecipes * 50;
 
@@ -88,9 +86,6 @@ export class CurrencyManager {
             (baseReward + timeBonus + comboBonus + recipeBonus) *
                 difficultyMultiplier
         );
-
-        console.log(`💰 Détail: Base=${baseReward}, Temps=${timeBonus}, Combo=${comboBonus}, Recette=${recipeBonus}, x${difficultyMultiplier} = ${total}`);
-
         return {
             baseReward,
             timeBonus,

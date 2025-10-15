@@ -60,8 +60,11 @@ export class RandomMapGenerator {
         // Ajouter les comptoirs de communication
         this.addCommunicationCounters(mapData, playerZones);
         
-        // Ajouter la zone de livraison dans la zone choisie
-        this.addDeliveryZone(mapData, playerZones);
+        // Ajouter la zone de livraison UNIQUEMENT lors de la première vague
+        // La zone de livraison reste fixe tout au long du jeu
+        if (waveLevel === 1) {
+            this.addDeliveryZone(mapData, playerZones);
+        }
         
         // Valider que tous les éléments sont accessibles
         const isValid = this.validateAccessibility(mapData, playerZones);
@@ -71,8 +74,6 @@ export class RandomMapGenerator {
             // Régénérer une nouvelle carte si l'accessibilité n'est pas validée
             return this.generateMap(config, attempt + 1);
         }
-        
-        console.log("✅ Validation d'accessibilité réussie - Tous les éléments sont atteignables");
         
         // Créer la configuration de carte
         return {
@@ -224,14 +225,9 @@ export class RandomMapGenerator {
         // Distribution aléatoire des ingrédients (1 type par zone, ~équilibré)
         const ingredientDistribution = this.randomizeIngredientDistribution(waveLevel);
         
-        // Distribution aléatoire de la zone de livraison
+        // Distribution aléatoire de la zone de livraison (uniquement pour la vague 1)
         const deliveryInZone1 = Math.random() < 0.5;
-        
-        // Log de distribution
-        console.log(`🎲 Distribution aléatoire complète:`);
-        console.log(`  Zone 1: ${zone1HasOven ? '🔥 Four' : '📋 Table Transform'} | ${ingredientDistribution.zone1Ingredients.join(' ')} ${deliveryInZone1 ? '| 📦 Livraison' : ''}`);
-        console.log(`  Zone 2: ${!zone1HasOven ? '🔥 Four' : '📋 Table Transform'} | ${ingredientDistribution.zone2Ingredients.join(' ')} ${!deliveryInZone1 ? '| 📦 Livraison' : ''}`);
-        
+
         // Placer les ingrédients selon la distribution aléatoire
         this.placeRandomIngredients(
             mapData, 
@@ -240,9 +236,11 @@ export class RandomMapGenerator {
             ingredientDistribution
         );
         
-        // Stocker la zone de livraison pour plus tard
-        (zone1 as any).hasDeliveryZone = deliveryInZone1;
-        (zone2 as any).hasDeliveryZone = !deliveryInZone1;
+        // Stocker la zone de livraison pour plus tard (uniquement pour la vague 1)
+        if (waveLevel === 1) {
+            (zone1 as any).hasDeliveryZone = deliveryInZone1;
+            (zone2 as any).hasDeliveryZone = !deliveryInZone1;
+        }
         
             // Placer les tables normales (équilibré) - Plus de tables pour plus d'interaction
             const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
@@ -390,8 +388,6 @@ export class RandomMapGenerator {
 
         if (placed < count) {
             console.warn(`⚠️ Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables placées (${rejectedCount} positions rejetées pour blocage)`);
-        } else {
-            console.log(`📋 Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables normales placées`);
         }
     }
 
@@ -434,9 +430,6 @@ export class RandomMapGenerator {
      * pas besoin d'ajouter des comptoirs supplémentaires
      */
     private static addCommunicationCounters(mapData: number[][], zones: PlayerZone[]): void {
-        // La ligne de tables de séparation sert déjà de comptoirs de communication
-        // Les joueurs peuvent déposer/récupérer des objets de part et d'autre
-        console.log("📋 Les tables de séparation servent de comptoirs de communication");
     }
 
     /**
@@ -486,7 +479,6 @@ export class RandomMapGenerator {
         const position = this.findRandomEmptyPosition(mapData, targetZone);
         if (position) {
             mapData[position.y][position.x] = 9; // Zone de livraison
-            console.log(`📦 Zone de livraison placée en (${position.x}, ${position.y})`);
         }
     }
 
@@ -596,16 +588,6 @@ export class RandomMapGenerator {
                 console.warn(`❌ Zone ${i + 1}: ${totalFloorTiles - accessibleFloorTiles} cases de sol inaccessibles (${accessibleFloorTiles}/${totalFloorTiles})`);
                 return false;
             }
-            
-            // Log de succès détaillé
-            console.log(`✅ Zone ${i + 1} validation réussie:`);
-            console.log(`   - Spawn point libre à (${spawnPoint.x}, ${spawnPoint.y})`);
-            console.log(`   - ${zone.ingredientBoxes.length} boîtes d'ingrédients accessibles`);
-            console.log(`   - ${zone.tables.length} tables normales accessibles`);
-            console.log(`   - ${zone.transformationTables.length} tables de transformation accessibles`);
-            console.log(`   - ${zone.ovens.length} fours accessibles`);
-            if (deliveryZone) console.log(`   - 1 zone de livraison accessible`);
-            console.log(`   - ${accessibleFloorTiles}/${totalFloorTiles} cases de sol accessibles (100%)`);
         }
         
         return true;
@@ -675,9 +657,6 @@ export class RandomMapGenerator {
                 
                 // Vérifier que placer un élément ici ne bloquera pas l'accès
                 if (this.canPlaceElementSafely(mapData, x, y, zone)) {
-                    if (rejectedCount > 0) {
-                        console.log(`   ℹ️ Position sûre trouvée après ${rejectedCount} rejets`);
-                    }
                     return { x, y };
                 } else {
                     rejectedCount++;

@@ -75,9 +75,32 @@ export class MapManager {
     }
 
     /**
+     * Nettoie la carte existante (détruit tous les sprites et collisions)
+     */
+    private cleanupMap(): void {
+        // Détruire tous les craft plans
+        this.craftPlanOverlays.forEach((overlay) => {
+            overlay.destroy();
+        });
+        this.craftPlanOverlays.clear();
+
+        // Détruire l'ancienne carte isométrique si elle existe
+        if (this.isoMap) {
+            this.isoMap.destroy();
+        }
+
+        // Nettoyer les ingrédients
+        this.ingredientTiles.clear();
+
+    }
+
+    /**
      * Crée la carte avec la configuration fournie
      */
     createMap(): IsometricMap {
+        // Nettoyer l'ancienne carte avant d'en créer une nouvelle
+        this.cleanupMap();
+
         this.isoMap = new IsometricMap(this.scene);
 
         const mapData = this.currentMapConfig.mapData;
@@ -274,12 +297,6 @@ export class MapManager {
             // Table pas ouverte en bas -> rotation normale (0°)
             craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.NORMAL);
         }
-
-        console.log(
-            `🔄 Craft plan rotation pour ${textureKey}: ${
-                craftPlan.rotation
-            } rad (${((craftPlan.rotation * 180) / Math.PI).toFixed(0)}°)`
-        );
     }
 
     /**
@@ -418,9 +435,6 @@ export class MapManager {
         const isTable = tile?.texture.key?.startsWith("table-") || false;
         const hasCraftPlan = this.hasCraftPlanOverlay(gridX, gridY);
 
-        console.log(
-            `isTransformationTable(${gridX}, ${gridY}): texture=${tile?.texture.key}, isTable=${isTable}, hasCraftPlan=${hasCraftPlan}, isCounter=${isCounter}`
-        );
         return isTable && hasCraftPlan;
     }
 
@@ -442,9 +456,6 @@ export class MapManager {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
         const isOven = tile?.texture.key === "oven";
-        console.log(
-            `isOven(${gridX}, ${gridY}): texture=${tile?.texture.key}, isOven=${isOven}`
-        );
         return isOven;
     }
 
@@ -455,9 +466,6 @@ export class MapManager {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
         const isCasserole = tile?.texture.key === "casserole_cuisson";
-        console.log(
-            `isCasserole(${gridX}, ${gridY}): texture=${tile?.texture.key}, isCasserole=${isCasserole}`
-        );
         return isCasserole;
     }
 

@@ -30,11 +30,6 @@ export class OrderDisplayManager {
         this.recipeContainer = this.scene.add.container(20, 20);
         this.recipeContainer.setScrollFactor(0);
         this.recipeContainer.setDepth(2000);
-
-        // Ne pas créer de boîtes ici - elles seront créées dynamiquement selon la vague
-        console.log(
-            "📦 Système de boîtes de recettes initialisé - création dynamique selon les vagues"
-        );
     }
 
     /**
@@ -109,14 +104,11 @@ export class OrderDisplayManager {
         const dishId = this.activeOrders[orderIndex];
         const recipeBox = this.recipeBoxes[orderIndex];
 
-        console.log(`📋 OrderDisplayManager.completeOrder() - dishId: ${dishId}, index: ${orderIndex}`);
-
         // Faire disparaître la boîte avec animation
         this.removeBoxWithAnimation(orderIndex);
 
         // Notifier le système de vagues qu'une recette est complétée
         if (this.onOrderCompleted && dishId) {
-            console.log(`🔔 Appel du callback onOrderCompleted avec dishId: ${dishId}`);
             this.onOrderCompleted(dishId);
         } else {
             console.warn(`⚠️ Callback non appelé - onOrderCompleted: ${!!this.onOrderCompleted}, dishId: ${dishId}`);
@@ -138,6 +130,9 @@ export class OrderDisplayManager {
 
             // Supprimer la boîte du tableau
             this.recipeBoxes.splice(boxIndex, 1);
+
+            // Supprimer de activeOrders aussi
+            this.activeOrders.splice(boxIndex, 1);
 
             // Décale les boîtes restantes vers la gauche
             this.shiftRemainingBoxes(boxIndex);
@@ -193,11 +188,6 @@ export class OrderDisplayManager {
         // Vider les tableaux
         this.recipeBoxes = [];
         this.activeOrders = [];
-
-        // Vider le conteneur
-        if (this.recipeContainer) {
-            this.recipeContainer.removeAll(true);
-        }
     }
 
     /**
@@ -370,11 +360,12 @@ export class OrderDisplayManager {
 
         // Mettre à jour la boîte avec la recette
         const box = this.recipeBoxes[newIndex];
+        if (!box) return;
+        
         box.updateWithRecipe(recipe);
 
         // Définir le callback d'expiration
         box.onExpired = () => {
-            console.log(`⏰ Commande expirée: ${recipe.result}`);
             
             // EFFET VISUEL DRAMATIQUE !
             this.showExpirationEffect(box);

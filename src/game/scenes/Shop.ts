@@ -264,8 +264,6 @@ export default class Shop extends Phaser.Scene {
         if (this.currencyManager.spendCoins(upgrade.cost)) {
             this.upgradeManager.purchaseUpgrade(upgrade.id);
 
-            console.log(`✅ Upgrade acheté: ${upgrade.name}`);
-
             // Rafraîchir l'affichage
             this.scene.restart({
                 currencyManager: this.currencyManager,
@@ -332,7 +330,6 @@ export default class Shop extends Phaser.Scene {
      * Ferme le shop et continue le jeu
      */
     private closeShop(): void {
-        console.log("🚪 Fermeture du shop");
         
         // Appeler le callback
         if (this.onClose) {

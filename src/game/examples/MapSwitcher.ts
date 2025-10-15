@@ -24,9 +24,6 @@ export class MapSwitcher {
         this.currentMapIndex = (this.currentMapIndex + 1) % this.availableMaps.length;
         const newMapConfig = this.availableMaps[this.currentMapIndex];
         
-        console.log(`🔄 Changement vers la carte: ${newMapConfig.name}`);
-        console.log(`📝 Description: ${newMapConfig.description}`);
-        
         // Changer la configuration de la carte
         this.mapManager.setMapConfig(newMapConfig);
         
@@ -48,8 +45,6 @@ export class MapSwitcher {
             console.error(`❌ Carte "${mapName}" non trouvée`);
             return false;
         }
-
-        console.log(`🔄 Changement vers la carte: ${mapConfig.name}`);
         this.mapManager.setMapConfig(mapConfig);
         this.mapManager.createMap();
         

@@ -189,7 +189,6 @@ export class TimerManager {
      */
     public setBonusTimePerDelivery(bonus: number): void {
         this.bonusTimePerDelivery = bonus;
-        console.log(`⏳ Bonus de temps par livraison: +${bonus}s`);
     }
 
     /**

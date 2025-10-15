@@ -249,7 +249,7 @@ export class IsometricMap {
     }
 
     /**
-     * Détruit tous les tiles
+     * Détruit tous les tiles et nettoie la carte
      */
     destroy() {
         this.tiles.forEach(tile => tile.destroy());
@@ -260,6 +260,9 @@ export class IsometricMap {
         
         this.counterTiles.forEach(tile => tile.destroy());
         this.counterTiles.clear();
+        
+        // Réinitialiser les données de carte
+        this.mapData = [];
     }
 
     /**
