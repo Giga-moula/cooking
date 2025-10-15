@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import { IngredientInteractionManager } from "./IngredientInteractionManager";
-import { OrderVisualEffects } from "./OrderVisualEffects";
 import { RecipeBox } from "./RecipeBox";
 
 /**
@@ -12,9 +11,8 @@ export class OrderDisplayManager {
     private activeOrders: string[] = [];
     private maxOrders: number = 4;
     private ingredientManager: IngredientInteractionManager;
-    private orderDuration: number = 60; // Durée par défaut des commandes
+    private orderDuration: number = 60;
     private recipeContainer?: Phaser.GameObjects.Container;
-    private visualEffects: OrderVisualEffects;
 
     constructor(
         scene: Phaser.Scene,
@@ -22,7 +20,6 @@ export class OrderDisplayManager {
     ) {
         this.scene = scene;
         this.ingredientManager = ingredientManager;
-        this.visualEffects = new OrderVisualEffects(scene);
     }
 
     /**
@@ -51,7 +48,6 @@ export class OrderDisplayManager {
             index,
             this.recipeContainer
         );
-        recipeBox.onExpired = () => this.handleRecipeExpired(recipeBox);
 
         this.recipeBoxes.push(recipeBox);
     }
@@ -87,20 +83,6 @@ export class OrderDisplayManager {
     }
 
     /**
-     * Gère l'expiration d'une recette
-     */
-    private handleRecipeExpired(recipeBox: RecipeBox): void {
-        // Supprimer la commande de la liste active
-        const orderIndex = this.activeOrders.indexOf(recipeBox.orderId!);
-        if (orderIndex !== -1) {
-            this.activeOrders.splice(orderIndex, 1);
-        }
-
-        // Effet visuel d'expiration
-        this.visualEffects.showRecipeExpiredEffect(recipeBox);
-    }
-
-    /**
      * Vérifie si un plat réalisé correspond à une commande
      */
     checkOrderCompletion(dishId: string): boolean {
@@ -119,9 +101,6 @@ export class OrderDisplayManager {
         if (orderIndex >= this.activeOrders.length) return;
 
         const recipeBox = this.recipeBoxes[orderIndex];
-
-        // Effet visuel de succès avant de faire disparaître la boîte
-        this.visualEffects.showOrderCompleteEffect(recipeBox);
 
         // Faire disparaître la boîte avec animation
         this.removeBoxWithAnimation(orderIndex);
@@ -188,8 +167,6 @@ export class OrderDisplayManager {
         for (let i = 0; i < numberOfRecipes; i++) {
             this.createRecipeBox(i);
         }
-
-        console.log(`📦 Créé ${numberOfRecipes} boîtes pour la vague`);
     }
 
     /**
@@ -270,7 +247,6 @@ export class OrderDisplayManager {
         const recipe = allRecipes.find((r) => r.result === dish.id);
 
         if (!recipe) {
-            console.warn(`Aucune recette trouvée pour le plat: ${dish.id}`);
             return;
         }
 
@@ -284,6 +260,15 @@ export class OrderDisplayManager {
 
         // Démarrer le timer
         box.startTimer(this.orderDuration);
+    }
+
+    /**
+     * Arrête tous les timers des commandes
+     */
+    public stopAllTimers(): void {
+        this.recipeBoxes.forEach((box) => {
+            box.stopTimer();
+        });
     }
 }
 
