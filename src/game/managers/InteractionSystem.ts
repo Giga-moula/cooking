@@ -8,6 +8,7 @@ import { IngredientInteractionManager } from "./IngredientInteractionManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
 import { ScoreManager } from "./ScoreManager";
 import { TimerManager } from "./TimerManager";
+import { OvenManager } from "./OvenManager";
 
 /**
  * Système d'interaction orienté objet
@@ -22,6 +23,7 @@ export class InteractionSystem {
     private orderDisplayManager: OrderDisplayManager;
     private scoreManager: ScoreManager;
     private timerManager?: TimerManager;
+    private ovenManager: OvenManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -31,7 +33,8 @@ export class InteractionSystem {
         ingredientManager: IngredientInteractionManager,
         orderDisplayManager: OrderDisplayManager,
         scoreManager: ScoreManager,
-        timerManager?: TimerManager
+        timerManager?: TimerManager,
+        ovenManager?: OvenManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -41,6 +44,7 @@ export class InteractionSystem {
         this.orderDisplayManager = orderDisplayManager;
         this.scoreManager = scoreManager;
         this.timerManager = timerManager;
+        this.ovenManager = ovenManager!;
     }
 
     /**
@@ -68,7 +72,12 @@ export class InteractionSystem {
             return;
         }
 
-        console.log(`❌ Aucune table de transformation à (${targetX}, ${targetY})`);
+        // Vérifier aussi le four pour la cuisson
+        if (this.handleOvenCooking(targetX, targetY, player)) {
+            return;
+        }
+
+        console.log(`❌ Aucune table de transformation ou four à (${targetX}, ${targetY})`);
     }
 
     /**
@@ -106,7 +115,8 @@ export class InteractionSystem {
         // Prioriser les interactions dans cet ordre:
         // 1. Ingrédient
         // 2. Zone de livraison
-        // 3. Plan de travail (normal et table de transformation)
+        // 3. Four (cuisson)
+        // 4. Plan de travail (normal et table de transformation)
         // Note: Les transformations spécifiques utilisent la touche R/P
 
         if (this.handleIngredientInteraction(targetX, targetY, player)) {
@@ -114,6 +124,10 @@ export class InteractionSystem {
         }
 
         if (this.handleDeliveryInteraction(targetX, targetY, player)) {
+            return;
+        }
+
+        if (this.handleOvenInteraction(targetX, targetY, player)) {
             return;
         }
 
@@ -473,6 +487,145 @@ export class InteractionSystem {
         }
 
         return false;
+    }
+
+    /**
+     * Gère l'interaction avec le four
+     * Avec E/O : Poser/Prendre des ingrédients
+     * Avec R/P : Cuire les ingrédients
+     */
+    private handleOvenInteraction(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isOven(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🔥 Interaction avec le four à (${targetX}, ${targetY})`);
+
+        const inventory = player.getInventory();
+        const playerSprite = player.getPlayer();
+        if (!inventory || !playerSprite) return false;
+
+        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+        const inventoryEmpty = inventory.isEmpty();
+
+        console.log(
+            `État: Four=${hasItemInOven ? "plein" : "vide"}, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
+        );
+
+        // Cas 1: Ramasser un objet du four
+        if (hasItemInOven && inventoryEmpty) {
+            return this.pickupFromOven(targetX, targetY, player);
+        }
+
+        // Cas 2: Poser un objet dans le four
+        if (!hasItemInOven && !inventoryEmpty) {
+            return this.placeInOven(targetX, targetY, player);
+        }
+
+        // Cas 3: Four occupé et inventaire plein
+        if (hasItemInOven && !inventoryEmpty) {
+            console.log(`💡 Utilisez R/P pour cuire dans le four !`);
+            this.ovenManager.showCookingMessage(
+                "💡 Appuyez sur R/P",
+                targetX,
+                targetY
+            );
+            return true;
+        }
+
+        console.log(`ℹ️ Aucune action possible sur ce four`);
+        return true;
+    }
+
+    /**
+     * Ramasse un objet du four
+     */
+    private pickupFromOven(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const inventory = player.getInventory();
+        if (!inventory) return false;
+
+        const itemType = this.ovenManager.removeItemFromOven(targetX, targetY);
+
+        if (itemType) {
+            inventory.addItem(itemType);
+            player.updateCarriedItem();
+            console.log(`✅ Ramassé du four: ${itemType}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Pose un objet dans le four
+     */
+    private placeInOven(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const inventory = player.getInventory();
+        if (!inventory) return false;
+
+        const itemType = inventory.removeItem();
+        if (itemType) {
+            this.ovenManager.placeItemInOven(targetX, targetY, itemType);
+            player.removeCarriedItem();
+            console.log(`✅ Posé dans le four: ${itemType}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Gère la cuisson dans le four (appelée avec R/P)
+     */
+    private handleOvenCooking(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isOven(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🔥 Tentative de cuisson à (${targetX}, ${targetY})`);
+
+        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+
+        if (hasItemInOven) {
+            const success = this.ovenManager.performCooking(targetX, targetY);
+            if (success) {
+                console.log(`✅ Cuisson réussie dans le four`);
+                return true;
+            } else {
+                console.log(`❌ Aucune cuisson possible pour cet ingrédient`);
+                this.ovenManager.showCookingMessage(
+                    "❌ Pas de cuisson",
+                    targetX,
+                    targetY
+                );
+                return true;
+            }
+        } else {
+            console.log(`❌ Four vide - posez d'abord un ingrédient avec E/O`);
+            this.ovenManager.showCookingMessage(
+                "❌ Four vide",
+                targetX,
+                targetY
+            );
+        }
+
+        return true;
     }
 }
 

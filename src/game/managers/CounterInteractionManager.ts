@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { RecipeManager } from "./RecipeManager";
 
 /**
  * Gestionnaire des interactions avec les comptoirs et des objets posés
@@ -10,6 +11,7 @@ export class CounterInteractionManager {
     private mapOffsetX: number;
     private mapOffsetY: number;
     private inventoryManager?: any; // Référence vers l'inventory manager
+    private recipeManager?: RecipeManager; // Référence vers le RecipeManager partagé
 
     constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
         this.scene = scene;
@@ -25,6 +27,13 @@ export class CounterInteractionManager {
     }
 
     /**
+     * Définit la référence vers le RecipeManager partagé
+     */
+    setRecipeManager(recipeManager: RecipeManager): void {
+        this.recipeManager = recipeManager;
+    }
+
+    /**
      * Place un objet sur un comptoir
      */
     placeItemOnCounter(
@@ -32,12 +41,10 @@ export class CounterInteractionManager {
         gridY: number,
         itemType: string
     ): boolean {
-        console.log(`placeItemOnCounter appelée pour (${gridX}, ${gridY}) avec ${itemType}`);
         const key = `${gridX},${gridY}`;
 
         // Vérifier s'il n'y a pas déjà un objet sur ce plan de travail
         if (this.itemsOnCounters.has(key)) {
-            console.log(`Objet déjà présent sur (${gridX}, ${gridY})`);
             return false;
         }
 
@@ -46,15 +53,12 @@ export class CounterInteractionManager {
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
 
-        console.log(`Position écran calculée: (${x}, ${y})`);
-
         // Créer une image simple
         const item = this.scene.add.image(x, y, itemType);
         item.setOrigin(0.5, 0.5);
         item.setScale(1.2);
         item.setDepth(y + 100);
         this.itemsOnCounters.set(key, item);
-        console.log(`Objet ${itemType} placé avec succès sur (${gridX}, ${gridY})`);
         return true;
     }
 
@@ -81,7 +85,6 @@ export class CounterInteractionManager {
     hasItemOnCounter(gridX: number, gridY: number): boolean {
         const key = `${gridX},${gridY}`;
         const hasItem = this.itemsOnCounters.has(key);
-        console.log(`hasItemOnCounter(${gridX}, ${gridY}): ${hasItem}`);
         return hasItem;
     }
 
@@ -157,51 +160,44 @@ export class CounterInteractionManager {
         if (!item) return false;
 
         const currentType = item.texture.key;
+        console.log(`🔍 Transformation sur table: ${currentType}, inventaire:`, playerInventory ? 'présent' : 'absent');
         
-        // Transformation 1: Chocolat → Chunks de chocolat (ne nécessite pas d'inventaire)
-        if (currentType === "chocolate") {
-            this.transformItem(gridX, gridY, "chocolate-chunks", "🍫 Chocolat → Chunks");
-            return true;
-        }
-        
-        // Si un inventaire est fourni, on peut faire des transformations combinées
-        if (playerInventory) {
-            // Transformation 2: Beurre + Farine → Pâte
-            if (currentType === "butter") {
-                // Chercher de la farine dans l'inventaire
-                if (playerInventory.hasItem && playerInventory.hasItem("wheat_floor")) {
-                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("wheat_floor")) {
-                        this.transformItem(gridX, gridY, "dough", "🧈 Beurre + Farine → Pâte");
-                        return true;
-                    }
-                }
+        // Vérifier d'abord les transformations spéciales (1 ingrédient → 1 autre)
+        if (this.recipeManager) {
+            const specialResult = this.recipeManager.performSpecialTransformation(currentType);
+            if (specialResult) {
+                const ingredient = this.recipeManager.getIngredient(specialResult);
+                const message = ingredient ? `✨ ${ingredient.name}` : `✨ Transformation`;
+                this.transformItem(gridX, gridY, specialResult, message);
+                return true;
             }
             
-            if (currentType === "wheat_floor") {
-                // Chercher du beurre dans l'inventaire
-                if (playerInventory.hasItem && playerInventory.hasItem("butter")) {
-                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("butter")) {
-                        this.transformItem(gridX, gridY, "dough", "🌾 Farine + Beurre → Pâte");
-                        return true;
-                    }
-                }
-            }
-            
-            // Transformation 3: Pâte + Chunks de chocolat → Cookie Mix
-            if (currentType === "dough") {
-                if (playerInventory.hasItem && playerInventory.hasItem("chocolate-chunks")) {
-                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("chocolate-chunks")) {
-                        this.transformItem(gridX, gridY, "cookie-mix", "🥣 Pâte + Chunks → Cookie Mix");
-                        return true;
-                    }
-                }
-            }
-            
-            if (currentType === "chocolate-chunks") {
-                if (playerInventory.hasItem && playerInventory.hasItem("dough")) {
-                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("dough")) {
-                        this.transformItem(gridX, gridY, "cookie-mix", "🍫 Chunks + Pâte → Cookie Mix");
-                        return true;
+            // Si un inventaire est fourni, essayer les recettes (2 ingrédients → 1 résultat)
+            if (playerInventory) {
+                // Essayer toutes les recettes possibles avec l'ingrédient sur la table
+                const allRecipes = this.recipeManager.getAllRecipes();
+                
+                for (const recipe of allRecipes) {
+                    // Vérifier si l'ingrédient sur la table correspond à ingredient1 ou ingredient2
+                    if (currentType === recipe.ingredient1 || currentType === recipe.ingredient2) {
+                        const neededIngredient = currentType === recipe.ingredient1 
+                            ? recipe.ingredient2 
+                            : recipe.ingredient1;
+                        
+                        // Vérifier si le joueur a l'ingrédient nécessaire
+                        console.log(`🔍 Vérification recette: ${currentType} + ${neededIngredient} = ${recipe.result}`);
+                        if (playerInventory.hasItem && playerInventory.hasItem(neededIngredient)) {
+                            console.log(`✅ Ingrédient ${neededIngredient} trouvé dans l'inventaire`);
+                            if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem(neededIngredient)) {
+                                const ingredient = this.recipeManager.getIngredient(recipe.result);
+                                const message = ingredient ? `✨ ${ingredient.name}` : `✨ ${recipe.name}`;
+                                console.log(`🎉 Recette réussie: ${message}`);
+                                this.transformItem(gridX, gridY, recipe.result, message);
+                                return true;
+                            }
+                        } else {
+                            console.log(`❌ Ingrédient ${neededIngredient} manquant dans l'inventaire`);
+                        }
                     }
                 }
             }
