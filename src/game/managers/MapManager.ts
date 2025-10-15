@@ -39,6 +39,7 @@ export class MapManager {
         const tiles = [
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
+            { key: "iso-special-counter", color: 0x4a9eff, darkColor: 0x2b7fd9 }, // Plan de travail spécial (bleu)
         ];
 
         tiles.forEach(({ key, color, darkColor }) => {
@@ -74,13 +75,13 @@ export class MapManager {
 
         const mapData = [
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 6, 2, 2, 1, 1, 1, 3, 3, 4],
-            [4, 1, 2, 2, 1, 5, 5, 3, 3, 4],
-            [4, 1, 2, 2, 1, 5, 5, 1, 1, 4],
+            [4, 6, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-            [4, 1, 1, 1, 1, 2, 2, 1, 1, 4],
-            [4, 3, 3, 1, 1, 2, 2, 1, 1, 4],
-            [4, 3, 3, 1, 5, 5, 5, 1, 1, 4],
+            [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
+            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Tile spéciale (plan de travail pour actions spécifiques)
+            [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+            [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+            [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
             [4, 7, 8, 1, 1, 1, 1, 1, 9, 4],
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
         ];
@@ -111,14 +112,13 @@ export class MapManager {
     private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string}>): { [key: number]: string } {
         return {
             1: "planks",
-            2: "planks", 
-            3: "planks",
             4: "iso-wall",
-            5: "planks", // Texture temporaire, sera remplacée par les vraies textures de table
-            6: "choco_box",      // Caisse de chocolat
-            7: "butter_box",     // Caisse de beurre
-            8: "flour_box",      // Caisse de farine
+            5: "table-mono",           // Texture temporaire qui sera remplacée par la bonne texture de table
+            6: "choco_box",            // Caisse de chocolat
+            7: "butter_box",           // Caisse de beurre
+            8: "flour_box",            // Caisse de farine
             9: "iso-delivery-zone",
+            10: "iso-special-counter", // Plan de travail spécial (pour actions spécifiques)
         };
     }
 
@@ -136,8 +136,8 @@ export class MapManager {
             // Les tables sont des tiles solides, on doit les récupérer depuis solidTiles
             const existingSolidTile = this.isoMap!.getSolidTile(config.gridX, config.gridY);
             if (existingSolidTile) {
-                // Vérifier si c'est bien une table temporaire (planks)
-                if (existingSolidTile.texture.key === 'planks') {
+                // Vérifier si c'est bien une table temporaire (table-mono ou toute texture de table)
+                if (existingSolidTile.texture.key === 'table-mono' || existingSolidTile.texture.key.startsWith('table-')) {
                     // Supprimer l'ancien tile solide
                     this.isoMap!.removeSolidTile(config.gridX, config.gridY);
                     
@@ -247,6 +247,26 @@ export class MapManager {
     getIngredientFromTile(gridX: number, gridY: number): string | null {
         const key = `${gridX},${gridY}`;
         return this.ingredientTiles.get(key) || null;
+    }
+
+    /**
+     * Vérifie si une position est une tile spéciale (type 10 - pour actions spécifiques)
+     */
+    isSpecialTile(gridX: number, gridY: number): boolean {
+        if (!this.isoMap) return false;
+        const tile = this.isoMap.getSolidTile(gridX, gridY);
+        const isSpecialTexture = tile?.texture.key === 'iso-special-counter';
+        const isCounter = this.isoMap.isCounter(gridX, gridY);
+        console.log(`isSpecialTile(${gridX}, ${gridY}): texture=${tile?.texture.key}, isSpecial=${isSpecialTexture}, isCounter=${isCounter}`);
+        return isSpecialTexture;
+    }
+
+    /**
+     * Récupère la tile spéciale à une position donnée
+     */
+    getSpecialTile(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+        if (!this.isSpecialTile(gridX, gridY)) return undefined;
+        return this.isoMap?.getSolidTile(gridX, gridY);
     }
 
     // Getters

@@ -9,11 +9,19 @@ export class CounterInteractionManager {
     private itemsOnCounters: Map<string, Phaser.GameObjects.Image> = new Map();
     private mapOffsetX: number;
     private mapOffsetY: number;
+    private inventoryManager?: any; // Référence vers l'inventory manager
 
     constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+    }
+
+    /**
+     * Définit la référence vers l'inventory manager
+     */
+    setInventoryManager(inventoryManager: any): void {
+        this.inventoryManager = inventoryManager;
     }
 
     /**
@@ -24,15 +32,21 @@ export class CounterInteractionManager {
         gridY: number,
         itemType: string
     ): boolean {
+        console.log(`placeItemOnCounter appelée pour (${gridX}, ${gridY}) avec ${itemType}`);
         const key = `${gridX},${gridY}`;
 
         // Vérifier s'il n'y a pas déjà un objet sur ce plan de travail
-        if (this.itemsOnCounters.has(key)) return false;
+        if (this.itemsOnCounters.has(key)) {
+            console.log(`Objet déjà présent sur (${gridX}, ${gridY})`);
+            return false;
+        }
 
         // Calculer la position à l'écran
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
+
+        console.log(`Position écran calculée: (${x}, ${y})`);
 
         // Créer une image simple
         const item = this.scene.add.image(x, y, itemType);
@@ -40,6 +54,7 @@ export class CounterInteractionManager {
         item.setScale(1.2);
         item.setDepth(y + 100);
         this.itemsOnCounters.set(key, item);
+        console.log(`Objet ${itemType} placé avec succès sur (${gridX}, ${gridY})`);
         return true;
     }
 
@@ -65,7 +80,9 @@ export class CounterInteractionManager {
      */
     hasItemOnCounter(gridX: number, gridY: number): boolean {
         const key = `${gridX},${gridY}`;
-        return this.itemsOnCounters.has(key);
+        const hasItem = this.itemsOnCounters.has(key);
+        console.log(`hasItemOnCounter(${gridX}, ${gridY}): ${hasItem}`);
+        return hasItem;
     }
 
     /**
@@ -124,6 +141,98 @@ export class CounterInteractionManager {
             ease: "Cubic.easeOut",
             onComplete: () => message.destroy(),
         });
+    }
+
+    /**
+     * Effectue une transformation d'ingrédients sur une tile spéciale (type 10)
+     * @param gridX Position X de la grille
+     * @param gridY Position Y de la grille
+     * @returns true si une transformation a eu lieu, false sinon
+     */
+    performSpecialTransformation(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        const item = this.itemsOnCounters.get(key);
+
+        if (!item) return false;
+
+        const currentType = item.texture.key;
+        
+        // Transformation 1: Chocolat → Chunks de chocolat
+        if (currentType === "chocolate") {
+            this.transformItem(gridX, gridY, "chocolate-chunks", "🍫 Chocolat → Chunks");
+            return true;
+        }
+        
+        // Transformation 2: Beurre + Farine → Pâte
+        if (currentType === "butter") {
+            // Chercher de la farine dans l'inventaire
+            if (this.hasIngredientAvailable("wheat_floor")) {
+                this.consumeIngredient("wheat_floor");
+                this.transformItem(gridX, gridY, "dough", "🧈 Beurre + Farine → Pâte");
+                return true;
+            }
+        }
+        
+        if (currentType === "wheat_floor") {
+            // Chercher du beurre dans l'inventaire
+            if (this.hasIngredientAvailable("butter")) {
+                this.consumeIngredient("butter");
+                this.transformItem(gridX, gridY, "dough", "🌾 Farine + Beurre → Pâte");
+                return true;
+            }
+        }
+        
+        // Transformation 3: Pâte + Chunks de chocolat → Cookie Mix
+        if (currentType === "dough") {
+            if (this.hasIngredientAvailable("chocolate-chunks")) {
+                this.consumeIngredient("chocolate-chunks");
+                this.transformItem(gridX, gridY, "cookie-mix", "🥣 Pâte + Chunks → Cookie Mix");
+                return true;
+            }
+        }
+        
+        if (currentType === "chocolate-chunks") {
+            if (this.hasIngredientAvailable("dough")) {
+                this.consumeIngredient("dough");
+                this.transformItem(gridX, gridY, "cookie-mix", "🍫 Chunks + Pâte → Cookie Mix");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Transforme un item en un autre
+     */
+    private transformItem(gridX: number, gridY: number, newType: string, message: string): void {
+        const key = `${gridX},${gridY}`;
+        const item = this.itemsOnCounters.get(key);
+        
+        if (item) {
+            // Changer la texture
+            item.setTexture(newType);
+            // Afficher le message de transformation
+            this.showCombinationMessage(message, gridX, gridY);
+            // Effet visuel
+            this.playFusionEffect(gridX, gridY);
+        }
+    }
+
+    /**
+     * Vérifie si un ingrédient est disponible (dans l'inventaire du joueur)
+     */
+    private hasIngredientAvailable(ingredientType: string): boolean {
+        if (!this.inventoryManager) return false;
+        return this.inventoryManager.hasItem(ingredientType);
+    }
+
+    /**
+     * Consomme un ingrédient de l'inventaire du joueur
+     */
+    private consumeIngredient(ingredientType: string): boolean {
+        if (!this.inventoryManager) return false;
+        return this.inventoryManager.removeSpecificItem(ingredientType);
     }
 }
 

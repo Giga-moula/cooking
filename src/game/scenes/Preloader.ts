@@ -62,6 +62,8 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("butter", "assets/ingredients/butter.png");
         this.load.image("flour", "assets/ingredients/flour.png");
         this.load.image("chocolate", "assets/ingredients/chocolate.png");
+        this.load.image("chocolate-chunks", "assets/ingredients/chocolate-chunks.png");
+        this.load.image("cookie-mix", "assets/ingredients/cookie-mix.png");
         this.load.image("dough", "assets/crafted/dough.png");
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("favicon", "assets/favicon.png");
