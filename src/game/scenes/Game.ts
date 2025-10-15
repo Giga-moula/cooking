@@ -77,6 +77,9 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
+        
+        // Connecter l'inventory manager au counter manager
+        this.counterManager.setInventoryManager(this.inventoryManager);
         this.deliveryManager = new DeliveryManager(
             this,
             this.mapOffsetX,
@@ -128,6 +131,9 @@ export default class Game extends Phaser.Scene {
         this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
 
+        // Afficher les contrôles
+        this.displayControls();
+
         // Configurer les contrôles
         this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -140,6 +146,11 @@ export default class Game extends Phaser.Scene {
         // Touche E pour interagir avec les plans de travail
         this.input.keyboard?.on("keydown-E", () => {
             this.interactWithCounter();
+        });
+
+        // Touche T pour transformer les ingrédients sur les tiles spéciales
+        this.input.keyboard?.on("keydown-T", () => {
+            this.transformIngredientsOnSpecialTile();
         });
 
         EventBus.emit("current-scene-ready", this);
@@ -274,7 +285,7 @@ export default class Game extends Phaser.Scene {
                     );
                 }
             } else if (!hasItem && !this.inventoryManager.isEmpty()) {
-                // Poser l'objet
+                // Permettre de poser l'objet sur toutes les tables (normales et spéciales)
                 const itemType = this.inventoryManager.removeItem();
                 if (itemType) {
                     this.counterManager.placeItemOnCounter(
@@ -283,57 +294,32 @@ export default class Game extends Phaser.Scene {
                         itemType
                     );
                     this.inventoryManager.removeCarriedItem();
-                }
-            } else if (hasItem && !this.inventoryManager.isEmpty()) {
-                // Tenter une combinaison
-                const itemInHand = this.inventoryManager.peekItem();
-                const itemOnCounter = this.counterManager.getItemTypeOnCounter(
-                    targetX,
-                    targetY
-                );
-
-                if (itemInHand && itemOnCounter && this.ingredientManager) {
-                    const resultId = this.ingredientManager
-                        .getRecipeManager()
-                        .combineIngredients(itemInHand, itemOnCounter);
-
-                    if (resultId) {
-
-                        // Retirer les ingrédients
-                        this.inventoryManager.removeItem();
-                        this.inventoryManager.removeCarriedItem();
-                        this.counterManager.removeItemFromCounter(
-                            targetX,
-                            targetY
-                        );
-
-                        // Créer le résultat
-                        this.counterManager.placeItemOnCounter(
-                            targetX,
-                            targetY,
-                            resultId
-                        );
-
-                        // Effets visuels
-                        this.counterManager.playFusionEffect(targetX, targetY);
-                        const ingredient = this.ingredientManager
-                            .getRecipeManager()
-                            .getIngredient(resultId);
-                        if (ingredient) {
-                            this.counterManager.showCombinationMessage(
-                                `✨ ${ingredient.name} créé !`,
-                                targetX,
-                                targetY
-                            );
-                        }
-
-                    } else {
+                    
+                    // Message différent selon le type de tile
+                    if (this.mapManager.isSpecialTile(targetX, targetY)) {
                         this.counterManager.showCombinationMessage(
-                            "❌ Pas de recette",
+                            "💡 Appuyez sur T pour transformer",
                             targetX,
                             targetY
                         );
                     }
+                }
+            } else if (hasItem && !this.inventoryManager.isEmpty()) {
+                // Si la table a déjà un item, afficher un message
+                if (this.mapManager.isSpecialTile(targetX, targetY)) {
+                    // Sur les tiles spéciales, rappeler d'utiliser T pour transformer
+                    this.counterManager.showCombinationMessage(
+                        "💡 Appuyez sur T pour transformer",
+                        targetX,
+                        targetY
+                    );
+                } else {
+                    // Sur les tables normales, pas de transformation possible
+                    this.counterManager.showCombinationMessage(
+                        "❌ Tables normales: pas de transformation",
+                        targetX,
+                        targetY
+                    );
                 }
             }
         }
@@ -341,6 +327,104 @@ export default class Game extends Phaser.Scene {
 
     changeScene() {
         this.scene.start("GameOver");
+    }
+
+    /**
+     * Affiche les contrôles du jeu
+     */
+    displayControls() {
+        const controlsText = this.add.text(10, 10, 
+            "Contrôles:\n" +
+            "• Flèches: Se déplacer\n" +
+            "• E: Tables normales (poser/prendre)\n" +
+            "• T: Tiles bleues (transformer)\n" +
+            "• ESPACE: Menu", 
+            {
+                fontFamily: "Arial",
+                fontSize: "16px",
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 2,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                padding: { x: 10, y: 10 }
+            }
+        );
+        controlsText.setDepth(1000);
+    }
+
+    /**
+     * Transforme les ingrédients sur une tile spéciale
+     */
+    transformIngredientsOnSpecialTile() {
+        if (!this.playerManager || !this.mapManager || !this.counterManager || !this.inventoryManager) {
+            console.log("Managers manquants");
+            return;
+        }
+
+        const playerGridX = this.playerManager.getPlayerGridX();
+        const playerGridY = this.playerManager.getPlayerGridY();
+        const lastDirection = this.playerManager.getLastDirection();
+
+        console.log(`Joueur en position: (${playerGridX}, ${playerGridY}), direction: (${lastDirection.x}, ${lastDirection.y})`);
+
+        // Calculer la position adjacente selon la direction
+        const adjacentX = playerGridX + lastDirection.x;
+        const adjacentY = playerGridY + lastDirection.y;
+
+        console.log(`Position adjacente calculée: (${adjacentX}, ${adjacentY})`);
+        console.log(`Est une tile spéciale: ${this.mapManager.isSpecialTile(adjacentX, adjacentY)}`);
+        
+        // Vérifier aussi si le joueur est directement sur une tile spéciale
+        console.log(`Joueur sur tile spéciale: ${this.mapManager.isSpecialTile(playerGridX, playerGridY)}`);
+
+        // Vérifier si la position adjacente est une tile spéciale
+        if (this.mapManager.isSpecialTile(adjacentX, adjacentY)) {
+            console.log(`Tile spéciale trouvée en (${adjacentX}, ${adjacentY})`);
+            
+            // Vérifier s'il y a un objet sur cette tile
+            if (this.counterManager.hasItemOnCounter(adjacentX, adjacentY)) {
+                console.log("Objet trouvé sur la tile spéciale, tentative de transformation");
+                // Effectuer la transformation
+                const success = this.counterManager.performSpecialTransformation(adjacentX, adjacentY);
+                if (success) {
+                    console.log("Transformation réussie !");
+                } else {
+                    console.log("Aucune transformation possible");
+                }
+            } else if (!this.inventoryManager.isEmpty()) {
+                console.log("Inventaire non vide, tentative de placement");
+                // Poser un ingrédient sur la tile spéciale
+                const player = this.playerManager.getPlayer();
+                if (player) {
+                    const itemType = this.inventoryManager.removeItem();
+                    if (itemType) {
+                        console.log(`Tentative de placer ${itemType} sur la tile spéciale`);
+                        const placed = this.counterManager.placeItemOnCounter(
+                            adjacentX,
+                            adjacentY,
+                            itemType
+                        );
+                        if (placed) {
+                            this.inventoryManager.removeCarriedItem();
+                            this.counterManager.showCombinationMessage(
+                                `📦 ${itemType} posé`,
+                                adjacentX,
+                                adjacentY
+                            );
+                            console.log("Ingrédient placé avec succès");
+                        } else {
+                            console.log("Échec du placement de l'ingrédient");
+                            // Remettre l'ingrédient dans l'inventaire
+                            this.inventoryManager.addItem(itemType);
+                        }
+                    }
+                }
+            } else {
+                console.log("Aucun ingrédient dans l'inventaire");
+            }
+        } else {
+            console.log("Pas de tile spéciale à côté du joueur");
+        }
     }
 
     /**

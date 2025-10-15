@@ -139,7 +139,7 @@ export class IsometricMap {
             }
             
             // Différencier les murs des plans de travail / tables
-            if (texture === 'iso-counter' || texture.startsWith('table-') || isCounter) {
+            if (texture === 'iso-counter' || texture.startsWith('iso-special-counter') || texture.startsWith('table-') || isCounter) {
                 // Plan de travail / Table : impassable mais interactif
                 this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
             }
