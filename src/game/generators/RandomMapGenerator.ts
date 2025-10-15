@@ -349,18 +349,30 @@ export class RandomMapGenerator {
         }
 
         // Placer les tables dans les positions disponibles avec validation
+        let rejectedCount = 0;
         for (const pos of availablePositions) {
             if (placed >= count) break;
+            
+            // Vérifier que ce n'est pas le spawn ou trop proche
+            if (this.isSpawnPoint(pos.x, pos.y, zone) || this.isTooCloseToSpawn(pos.x, pos.y, zone)) {
+                continue;
+            }
             
             // Vérifier que placer cette table ne bloquera pas l'accès
             if (this.canPlaceElementSafely(mapData, pos.x, pos.y, zone)) {
                 mapData[pos.y][pos.x] = 5; // Table normale
                 zone.tables.push({ x: pos.x, y: pos.y });
                 placed++;
+            } else {
+                rejectedCount++;
             }
         }
 
-        console.log(`📋 Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables normales placées`);
+        if (placed < count) {
+            console.warn(`⚠️ Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables placées (${rejectedCount} positions rejetées pour blocage)`);
+        } else {
+            console.log(`📋 Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables normales placées`);
+        }
     }
 
     /**
@@ -469,7 +481,10 @@ export class RandomMapGenerator {
             const y = zone.startY + Math.floor(Math.random() * (zone.endY - zone.startY + 1));
             
             if (mapData[y][x] === 1) { // Sol libre
-                return { x, y };
+                // Vérifier que ce n'est pas le spawn point du joueur
+                if (!this.isSpawnPoint(x, y, zone)) {
+                    return { x, y };
+                }
             }
         }
         
@@ -486,6 +501,28 @@ export class RandomMapGenerator {
         for (let i = 0; i < zones.length; i++) {
             const zone = zones[i];
             const spawnPoint = zone.spawnPoint;
+            
+            // Vérifier que les 4 cases autour du spawn point sont libres
+            // Le joueur spawn ENTRE 4 cases en position isométrique
+            const spawnX = spawnPoint.x;
+            const spawnY = spawnPoint.y;
+            
+            const spawnTiles = [
+                { x: spawnX, y: spawnY, name: "principale" },
+                { x: spawnX + 1, y: spawnY, name: "droite" },
+                { x: spawnX, y: spawnY + 1, name: "bas" },
+                { x: spawnX + 1, y: spawnY + 1, name: "diagonale" }
+            ];
+            
+            for (const tile of spawnTiles) {
+                if (tile.y >= 0 && tile.y < mapData.length && tile.x >= 0 && tile.x < mapData[0].length) {
+                    const tileValue = mapData[tile.y][tile.x];
+                    if (tileValue !== 1 && tileValue !== 9) { // Doit être sol libre (1) ou zone de livraison (9)
+                        console.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
+                        return false;
+                    }
+                }
+            }
             
             // Vérifier que tous les éléments de la zone sont accessibles depuis le spawn
             const accessiblePositions = this.floodFill(mapData, spawnPoint, zone);
@@ -542,6 +579,7 @@ export class RandomMapGenerator {
             
             // Log de succès détaillé
             console.log(`✅ Zone ${i + 1} validation réussie:`);
+            console.log(`   - Spawn point libre à (${spawnPoint.x}, ${spawnPoint.y})`);
             console.log(`   - ${zone.ingredientBoxes.length} boîtes d'ingrédients accessibles`);
             console.log(`   - ${zone.tables.length} tables normales accessibles`);
             console.log(`   - ${zone.transformationTables.length} tables de transformation accessibles`);
@@ -576,16 +614,26 @@ export class RandomMapGenerator {
         y: number, 
         zone: PlayerZone
     ): boolean {
+        // Compter les cases accessibles AVANT le placement
+        const accessibleBefore = this.floodFill(mapData, zone.spawnPoint, zone);
+        const totalBefore = accessibleBefore.size;
+        
         // Créer une copie temporaire de la carte avec l'élément placé
         const tempMapData = mapData.map(row => [...row]);
-        tempMapData[y][x] = 5; // Placer temporairement l'élément (table)
+        tempMapData[y][x] = 5; // Placer temporairement l'élément (table/objet solide)
         
-        // Vérifier que toutes les cases de sol restent accessibles
-        const accessiblePositions = this.floodFill(tempMapData, zone.spawnPoint, zone);
-        const totalFloorTiles = this.countFloorTiles(mapData, zone) - 1; // -1 car on place un élément
+        // Compter les cases accessibles APRÈS le placement
+        const accessibleAfter = this.floodFill(tempMapData, zone.spawnPoint, zone);
+        const totalAfter = accessibleAfter.size;
         
-        // Si toutes les cases restantes sont accessibles, le placement est sûr
-        return accessiblePositions.size >= totalFloorTiles;
+        // Le placement est sûr si on ne perd qu'UNE SEULE case (celle où on place l'élément)
+        // Si on perd plus d'une case, ça veut dire qu'on a bloqué l'accès à d'autres cases
+        const lostCases = totalBefore - totalAfter;
+        
+        // On doit perdre exactement 1 case (celle où on place l'élément)
+        // Si on perd 0 cases, c'est bizarre (la case n'était pas accessible?)
+        // Si on perd >1 cases, on a bloqué l'accès à d'autres cases
+        return lostCases === 1;
     }
 
     /**
@@ -593,21 +641,70 @@ export class RandomMapGenerator {
      */
     private static findSafeEmptyPosition(mapData: number[][], zone: PlayerZone): SpawnPoint | null {
         const attempts = 100; // Plus d'attempts pour trouver une position sûre
+        let rejectedCount = 0;
         
         for (let i = 0; i < attempts; i++) {
             const x = zone.startX + Math.floor(Math.random() * (zone.endX - zone.startX + 1));
             const y = zone.startY + Math.floor(Math.random() * (zone.endY - zone.startY + 1));
             
             if (mapData[y][x] === 1) { // Sol libre
+                // Vérifier que ce n'est pas le spawn point du joueur ou trop proche
+                if (this.isSpawnPoint(x, y, zone) || this.isTooCloseToSpawn(x, y, zone)) {
+                    continue; // Passer à la position suivante
+                }
+                
                 // Vérifier que placer un élément ici ne bloquera pas l'accès
                 if (this.canPlaceElementSafely(mapData, x, y, zone)) {
+                    if (rejectedCount > 0) {
+                        console.log(`   ℹ️ Position sûre trouvée après ${rejectedCount} rejets`);
+                    }
                     return { x, y };
+                } else {
+                    rejectedCount++;
                 }
             }
         }
         
-        // Si aucune position sûre n'est trouvée, retourner n'importe quelle position vide
-        return this.findRandomEmptyPosition(mapData, zone);
+        console.warn(`⚠️ Aucune position sûre trouvée après ${attempts} tentatives (${rejectedCount} rejets pour blocage)`);
+        // Si aucune position sûre n'est trouvée, retourner null pour forcer la régénération
+        return null;
+    }
+
+    /**
+     * Vérifie si une position est un point de spawn
+     */
+    private static isSpawnPoint(x: number, y: number, zone: PlayerZone): boolean {
+        return zone.spawnPoint.x === x && zone.spawnPoint.y === y;
+    }
+
+    /**
+     * Vérifie si une position est trop proche du spawn point (pour laisser de l'espace)
+     * Le joueur spawn ENTRE 4 cases, donc on doit protéger les 4 cases autour du point de spawn
+     */
+    private static isTooCloseToSpawn(x: number, y: number, zone: PlayerZone): boolean {
+        const spawnX = zone.spawnPoint.x;
+        const spawnY = zone.spawnPoint.y;
+        
+        // Le joueur spawn au coin entre 4 cases, donc on protège:
+        // (spawnX, spawnY), (spawnX+1, spawnY), (spawnX, spawnY+1), (spawnX+1, spawnY+1)
+        // Et aussi les cases adjacentes pour laisser de l'espace
+        
+        const isInSpawnArea = 
+            (x === spawnX && y === spawnY) ||           // Case principale
+            (x === spawnX + 1 && y === spawnY) ||       // Case droite
+            (x === spawnX && y === spawnY + 1) ||       // Case bas
+            (x === spawnX + 1 && y === spawnY + 1) ||   // Case diagonale
+            (x === spawnX - 1 && y === spawnY) ||       // Case gauche
+            (x === spawnX && y === spawnY - 1) ||       // Case haut
+            (x === spawnX + 1 && y === spawnY - 1) ||   // Case haut-droite
+            (x === spawnX - 1 && y === spawnY + 1) ||   // Case bas-gauche
+            (x === spawnX - 1 && y === spawnY - 1) ||   // Case haut-gauche
+            (x === spawnX + 2 && y === spawnY) ||       // Case droite+1
+            (x === spawnX && y === spawnY + 2) ||       // Case bas+1
+            (x === spawnX + 1 && y === spawnY + 2) ||   // Case bas-droite
+            (x === spawnX + 2 && y === spawnY + 1);     // Case droite-bas
+        
+        return isInSpawnArea;
     }
 
     /**
