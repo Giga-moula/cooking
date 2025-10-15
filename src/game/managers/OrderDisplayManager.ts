@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { IngredientInteractionManager } from "./IngredientInteractionManager";
+import { RecipeManager } from "./RecipeManager";
 import { RecipeBox } from "./RecipeBox";
 
 /**
@@ -10,16 +10,16 @@ export class OrderDisplayManager {
     private recipeBoxes: RecipeBox[] = [];
     private activeOrders: string[] = [];
     private maxOrders: number = 4;
-    private ingredientManager: IngredientInteractionManager;
+    private recipeManager: RecipeManager;
     private orderDuration: number = 60;
     private recipeContainer?: Phaser.GameObjects.Container;
 
     constructor(
         scene: Phaser.Scene,
-        ingredientManager: IngredientInteractionManager
+        recipeManager: RecipeManager
     ) {
         this.scene = scene;
-        this.ingredientManager = ingredientManager;
+        this.recipeManager = recipeManager;
     }
 
     /**
@@ -51,8 +51,7 @@ export class OrderDisplayManager {
      * Génère de nouvelles commandes
      */
     generateNewOrders(): void {
-        const recipeManager = this.ingredientManager.getRecipeManager();
-        const dishes = recipeManager.getDishes();
+        const dishes = this.recipeManager.getDishes();
 
         // Nettoyer les commandes existantes
         this.activeOrders = [];
@@ -73,7 +72,7 @@ export class OrderDisplayManager {
             availableDishes.splice(randomIndex, 1);
 
             // Trouver la recette qui produit ce plat
-            const allRecipes = recipeManager.getAllRecipes();
+            const allRecipes = this.recipeManager.getAllRecipes();
             const recipe = allRecipes.find((r) => r.result === dish.id);
 
             if (recipe) {

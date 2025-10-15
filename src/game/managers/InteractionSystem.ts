@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { CounterInteractionManager } from "./CounterInteractionManager";
 import { DeliveryManager } from "./DeliveryManager";
-import { IngredientInteractionManager } from "./IngredientInteractionManager";
+import { RecipeManager } from "./RecipeManager";
 import { MapManager } from "./MapManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
 import { PlayerManager } from "./PlayerManager";
@@ -19,7 +19,7 @@ export class InteractionSystem {
     private mapManager: MapManager;
     private counterManager: CounterInteractionManager;
     private deliveryManager: DeliveryManager;
-    private ingredientManager: IngredientInteractionManager;
+    private recipeManager: RecipeManager;
     private orderDisplayManager: OrderDisplayManager;
     private scoreManager: ScoreManager;
     private timerManager: TimerManager;
@@ -31,7 +31,7 @@ export class InteractionSystem {
         mapManager: MapManager,
         counterManager: CounterInteractionManager,
         deliveryManager: DeliveryManager,
-        ingredientManager: IngredientInteractionManager,
+        recipeManager: RecipeManager,
         orderDisplayManager: OrderDisplayManager,
         scoreManager: ScoreManager,
         timerManager: TimerManager,
@@ -42,7 +42,7 @@ export class InteractionSystem {
         this.mapManager = mapManager;
         this.counterManager = counterManager;
         this.deliveryManager = deliveryManager;
-        this.ingredientManager = ingredientManager;
+        this.recipeManager = recipeManager;
         this.orderDisplayManager = orderDisplayManager;
         this.scoreManager = scoreManager;
         this.timerManager = timerManager;
@@ -218,7 +218,7 @@ export class InteractionSystem {
         if (!carriedItem) return true;
 
         // Vérifier si c'est un plat fini
-        if (this.ingredientManager.getRecipeManager().isDish(carriedItem)) {
+        if (this.recipeManager.isDish(carriedItem)) {
             if (this.orderDisplayManager.checkOrderCompletion(carriedItem)) {
                 // Livraison réussie
                 inventory.removeItem();
@@ -276,9 +276,7 @@ export class InteractionSystem {
             
             if (itemInHand && itemOnTable) {
                 // Essayer d'abord une recette (combinaison)
-                const resultId = this.ingredientManager
-                    .getRecipeManager()
-                    .combineIngredients(itemInHand, itemOnTable);
+                const resultId = this.recipeManager.combineIngredients(itemInHand, itemOnTable);
 
                 if (resultId) {
 
@@ -292,9 +290,7 @@ export class InteractionSystem {
 
                     // Effets visuels
                     this.counterManager.playFusionEffect(targetX, targetY);
-                    const ingredient = this.ingredientManager
-                        .getRecipeManager()
-                        .getIngredient(resultId);
+                    const ingredient = this.recipeManager.getIngredient(resultId);
                     if (ingredient) {
                         this.counterManager.showCombinationMessage(
                             `✨ ${ingredient.name} créé !`,

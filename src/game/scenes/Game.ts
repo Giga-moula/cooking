@@ -6,7 +6,7 @@ import { GameConfig } from "../config/GameConfig";
 import { EventBus } from "../EventBus";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
-import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
+import { RecipeManager } from "../managers/RecipeManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
 import { DynamicMapManager } from "../managers/DynamicMapManager";
@@ -40,7 +40,7 @@ export default class Game extends Phaser.Scene {
     private deliveryManager?: DeliveryManager;
     private scoreManager?: ScoreManager;
 
-    private ingredientManager?: IngredientInteractionManager;
+    private recipeManager?: RecipeManager;
 
     private interactionSystem?: InteractionSystem;
 
@@ -128,26 +128,24 @@ export default class Game extends Phaser.Scene {
         this.deliveryManager.setMapManager(this.mapManager);
 
         this.scoreManager = new ScoreManager(this);
-        this.ingredientManager = new IngredientInteractionManager();
+        this.recipeManager = new RecipeManager();
 
         this.ovenManager = new OvenManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY,
-            this.ingredientManager.getRecipeManager()
+            this.recipeManager
         );
 
         this.casseroleManager = new CasseroleManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY,
-            this.ingredientManager.getRecipeManager()
+            this.recipeManager
         );
 
         // Passer le RecipeManager partagé au CounterInteractionManager
-        this.counterManager.setRecipeManager(
-            this.ingredientManager.getRecipeManager()
-        );
+        this.counterManager.setRecipeManager(this.recipeManager);
 
         // Créer les tiles procéduralement
         this.mapManager.createIsometricTiles();
@@ -194,7 +192,7 @@ export default class Game extends Phaser.Scene {
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
             this,
-            this.ingredientManager
+            this.recipeManager
         );
         this.orderDisplayManager.initializeRecipeDisplay();
 
@@ -213,7 +211,7 @@ export default class Game extends Phaser.Scene {
             this,
             this.orderDisplayManager,
             this.scoreManager,
-            this.ingredientManager.getRecipeManager()
+            this.recipeManager
         );
         this.waveManager.initializeWaveDisplay();
 
@@ -252,7 +250,7 @@ export default class Game extends Phaser.Scene {
             this.mapManager,
             this.counterManager,
             this.deliveryManager,
-            this.ingredientManager,
+            this.recipeManager,
             this.orderDisplayManager,
             this.scoreManager,
             this.timerManager,
@@ -642,11 +640,12 @@ export default class Game extends Phaser.Scene {
      * Nettoyage quand on quitte la scène
      */
     shutdown() {
-        if (this.ingredientManager) {
-            this.ingredientManager.cleanup();
-        }
+        // RecipeManager n'a pas besoin de cleanup
         if (this.casseroleManager) {
             this.casseroleManager.cleanup();
+        }
+        if (this.ovenManager) {
+            this.ovenManager.cleanup();
         }
     }
 

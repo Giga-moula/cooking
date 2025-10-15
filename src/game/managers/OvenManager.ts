@@ -1,158 +1,61 @@
 import Phaser from "phaser";
-import { OVEN_COOKING } from "../data/recipes";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
+import { BaseCookingManager } from "./BaseCookingManager";
 
 /**
  * Gestionnaire des interactions avec le four
  * Permet de faire fondre le beurre et cuire les cookies
  */
-export class OvenManager {
-    private scene: Phaser.Scene;
-    private itemsInOven: Map<string, Phaser.GameObjects.Image> = new Map();
-    private mapOffsetX: number;
-    private mapOffsetY: number;
-    private recipeManager: RecipeManager;
-    private cookingSpeedMultiplier: number = 1.0;
-
+export class OvenManager extends BaseCookingManager {
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
         mapOffsetY: number,
         recipeManager: RecipeManager
     ) {
-        this.scene = scene;
-        this.mapOffsetX = mapOffsetX;
-        this.mapOffsetY = mapOffsetY;
-        this.recipeManager = recipeManager;
+        super(scene, mapOffsetX, mapOffsetY, recipeManager);
     }
 
     /**
      * Place un objet dans le four
      */
     placeItemInOven(gridX: number, gridY: number, itemType: string): boolean {
-        const key = `${gridX},${gridY}`;
-
-        // Vérifier s'il n'y a pas déjà un objet dans le four
-        if (this.itemsInOven.has(key)) {
-            return false;
-        }
-
-        // Calculer la position à l'écran
-        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY;
-
-        // Créer une image simple
-        const item = this.scene.add.image(x, y, itemType);
-        item.setOrigin(0.5, 0.5);
-        item.setScale(1.2);
-        item.setDepth(y + 100);
-        this.itemsInOven.set(key, item);
-        return true;
+        return this.placeItem(gridX, gridY, itemType);
     }
 
     /**
      * Retire un objet du four
      */
     removeItemFromOven(gridX: number, gridY: number): string | null {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInOven.get(key);
-
-        if (item) {
-            const itemType = item.texture.key;
-            item.destroy();
-            this.itemsInOven.delete(key);
-            return itemType;
-        }
-
-        return null;
+        return this.removeItem(gridX, gridY);
     }
 
     /**
      * Vérifie si le four contient un objet
      */
     hasItemInOven(gridX: number, gridY: number): boolean {
-        const key = `${gridX},${gridY}`;
-        const hasItem = this.itemsInOven.has(key);
-        return hasItem;
+        return this.hasItem(gridX, gridY);
     }
 
     /**
      * Récupère le type d'objet dans le four
      */
     getItemTypeInOven(gridX: number, gridY: number): string | null {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInOven.get(key);
-        return item ? item.texture.key : null;
-    }
-
-    /**
-     * Applique un multiplicateur de vitesse de cuisson (depuis les upgrades)
-     * Note: Pour l'instant, la cuisson est instantanée. Cette méthode est prête pour une future implémentation.
-     */
-    applyCookingSpeedMultiplier(multiplier: number): void {
-        this.cookingSpeedMultiplier = multiplier;
+        return this.getItemType(gridX, gridY);
     }
 
     /**
      * Effectue la cuisson dans le four
-     * @param gridX Position X de la grille
-     * @param gridY Position Y de la grille
-     * @returns true si une cuisson a eu lieu, false sinon
      */
     performCooking(gridX: number, gridY: number): boolean {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInOven.get(key);
-
-        if (!item) return false;
-
-        const currentType = item.texture.key;
-
-        // Chercher une recette de cuisson correspondante
-        const cookingRecipe = OVEN_COOKING.find(
-            (recipe) => recipe.from === currentType
-        );
-
-        if (cookingRecipe) {
-            this.cookItem(
-                gridX,
-                gridY,
-                cookingRecipe.to,
-                `🔥 ${cookingRecipe.name}`
-            );
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Cuit un item en un autre
-     */
-    private cookItem(
-        gridX: number,
-        gridY: number,
-        newType: string,
-        message: string
-    ): void {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInOven.get(key);
-
-        if (item) {
-            // Changer la texture
-            item.setTexture(newType);
-            // Afficher le message de cuisson
-            this.showCookingMessage(message, gridX, gridY);
-            // Effet visuel
-            this.playCookingEffect(gridX, gridY);
-        }
+        return this.cook(gridX, gridY);
     }
 
     /**
      * Affiche un effet de cuisson (particules de feu)
      */
-    playCookingEffect(gridX: number, gridY: number): void {
+    protected playCookingEffect(gridX: number, gridY: number): void {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
@@ -174,43 +77,10 @@ export class OvenManager {
     }
 
     /**
-     * Affiche un message de cuisson
+     * Obtient le nom de l'appareil
      */
-    showCookingMessage(text: string, gridX: number, gridY: number): void {
-        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY - 50;
-
-        const message = this.scene.add.text(x, y, text, {
-            fontFamily: "Arial",
-            fontSize: "24px",
-            color: "#ffffff",
-            stroke: "#000000",
-            strokeThickness: 4,
-        });
-        message.setOrigin(0.5);
-
-        // Animation de montée et disparition
-        this.scene.tweens.add({
-            targets: message,
-            y: y - 30,
-            alpha: 0,
-            duration: 1000,
-            ease: "Cubic.easeOut",
-            onComplete: () => message.destroy(),
-        });
-    }
-
-    /**
-     * Nettoie tous les fours
-     */
-    cleanup(): void {
-        this.itemsInOven.forEach((item) => {
-            if (item && item.scene) {
-                item.destroy();
-            }
-        });
-        this.itemsInOven.clear();
+    protected getDeviceName(): string {
+        return "Four";
     }
 }
 

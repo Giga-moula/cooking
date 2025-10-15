@@ -1,161 +1,85 @@
 import Phaser from "phaser";
-import { OVEN_COOKING } from "../data/recipes";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
+import { BaseCookingManager } from "./BaseCookingManager";
 
 /**
  * Gestionnaire des interactions avec la casserole
  * Permet de faire fondre le beurre et transformer le sucre en caramel
  */
-export class CasseroleManager {
-    private scene: Phaser.Scene;
-    private itemsInCasserole: Map<string, Phaser.GameObjects.Image> = new Map();
-    private mapOffsetX: number;
-    private mapOffsetY: number;
-    private recipeManager: RecipeManager;
-    private cookingSpeedMultiplier: number = 1.0;
-
+export class CasseroleManager extends BaseCookingManager {
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
         mapOffsetY: number,
         recipeManager: RecipeManager
     ) {
-        this.scene = scene;
-        this.mapOffsetX = mapOffsetX;
-        this.mapOffsetY = mapOffsetY;
-        this.recipeManager = recipeManager;
+        super(scene, mapOffsetX, mapOffsetY, recipeManager);
     }
 
     /**
      * Place un objet dans la casserole
      */
     placeItemInCasserole(gridX: number, gridY: number, itemType: string): boolean {
-        const key = `${gridX},${gridY}`;
-
-        // Vérifier s'il n'y a pas déjà un objet dans la casserole
-        if (this.itemsInCasserole.has(key)) {
-            return false;
-        }
-
-        // Calculer la position à l'écran
-        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY;
-
-        // Créer une image simple
-        const item = this.scene.add.image(x, y, itemType);
-        item.setOrigin(0.5, 0.5);
-        item.setScale(1.2);
-        item.setDepth(y + 100);
-        this.itemsInCasserole.set(key, item);
-        return true;
+        return this.placeItem(gridX, gridY, itemType);
     }
 
     /**
      * Retire un objet de la casserole
      */
     removeItemFromCasserole(gridX: number, gridY: number): string | null {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInCasserole.get(key);
-        if (item) {
-            const textureKey = item.texture.key;
-            item.destroy();
-            this.itemsInCasserole.delete(key);
-            return textureKey;
-        }
-        return null;
+        return this.removeItem(gridX, gridY);
     }
 
     /**
      * Vérifie s'il y a un objet dans la casserole
      */
     hasItemInCasserole(gridX: number, gridY: number): boolean {
-        const key = `${gridX},${gridY}`;
-        return this.itemsInCasserole.has(key);
+        return this.hasItem(gridX, gridY);
     }
 
     /**
      * Obtient le type d'objet dans la casserole
      */
     getItemInCasserole(gridX: number, gridY: number): string | null {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInCasserole.get(key);
-        return item ? item.texture.key : null;
+        return this.getItemType(gridX, gridY);
     }
 
     /**
      * Cuire/transformer un objet dans la casserole
-     * Utilise les mêmes recettes que le four pour beurre->molten_butter et sucre->caramel
      */
     cookInCasserole(gridX: number, gridY: number): boolean {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInCasserole.get(key);
-        
-        if (!item) {
-            return false;
-        }
-
-        const currentItem = item.texture.key;
-
-        // Chercher la recette de transformation
-        const cookingRecipe = OVEN_COOKING.find(recipe => recipe.from === currentItem);
-        
-        if (!cookingRecipe) {
-            this.showCookingMessage("❌ Ne peut pas cuire ça !", gridX, gridY);
-            return false;
-        }
-
-
-        // Remplacer l'objet par le résultat de la cuisson
-        item.setTexture(cookingRecipe.to);
-        
-        this.showCookingMessage(`✅ ${cookingRecipe.name} !`, gridX, gridY);
-        
-        return true;
+        return this.cook(gridX, gridY);
     }
 
     /**
-     * Affiche un message temporaire au-dessus de la casserole
+     * Effet visuel de cuisson pour la casserole (vapeur/bulles)
      */
-    showCookingMessage(message: string, gridX: number, gridY: number): void {
+    protected playCookingEffect(gridX: number, gridY: number): void {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
 
-        const text = this.scene.add.text(x, y - 50, message, {
-            fontSize: '16px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2,
+        // Effet de particules bleues/blanches pour simuler la vapeur
+        const particles = this.scene.add.particles(x, y, "star", {
+            speed: { min: -30, max: 30 },
+            angle: { min: 270, max: 270 }, // Particules qui montent
+            scale: { start: 0.2, end: 0 },
+            lifespan: 1000,
+            quantity: 8,
+            tint: 0x87ceeb, // Couleur bleu ciel
+            blendMode: "ADD",
         });
-        text.setOrigin(0.5, 0.5);
-        text.setDepth(1000);
 
-        // Faire disparaître le message après 2 secondes
-        this.scene.time.delayedCall(2000, () => {
-            if (text && text.scene) {
-                text.destroy();
-            }
+        this.scene.time.delayedCall(1000, () => {
+            particles.destroy();
         });
     }
 
     /**
-     * Applique un multiplicateur de vitesse de cuisson (pour les upgrades)
+     * Obtient le nom de l'appareil
      */
-    public applyCookingSpeedMultiplier(multiplier: number): void {
-        this.cookingSpeedMultiplier = multiplier;
-    }
-
-    /**
-     * Nettoie toutes les casseroles
-     */
-    cleanup(): void {
-        this.itemsInCasserole.forEach((item) => {
-            if (item && item.scene) {
-                item.destroy();
-            }
-        });
-        this.itemsInCasserole.clear();
+    protected getDeviceName(): string {
+        return "Casserole";
     }
 }
