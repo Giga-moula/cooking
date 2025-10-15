@@ -205,17 +205,10 @@ export class WaveManager {
         const waveScore = this.calculateWaveScore();
         this.scoreManager.addScore(waveScore);
 
-        // Afficher l'effet de fin de vague
-        this.showWaveCompleteEffect();
-
         // Passer à la vague suivante après un délai
         this.scene.time.delayedCall(3000, () => {
             this.startNextWave();
         });
-
-        console.log(
-            `✅ Vague ${this.currentWaveConfig.waveNumber} terminée ! Score: ${waveScore}`
-        );
     }
 
     /**
@@ -292,47 +285,6 @@ export class WaveManager {
     }
 
     /**
-     * Affiche l'effet de fin de vague
-     */
-    private showWaveCompleteEffect(): void {
-        const x = this.scene.cameras.main.width / 2;
-        const y = this.scene.cameras.main.height / 2;
-
-        const message = this.scene.add.text(
-            x,
-            y,
-            `Vague ${this.currentWaveConfig?.waveNumber} terminée !`,
-            {
-                fontFamily: "Arial",
-                fontSize: "32px",
-                color: "#27ae60",
-                stroke: "#ffffff",
-                strokeThickness: 3,
-            }
-        );
-        message.setOrigin(0.5);
-        message.setScrollFactor(0);
-        message.setDepth(4000);
-
-        this.scene.tweens.add({
-            targets: message,
-            scaleX: 1.2,
-            scaleY: 1.2,
-            duration: 500,
-            yoyo: true,
-            ease: "Cubic.easeInOut",
-            onComplete: () => {
-                this.scene.tweens.add({
-                    targets: message,
-                    alpha: 0,
-                    duration: 1000,
-                    onComplete: () => message.destroy(),
-                });
-            },
-        });
-    }
-
-    /**
      * Affiche l'effet de déblocage de recette
      */
     private showRecipeUnlockEffect(recipeId: string): void {
@@ -368,26 +320,7 @@ export class WaveManager {
      * Affiche la fin du jeu
      */
     private showGameComplete(): void {
-        const x = this.scene.cameras.main.width / 2;
-        const y = this.scene.cameras.main.height / 2;
-
-        const message = this.scene.add.text(
-            x,
-            y,
-            "🎉 Toutes les vagues terminées !",
-            {
-                fontFamily: "Arial",
-                fontSize: "36px",
-                color: "#e74c3c",
-                stroke: "#ffffff",
-                strokeThickness: 4,
-            }
-        );
-        message.setOrigin(0.5);
-        message.setScrollFactor(0);
-        message.setDepth(4000);
-
-        console.log("🎉 Toutes les vagues sont terminées !");
+        // Toutes les vagues sont terminées - pas de message affiché
     }
 
     // Plus besoin d'updateWaveDisplay - l'affichage est intégré dans les boîtes

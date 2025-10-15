@@ -20,9 +20,6 @@ export class OrderVisualEffects {
 
         // Effet de particules
         this.createParticleEffect(x, y);
-
-        // Message de succès
-        this.createSuccessMessage(x, y - 20);
     }
 
     /**
@@ -59,31 +56,6 @@ export class OrderVisualEffects {
         } catch (e) {
             console.log("Effet de particules non disponible");
         }
-    }
-
-    /**
-     * Crée un message de succès
-     */
-    private createSuccessMessage(x: number, y: number): void {
-        const message = this.scene.add.text(x, y, "✓ Commande terminée !", {
-            fontFamily: "Arial",
-            fontSize: "16px",
-            color: "#4CAF50",
-            stroke: "#ffffff",
-            strokeThickness: 2,
-        });
-        message.setOrigin(0.5);
-        message.setScrollFactor(0);
-        message.setDepth(3000);
-
-        this.scene.tweens.add({
-            targets: message,
-            y: y - 20,
-            alpha: 0,
-            duration: 1500,
-            ease: "Cubic.easeOut",
-            onComplete: () => message.destroy(),
-        });
     }
 
     /**

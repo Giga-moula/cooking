@@ -1,11 +1,10 @@
 import Phaser from "phaser";
-import { PlayerManager } from "./PlayerManager";
-import { MapManager } from "./MapManager";
 import { CounterInteractionManager } from "./CounterInteractionManager";
 import { DeliveryManager } from "./DeliveryManager";
-import { InventoryManager } from "./InventoryManager";
 import { IngredientInteractionManager } from "./IngredientInteractionManager";
+import { MapManager } from "./MapManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
+import { PlayerManager } from "./PlayerManager";
 import { ScoreManager } from "./ScoreManager";
 
 /**
@@ -88,7 +87,9 @@ export class InteractionSystem {
             return;
         }
 
-        console.log(`ℹ️ Aucune interaction possible à (${targetX}, ${targetY})`);
+        console.log(
+            `ℹ️ Aucune interaction possible à (${targetX}, ${targetY})`
+        );
     }
 
     /**
@@ -191,7 +192,6 @@ export class InteractionSystem {
                     this.scoreManager.calculateRecipePoints(carriedItem);
                 this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
 
-                console.log(`🎉 Plat livré avec succès: ${carriedItem}`);
                 this.deliveryManager.showDeliverySuccessEffect();
             } else {
                 console.log(`❌ Ce plat n'est pas dans les commandes`);
@@ -218,7 +218,9 @@ export class InteractionSystem {
             return false;
         }
 
-        console.log(`🔨 Interaction avec plan de travail à (${targetX}, ${targetY})`);
+        console.log(
+            `🔨 Interaction avec plan de travail à (${targetX}, ${targetY})`
+        );
 
         const inventory = player.getInventory();
         const playerSprite = player.getPlayer();
@@ -231,7 +233,9 @@ export class InteractionSystem {
         const inventoryEmpty = inventory.isEmpty();
 
         console.log(
-            `État: Comptoir=${hasItemOnCounter ? "plein" : "vide"}, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
+            `État: Comptoir=${
+                hasItemOnCounter ? "plein" : "vide"
+            }, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
         );
 
         // Cas 1: Ramasser un objet du comptoir
@@ -325,10 +329,6 @@ export class InteractionSystem {
             .combineIngredients(itemInHand, itemOnCounter);
 
         if (resultId) {
-            console.log(
-                `✨ Combinaison réussie: ${itemInHand} + ${itemOnCounter} = ${resultId}`
-            );
-
             // Retirer les ingrédients
             inventory.removeItem();
             player.removeCarriedItem();
@@ -352,7 +352,9 @@ export class InteractionSystem {
 
             return true;
         } else {
-            console.log(`❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`);
+            console.log(
+                `❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
+            );
             this.counterManager.showCombinationMessage(
                 "❌ Pas de recette",
                 targetX,
