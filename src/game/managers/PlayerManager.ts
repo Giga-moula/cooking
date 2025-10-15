@@ -10,6 +10,7 @@ export class PlayerManager {
     private scene: Phaser.Scene;
 
     private player?: Phaser.Physics.Arcade.Sprite;
+    private playerColor: string = "blue"; // Couleur par défaut
     private playerNumber: number; // 1 ou 2
     private playerSpeed: number = 150; // Pixels par seconde
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
@@ -19,7 +20,6 @@ export class PlayerManager {
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private mapOffsetX: number;
     private mapOffsetY: number;
-    private grandmaColor: string = "blue"; // Couleur par défaut
 
     private controls: PlayerControls;
 
@@ -43,9 +43,9 @@ export class PlayerManager {
         this.inventory = new InventoryManager(scene); // ✅ Initialiser l'inventaire
 
         if (playerNumber === 1) {
-            this.grandmaColor = "blue";
+            this.playerColor = "blue";
         } else {
-            this.grandmaColor = "red";
+            this.playerColor = "red";
         }
     }
 
@@ -60,46 +60,10 @@ export class PlayerManager {
 
     update(): void {
         this.handleMovement();
-        this.updateGridPosition();
+        // this.updateGridPosition();
         this.updateCarriedItemPosition(); // ✅ Mettre à jour l'objet porté
         this.updatePlayerDepth(); // ✅ Mettre à jour la profondeur
-    }
-
-    private handleMovement(): void {
-        if (!this.player) return;
-
-        let velocityX = 0;
-        let velocityY = 0;
-
-        if (this.controls.upKey.isDown) {
-            velocityY = -this.playerSpeed;
-            this.lastDirection = { x: 0, y: -1 };
-            this.updatePlayerSprite(`${this.grandmaColor}-grandma-back`, false);
-        } else if (this.controls.downKey.isDown) {
-            velocityY = this.playerSpeed;
-            this.lastDirection = { x: 0, y: 1 };
-            this.updatePlayerSprite(
-                `${this.grandmaColor}-grandma-front`,
-                false
-            );
-        }
-
-        if (this.controls.leftKey.isDown) {
-            velocityX = -this.playerSpeed;
-            this.lastDirection = { x: -1, y: 0 };
-            this.updatePlayerSprite(`${this.grandmaColor}-grandma-side`, true);
-        } else if (this.controls.rightKey.isDown) {
-            velocityX = this.playerSpeed;
-            this.lastDirection = { x: 1, y: 0 };
-            this.updatePlayerSprite(`${this.grandmaColor}-grandma-side`, false);
-        }
-
-        if (velocityX !== 0 && velocityY !== 0) {
-            velocityX *= this.DIAGONAL_FACTOR;
-            velocityY *= this.DIAGONAL_FACTOR;
-        }
-
-        this.player.setVelocity(velocityX, velocityY);
+        this.handleInventory();
     }
 
     /**
@@ -108,6 +72,10 @@ export class PlayerManager {
      */
     public isInteractionPressed(): boolean {
         return Phaser.Input.Keyboard.JustDown(this.controls.interactKey);
+    }
+
+    private handleInventory(): void {
+        if (!this.player) return;
     }
     /**
      * Crée le joueur à la position initiale
@@ -131,7 +99,7 @@ export class PlayerManager {
         this.player = this.scene.physics.add.sprite(
             startX,
             startY,
-            `${this.grandmaColor}-grandma-front`
+            `${this.playerColor}-grandma-front`
         );
         this.player.setOrigin(0.5, 0.5); // Centré pour la rotation
 
@@ -158,6 +126,39 @@ export class PlayerManager {
         return this.player;
     }
 
+    handleMovement(): void {
+        if (!this.player) return;
+
+        let velocityX = 0;
+        let velocityY = 0;
+
+        if (this.controls.upKey.isDown) {
+            velocityY = -this.playerSpeed;
+            this.lastDirection = { x: 0, y: -1 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-back`, false);
+        } else if (this.controls.downKey.isDown) {
+            velocityY = this.playerSpeed;
+            this.lastDirection = { x: 0, y: 1 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-front`, false);
+        }
+
+        if (this.controls.leftKey.isDown) {
+            velocityX = -this.playerSpeed;
+            this.lastDirection = { x: -1, y: 0 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-side`, true);
+        } else if (this.controls.rightKey.isDown) {
+            velocityX = this.playerSpeed;
+            this.lastDirection = { x: 1, y: 0 };
+            this.updatePlayerSprite(`${this.playerColor}-grandma-side`, false);
+        }
+
+        if (velocityX !== 0 && velocityY !== 0) {
+            velocityX *= this.DIAGONAL_FACTOR;
+            velocityY *= this.DIAGONAL_FACTOR;
+        }
+
+        this.player.setVelocity(velocityX, velocityY);
+    }
     /**
      * Met à jour la position en grille du joueur
      */
@@ -415,6 +416,6 @@ export class PlayerManager {
     }
 
     getPlayerColor(): string {
-        return this.grandmaColor;
+        return this.playerColor;
     }
 }

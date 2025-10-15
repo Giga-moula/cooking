@@ -1,3 +1,5 @@
+/* START OF COMPILED CODE */
+
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { EventBus } from "../EventBus";
@@ -8,6 +10,7 @@ import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";  
 import { ScoreManager } from "../managers/ScoreManager";
+import { InventoryManager } from "../managers/InventoryManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { TimerManager } from "../managers/TimerManager";
 
