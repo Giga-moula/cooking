@@ -10,7 +10,6 @@ import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";  
 import { ScoreManager } from "../managers/ScoreManager";
-import { InventoryManager } from "../managers/InventoryManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { TimerManager } from "../managers/TimerManager";
 
@@ -34,6 +33,7 @@ export default class Game extends Phaser.Scene {
     private ingredientManager?: IngredientInteractionManager;
 
     private interactionSystem?: InteractionSystem;
+
     private timerManager?: TimerManager;
     constructor() {
         super("Game");
