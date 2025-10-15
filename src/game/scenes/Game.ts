@@ -14,6 +14,7 @@ import { CommunicationManager } from "../managers/CommunicationManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { OvenManager } from "../managers/OvenManager";
+import { CasseroleManager } from "../managers/CasseroleManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
@@ -46,6 +47,7 @@ export default class Game extends Phaser.Scene {
     private timerManager?: TimerManager;
 
     private ovenManager?: OvenManager;
+    private casseroleManager?: CasseroleManager;
     private waveManager?: WaveManager;
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
@@ -129,6 +131,13 @@ export default class Game extends Phaser.Scene {
         this.ingredientManager = new IngredientInteractionManager();
 
         this.ovenManager = new OvenManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY,
+            this.ingredientManager.getRecipeManager()
+        );
+
+        this.casseroleManager = new CasseroleManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY,
@@ -248,7 +257,8 @@ export default class Game extends Phaser.Scene {
             this.orderDisplayManager,
             this.scoreManager,
             this.timerManager,
-            this.ovenManager
+            this.ovenManager,
+            this.casseroleManager
         );
 
         // Touche espace pour retourner au menu
@@ -296,8 +306,8 @@ export default class Game extends Phaser.Scene {
                         duration: 500,
                         ease: "Back.easeOut",
                     });
-                } else {
-                    // Afficher "GO!"
+                } else if (count === 0) {
+                    // Afficher "GO!" une seule fois
                     countdownText.setText("GO!");
                     countdownText.setScale(2);
                     this.tweens.add({
@@ -326,6 +336,8 @@ export default class Game extends Phaser.Scene {
     private startGame(): void {
         // Appliquer les upgrades au démarrage
         this.applyUpgrades();
+
+        // Pas besoin de régénérer la carte ici - elle a déjà été créée pour la vague 1 dans le constructeur de DynamicMapManager
 
         // Démarrer la première vague
         this.waveManager?.startWave(1);
@@ -506,6 +518,11 @@ export default class Game extends Phaser.Scene {
             this.ovenManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
         }
 
+        // Vitesse de cuisson de la casserole
+        if (this.casseroleManager) {
+            this.casseroleManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+        }
+
         // Multiplicateur de score
         if (this.scoreManager) {
             this.scoreManager.applyScoreMultiplier(effects.scoreMultiplier);
@@ -572,6 +589,10 @@ export default class Game extends Phaser.Scene {
                 // Appliquer les upgrades achetés
                 this.applyUpgrades();
                 
+                // Mettre à jour la carte pour la nouvelle vague
+                const nextWaveNumber = this.waveManager?.getNextWaveNumber() || 1;
+                this.updateWaveLevel(nextWaveNumber);
+                
                 // Démarrer la vague suivante
                 this.waveManager?.startNextWave();
             },
@@ -609,6 +630,9 @@ export default class Game extends Phaser.Scene {
     shutdown() {
         if (this.ingredientManager) {
             this.ingredientManager.cleanup();
+        }
+        if (this.casseroleManager) {
+            this.casseroleManager.cleanup();
         }
     }
 

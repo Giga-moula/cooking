@@ -55,7 +55,7 @@ export class RandomMapGenerator {
         const playerZones = this.generatePlayerZones(mapWidth, mapHeight, separationWall, complexity);
         
         // Placer les éléments dans les zones
-        this.populatePlayerZones(mapData, playerZones, availableActions, complexity);
+        this.populatePlayerZones(mapData, playerZones, availableActions, complexity, waveLevel);
         
         // Ajouter les comptoirs de communication
         this.addCommunicationCounters(mapData, playerZones);
@@ -207,7 +207,8 @@ export class RandomMapGenerator {
         mapData: number[][], 
         zones: PlayerZone[], 
         availableActions: number, 
-        complexity: number
+        complexity: number,
+        waveLevel: number
     ): void {
         if (zones.length < 2) return;
         
@@ -221,7 +222,7 @@ export class RandomMapGenerator {
         const zone1HasTransformTable = !zone1HasOven;
         
         // Distribution aléatoire des ingrédients (1 type par zone, ~équilibré)
-        const ingredientDistribution = this.randomizeIngredientDistribution();
+        const ingredientDistribution = this.randomizeIngredientDistribution(waveLevel);
         
         // Distribution aléatoire de la zone de livraison
         const deliveryInZone1 = Math.random() < 0.5;
@@ -267,7 +268,7 @@ export class RandomMapGenerator {
      * Génère une distribution aléatoire des ingrédients
      * Garantit ~équilibre entre les zones (1 ou 2 types par zone)
      */
-    private static randomizeIngredientDistribution(): {
+    private static randomizeIngredientDistribution(waveLevel: number): {
         zone1Ingredients: string[];
         zone2Ingredients: string[];
         zone1Types: number[];
@@ -276,18 +277,37 @@ export class RandomMapGenerator {
         const allIngredients = [
             { type: 6, name: '🍫 Chocolat' },
             { type: 7, name: '🧈 Beurre' },
-            { type: 8, name: '🌾 Farine' }
+            { type: 8, name: '🌾 Farine' },
+            { type: 12, name: '🍬 Sucre' }
         ];
         
-        // Mélanger les ingrédients
-        const shuffled = [...allIngredients].sort(() => Math.random() - 0.5);
+        // Mélanger les ingrédients de base (sans le sucre)
+        const baseIngredients = allIngredients.slice(0, 3); // Chocolat, Beurre, Farine
+        const shuffled = [...baseIngredients].sort(() => Math.random() - 0.5);
         
-        // Distribution aléatoire : soit 2-1 soit 1-2
+        // Distribution selon les règles : casserole dans zone avec 1 caisse, sucre dans zone avec 2 caisses
         const zone1Count = Math.random() < 0.5 ? 2 : 1;
         const zone2Count = 3 - zone1Count;
         
         const zone1Ingredients = shuffled.slice(0, zone1Count);
         const zone2Ingredients = shuffled.slice(zone1Count);
+        
+        // Ajouter casserole et sucre selon les règles (seulement à partir de la vague 2)
+        const shouldIncludeCasserole = waveLevel >= 2;
+        
+        if (shouldIncludeCasserole) {
+            if (zone1Count === 1) {
+                // Zone 1 a 1 caisse → elle aura la casserole
+                zone1Ingredients.push({ type: 13, name: '🍳 Casserole' });
+                // Zone 2 a 2 caisses → elle aura le sucre
+                zone2Ingredients.push({ type: 12, name: '🍬 Sucre' });
+            } else {
+                // Zone 1 a 2 caisses → elle aura le sucre
+                zone1Ingredients.push({ type: 12, name: '🍬 Sucre' });
+                // Zone 2 a 1 caisse → elle aura la casserole
+                zone2Ingredients.push({ type: 13, name: '🍳 Casserole' });
+            }
+        }
         
         return {
             zone1Ingredients: zone1Ingredients.map(i => i.name),

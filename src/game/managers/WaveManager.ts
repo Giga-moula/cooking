@@ -495,10 +495,17 @@ export class WaveManager {
     }
 
     /**
+     * Obtient le numéro de la prochaine vague
+     */
+    public getNextWaveNumber(): number {
+        return this.waveState.currentWave + 1;
+    }
+
+    /**
      * Démarre la vague suivante
      */
     public startNextWave(): void {
-        const nextWaveNumber = this.waveState.currentWave + 1;
+        const nextWaveNumber = this.getNextWaveNumber();
         const nextWave = this.waves.find(
             (w) => w.waveNumber === nextWaveNumber
         );

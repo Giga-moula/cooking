@@ -8,6 +8,7 @@ import { PlayerManager } from "./PlayerManager";
 import { ScoreManager } from "./ScoreManager";
 import { TimerManager } from "./TimerManager";
 import { OvenManager } from "./OvenManager";
+import { CasseroleManager } from "./CasseroleManager";
 
 /**
  * Système d'interaction orienté objet
@@ -23,6 +24,7 @@ export class InteractionSystem {
     private scoreManager: ScoreManager;
     private timerManager: TimerManager;
     private ovenManager: OvenManager;
+    private casseroleManager: CasseroleManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -33,7 +35,8 @@ export class InteractionSystem {
         orderDisplayManager: OrderDisplayManager,
         scoreManager: ScoreManager,
         timerManager: TimerManager,
-        ovenManager: OvenManager
+        ovenManager: OvenManager,
+        casseroleManager: CasseroleManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -44,6 +47,7 @@ export class InteractionSystem {
         this.scoreManager = scoreManager;
         this.timerManager = timerManager;
         this.ovenManager = ovenManager;
+        this.casseroleManager = casseroleManager;
     }
 
     /**
@@ -74,7 +78,12 @@ export class InteractionSystem {
             return;
         }
 
-        console.log(`❌ Aucune table de transformation ou four à (${targetX}, ${targetY})`);
+        // Vérifier aussi la casserole pour la cuisson
+        if (this.handleCasseroleCooking(targetX, targetY, player)) {
+            return;
+        }
+
+        console.log(`❌ Aucune table de transformation, four ou casserole à (${targetX}, ${targetY})`);
     }
 
     /**
@@ -123,6 +132,10 @@ export class InteractionSystem {
         }
 
         if (this.handleOvenInteraction(targetX, targetY, player)) {
+            return;
+        }
+
+        if (this.handleCasseroleInteraction(targetX, targetY, player)) {
             return;
         }
 
@@ -540,6 +553,113 @@ export class InteractionSystem {
     }
 
     /**
+     * Gère l'interaction avec la casserole
+     * Avec E/O : Poser/Prendre des ingrédients
+     * Avec R/P : Cuire les ingrédients
+     */
+    private handleCasseroleInteraction(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isCasserole(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🍳 Interaction avec la casserole à (${targetX}, ${targetY})`);
+
+        const inventory = player.getInventory();
+        const playerSprite = player.getPlayer();
+        if (!inventory || !playerSprite) return false;
+
+        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(targetX, targetY);
+        const inventoryEmpty = inventory.isEmpty();
+
+        console.log(
+            `État: Casserole=${hasItemInCasserole ? "pleine" : "vide"}, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
+        );
+
+        // Cas 1: Ramasser un objet de la casserole
+        if (hasItemInCasserole && inventoryEmpty) {
+            return this.pickupFromCasserole(targetX, targetY, player);
+        }
+
+        // Cas 2: Poser un objet dans la casserole
+        if (!hasItemInCasserole && !inventoryEmpty) {
+            return this.placeInCasserole(targetX, targetY, player);
+        }
+
+        // Cas 3: Casserole occupée et inventaire plein
+        if (hasItemInCasserole && !inventoryEmpty) {
+            console.log(`💡 Utilisez R/P pour cuire dans la casserole !`);
+            this.casseroleManager.showCookingMessage(
+                "💡 Appuyez sur R/P",
+                targetX,
+                targetY
+            );
+            return true;
+        }
+
+        console.log(`ℹ️ Aucune action possible sur cette casserole`);
+        return true;
+    }
+
+    /**
+     * Ramasse un objet de la casserole
+     */
+    private pickupFromCasserole(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const itemType = this.casseroleManager.removeItemFromCasserole(targetX, targetY);
+        if (itemType) {
+            const inventory = player.getInventory();
+            if (inventory) {
+                inventory.addItem(itemType);
+                console.log(`✅ ${itemType} récupéré de la casserole`);
+                this.casseroleManager.showCookingMessage(
+                    `✅ Récupéré !`,
+                    targetX,
+                    targetY
+                );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Place un objet dans la casserole
+     */
+    private placeInCasserole(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const inventory = player.getInventory();
+        if (!inventory) return false;
+
+        const itemType = inventory.removeItem();
+        if (itemType) {
+            const success = this.casseroleManager.placeItemInCasserole(targetX, targetY, itemType);
+            if (success) {
+                console.log(`✅ ${itemType} placé dans la casserole`);
+                this.casseroleManager.showCookingMessage(
+                    `✅ Placé !`,
+                    targetX,
+                    targetY
+                );
+                return true;
+            } else {
+                // Remettre l'objet dans l'inventaire si ça a échoué
+                inventory.addItem(itemType);
+            }
+        }
+        return false;
+    }
+
+    /**
      * Ramasse un objet du four
      */
     private pickupFromOven(
@@ -624,6 +744,38 @@ export class InteractionSystem {
         }
 
         return true;
+    }
+
+    /**
+     * Gère la cuisson dans la casserole (R/P)
+     */
+    private handleCasseroleCooking(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isCasserole(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🍳 Tentative de cuisson dans la casserole à (${targetX}, ${targetY})`);
+
+        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(targetX, targetY);
+
+        if (hasItemInCasserole) {
+            const success = this.casseroleManager.cookInCasserole(targetX, targetY);
+            if (success) {
+                console.log(`✅ Cuisson réussie dans la casserole !`);
+                return true;
+            } else {
+                console.log(`❌ Échec de la cuisson dans la casserole`);
+                return true;
+            }
+        } else {
+            console.log(`❌ Aucun objet à cuire dans la casserole`);
+            this.casseroleManager.showCookingMessage("❌ Vide !", targetX, targetY);
+            return true;
+        }
     }
 }
 

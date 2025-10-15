@@ -10,6 +10,7 @@ export interface TileTypeConfig {
     isDeliveryZone?: boolean; // True si c'est une zone de livraison
     isOven?: boolean; // True si c'est un four
     isTransformationTable?: boolean; // True si c'est une table de transformation
+    isCasserole?: boolean; // True si c'est une casserole de cuisson
     rotation?: number; // Rotation en radians (optionnel)
 }
 
@@ -43,6 +44,8 @@ export const DEFAULT_TILE_TYPES: { [key: number]: TileTypeConfig } = {
     9: { texture: "iso-delivery-zone", isSolid: false, isCounter: false, isDeliveryZone: true }, // Zone de livraison
     10: { texture: "table-mono", isSolid: true, isCounter: true, isTransformationTable: true }, // Table de transformation
     11: { texture: "oven", isSolid: true, isCounter: false, isOven: true }, // Four
+    12: { texture: "sugar-box", isSolid: true, isCounter: false, isIngredient: "sugar", rotation: Math.PI }, // Boîte sucre
+    13: { texture: "casserole_cuisson", isSolid: true, isCounter: false, isCasserole: true }, // Casserole de cuisson
 };
 
 /**

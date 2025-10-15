@@ -449,6 +449,19 @@ export class MapManager {
     }
 
     /**
+     * Vérifie si une position est une casserole (type 13 - pour cuisson)
+     */
+    isCasserole(gridX: number, gridY: number): boolean {
+        if (!this.isoMap) return false;
+        const tile = this.isoMap.getSolidTile(gridX, gridY);
+        const isCasserole = tile?.texture.key === "casserole_cuisson";
+        console.log(
+            `isCasserole(${gridX}, ${gridY}): texture=${tile?.texture.key}, isCasserole=${isCasserole}`
+        );
+        return isCasserole;
+    }
+
+    /**
      * Vérifie si une position est une zone de livraison
      */
     isDeliveryZone(gridX: number, gridY: number): boolean {

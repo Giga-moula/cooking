@@ -46,6 +46,8 @@ export class GameConfig {
         FLOUR: "flour",
         CHOCOLATE: "chocolate",
         SUGAR: "sugar",
+        SUGAR_BOX: "sugar-box",
+        CASSEROLE: "casserole_cuisson",
         MOLTEN_BUTTER: "molten_butter",
         DOUGH: "dough",
         COOKIE_MIX_CHOCO: "cookie-mix-choco",

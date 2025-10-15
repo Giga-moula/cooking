@@ -103,7 +103,10 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("butter_box", "assets/boxes/butter_box.png");
         this.load.image("flour_box", "assets/boxes/flour_box.png");
         this.load.image("choco_box", "assets/boxes/choco_box.png");
-        this.load.image("sugar_box", "assets/boxes/sugar-box.png");
+        this.load.image("sugar-box", "assets/boxes/sugar-box.png");
+
+        // Charger la casserole
+        this.load.image("casserole_cuisson", "assets/casserole_cuisson.png");
 
         // Charger les sprites de grand-mère
         this.load.image(
