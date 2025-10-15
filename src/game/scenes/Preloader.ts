@@ -73,16 +73,28 @@ export default class Preloader extends Phaser.Scene {
 
         // Charger les sprites de grand-mère
         this.load.image(
-            "grandma-front",
+            "blue-grandma-front",
             "assets/grandma/blue/grandma_blue_front.png"
         );
         this.load.image(
-            "grandma-back",
+            "blue-grandma-back",
             "assets/grandma/blue/grandma_blue_back.png"
         );
         this.load.image(
-            "grandma-side",
+            "blue-grandma-side",
             "assets/grandma/blue/grandma_blue_side.png"
+        );
+        this.load.image(
+            "red-grandma-front",
+            "assets/grandma/red/grandma_red_front.png"
+        );
+        this.load.image(
+            "red-grandma-back",
+            "assets/grandma/red/grandma_red_back.png"
+        );
+        this.load.image(
+            "red-grandma-side",
+            "assets/grandma/red/grandma_red_side.png"
         );
 
         // Charger les tuiles de table
