@@ -21,7 +21,7 @@ export class InteractionSystem {
     private ingredientManager: IngredientInteractionManager;
     private orderDisplayManager: OrderDisplayManager;
     private scoreManager: ScoreManager;
-    private timerManager?: TimerManager;
+    private timerManager: TimerManager;
     private ovenManager: OvenManager;
 
     constructor(
@@ -32,8 +32,8 @@ export class InteractionSystem {
         ingredientManager: IngredientInteractionManager,
         orderDisplayManager: OrderDisplayManager,
         scoreManager: ScoreManager,
-        timerManager?: TimerManager,
-        ovenManager?: OvenManager
+        timerManager: TimerManager,
+        ovenManager: OvenManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -43,7 +43,7 @@ export class InteractionSystem {
         this.orderDisplayManager = orderDisplayManager;
         this.scoreManager = scoreManager;
         this.timerManager = timerManager;
-        this.ovenManager = ovenManager!;
+        this.ovenManager = ovenManager;
     }
 
     /**
@@ -56,11 +56,9 @@ export class InteractionSystem {
 
         const playerGridX = player.getPlayerGridX();
         const playerGridY = player.getPlayerGridY();
-        const lastDirection = player.getLastDirection();
-
-        // Calculer la tile adjacente dans la direction regardée
-        const targetX = playerGridX + lastDirection.x;
-        const targetY = playerGridY + lastDirection.y;
+        const target = player.getTargetPosition();
+        const targetX = target.x;
+        const targetY = target.y;
 
         console.log(
             `⚗️ Tentative de transformation - Position: (${playerGridX}, ${playerGridY}), Cible: (${targetX}, ${targetY})`
@@ -95,11 +93,9 @@ export class InteractionSystem {
 
         const playerGridX = player.getPlayerGridX();
         const playerGridY = player.getPlayerGridY();
-        const lastDirection = player.getLastDirection();
-
-        // Calculer la tile adjacente dans la direction regardée
-        let targetX = playerGridX + lastDirection.x;
-        let targetY = playerGridY + lastDirection.y;
+        const target = player.getTargetPosition();
+        let targetX = target.x;
+        let targetY = target.y;
 
         // Si le joueur est sur une tile interactive, interagir avec cette même position
         if (this.isInteractiveTile(playerGridX, playerGridY, isoMap)) {

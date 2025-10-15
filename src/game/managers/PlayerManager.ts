@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
+import { GameConfig } from "../config/GameConfig";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -10,13 +11,13 @@ export class PlayerManager {
     private scene: Phaser.Scene;
 
     private player?: Phaser.Physics.Arcade.Sprite;
-    private playerColor: string = "blue"; // Couleur par défaut
+    private playerColor: string = GameConfig.COLORS.PLAYER_1; // Couleur par défaut
     private playerNumber: number; // 1 ou 2
-    private playerSpeed: number = 150; // Pixels par seconde
+    private playerSpeed: number = GameConfig.PLAYER_SPEED;
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
     private lastPlayerY: number = 0;
-    private playerGridX: number = 2; // Position en grille du joueur
-    private playerGridY: number = 2;
+    private playerGridX: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
+    private playerGridY: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private mapOffsetX: number;
     private mapOffsetY: number;
@@ -39,9 +40,13 @@ export class PlayerManager {
         this.inventory = new InventoryManager(scene);
 
         if (playerNumber === 1) {
-            this.playerColor = "blue";
+            this.playerColor = GameConfig.COLORS.PLAYER_1;
+            this.playerGridX = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
+            this.playerGridY = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
         } else {
-            this.playerColor = "red";
+            this.playerColor = GameConfig.COLORS.PLAYER_2;
+            this.playerGridX = GameConfig.PLAYER_START_POSITIONS.PLAYER_2.x;
+            this.playerGridY = GameConfig.PLAYER_START_POSITIONS.PLAYER_2.y;
         }
     }
 
@@ -305,5 +310,15 @@ export class PlayerManager {
 
     getPlayerColor(): string {
         return this.playerColor;
+    }
+
+    /**
+     * Calcule la position cible devant le joueur (basée sur la dernière direction)
+     */
+    getTargetPosition(): { x: number; y: number } {
+        return {
+            x: this.playerGridX + this.lastDirection.x,
+            y: this.playerGridY + this.lastDirection.y
+        };
     }
 }

@@ -14,10 +14,11 @@ import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
 import { OvenManager } from "../managers/OvenManager";
 import { WaveManager } from "../managers/WaveManager";
+import { GameConfig } from "../config/GameConfig";
 
 export default class Game extends Phaser.Scene {
-    private mapOffsetX: number = 272;
-    private mapOffsetY: number = 144;
+    private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
+    private mapOffsetY: number = GameConfig.MAP_OFFSET_Y;
 
     // Managers
     private player1: PlayerManager;
@@ -57,7 +58,7 @@ export default class Game extends Phaser.Scene {
     create() {
         this.editorCreate();
         // Fond de couleur
-        this.cameras.main.setBackgroundColor(0x87ceeb); // Bleu ciel
+        this.cameras.main.setBackgroundColor(GameConfig.COLORS.BACKGROUND);
 
         // 🎵 Continuer la musique si elle n'est pas déjà en cours
         if (
@@ -77,7 +78,10 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             1
         );
-        this.player1.createPlayer(2, 2);
+        this.player1.createPlayer(
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x,
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y
+        );
 
         this.player2 = new PlayerManager(
             this,
@@ -85,7 +89,10 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             2
         );
-        this.player2.createPlayer(4, 4);
+        this.player2.createPlayer(
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.x,
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.y
+        );
 
         this.playerList = [this.player1, this.player2];
 
@@ -183,10 +190,13 @@ export default class Game extends Phaser.Scene {
         // Démarrer la première vague
         this.waveManager.startWave(1);
 
-        // Initialiser le timer (5 minutes) AVANT InteractionSystem
+        // Initialiser le timer AVANT InteractionSystem
         this.timerManager = new TimerManager(this);
-        this.timerManager.initializeTimerDisplay(512, 20);
-        this.timerManager.start(300, () => {
+        this.timerManager.initializeTimerDisplay(
+            GameConfig.TIMER.DISPLAY_X,
+            GameConfig.TIMER.DISPLAY_Y
+        );
+        this.timerManager.start(GameConfig.TIMER.GAME_DURATION, () => {
             // Callback quand le temps est écoulé
             this.endGame();
         });

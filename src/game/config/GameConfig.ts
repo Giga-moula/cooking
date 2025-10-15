@@ -110,4 +110,22 @@ export class GameConfig {
         BACKGROUND: 0x87ceeb,
         PARTICLE_TINT: 0xff4500
     } as const;
+
+    // Configuration du timer
+    static readonly TIMER = {
+        GAME_DURATION: 300, // 5 minutes en secondes
+        DELIVERY_BONUS: 15, // Bonus de temps par livraison (en secondes)
+        DISPLAY_X: 512,
+        DISPLAY_Y: 20
+    } as const;
+
+    // Configuration Phaser
+    static readonly PHASER_CONFIG = {
+        WIDTH: 1024,
+        HEIGHT: 768,
+        BACKGROUND_COLOR: "#028af8",
+        PARENT: "game-container",
+        PHYSICS_GRAVITY: { x: 0, y: 0 },
+        PHYSICS_DEBUG: false
+    } as const;
 }
