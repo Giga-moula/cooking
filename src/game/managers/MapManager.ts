@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
 import { TableTileManager } from "./tableManager";
+import { GameConfig } from "../config/GameConfig";
 
 /**
  * Gestionnaire de la carte : tiles, murs, limites
@@ -15,6 +16,7 @@ export class MapManager {
     private mapHeight: number;
     private ingredientTiles: Map<string, string> = new Map();
     private tableTileManager?: TableTileManager;
+    private craftPlanOverlays: Map<string, Phaser.GameObjects.Image> = new Map(); // Track des craft_plans
 
     constructor(
         scene: Phaser.Scene,
@@ -39,7 +41,7 @@ export class MapManager {
         const tiles = [
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
-            { key: "iso-transformation-table", color: 0x4a9eff, darkColor: 0x2b7fd9 }, // Table de transformation (bleu)
+            // Supprimé iso-transformation-table car on utilise maintenant les vraies tables
         ];
 
         tiles.forEach(({ key, color, darkColor }) => {
@@ -77,10 +79,10 @@ export class MapManager {
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
             [4, 6, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
+            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4],
             [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Table de transformation (pour actions spécifiques)
             [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+            [4, 1, 1, 1, 10, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
             [4, 7, 8, 1, 1, 11, 1, 1, 9, 4], // 11 = Four (pour cuisson)
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
@@ -109,7 +111,7 @@ export class MapManager {
     /**
      * Crée le mapping des textures de base
      */
-    private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string}>): { [key: number]: string } {
+    private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): { [key: number]: string } {
         return {
             1: "planks",
             4: "iso-wall",
@@ -118,7 +120,7 @@ export class MapManager {
             7: "butter_box",           // Caisse de beurre
             8: "flour_box",            // Caisse de farine
             9: "iso-delivery-zone",
-            10: "iso-transformation-table", // Table de transformation (pour actions spécifiques)
+            10: "table-mono",          // Table de transformation - utilise maintenant les vraies tables
             11: "oven",            // Four (pour cuisson) - utilise l'image oven.png directement
         };
     }
@@ -126,7 +128,7 @@ export class MapManager {
     /**
      * Applique les textures de comptoir/table correctes selon les adjacences
      */
-    private applyTableTextures(tableConfigurations: Array<{gridX: number, gridY: number, texture: string}>): void {
+    private applyTableTextures(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): void {
         if (!this.isoMap) return;
 
         let replacedCount = 0;
@@ -153,11 +155,92 @@ export class MapManager {
                         true  // isCounter = true pour les tables/comptoirs
                     );
                     
+                    // Si c'est une table de transformation, ajouter le craft_plan en overlay
+                    if (config.isTransformationTable) {
+                        this.addCraftPlanOverlay(config.gridX, config.gridY);
+                    }
+                    
                     replacedCount++;
                 } 
             }
         });
         
+    }
+
+    /**
+     * Ajoute le craft_plan en overlay sur une table de transformation
+     */
+    private addCraftPlanOverlay(gridX: number, gridY: number): void {
+        const key = `${gridX},${gridY}`;
+        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
+        const x = screenPos.x + this.mapOffsetX;
+        const y = screenPos.y + this.mapOffsetY + GameConfig.CRAFT_PLAN_OFFSET_Y; // Utiliser la configuration
+
+        // Créer l'overlay craft_plan
+        const craftPlan = this.scene.add.image(x, y, "craft_plan");
+        craftPlan.setOrigin(0.5, 0.5);
+        craftPlan.setScale(GameConfig.CRAFT_PLAN_SCALE); // Utiliser la configuration
+        craftPlan.setDepth(y + 50); // Légèrement au-dessus de la table
+        
+        // Optionnel : ajouter un effet de transparence pour que ce soit plus subtil
+        craftPlan.setAlpha(GameConfig.CRAFT_PLAN_ALPHA);
+        
+        // Ajuster la rotation selon la texture de la table
+        this.adjustCraftPlanRotation(craftPlan, gridX, gridY);
+        
+        // Tracker l'overlay
+        this.craftPlanOverlays.set(key, craftPlan);
+    }
+
+    /**
+     * Ajuste la rotation du craft_plan selon la texture de la table
+     */
+    private adjustCraftPlanRotation(craftPlan: Phaser.GameObjects.Image, gridX: number, gridY: number): void {
+        if (!this.isoMap) return;
+        
+        const tile = this.isoMap.getSolidTile(gridX, gridY);
+        const textureKey = tile?.texture.key;
+        
+        if (!textureKey || !textureKey.startsWith('table-')) return;
+        
+        // Analyser la texture pour déterminer les ouvertures
+        const hasBottom = textureKey.includes('bottom');
+        const hasLeft = textureKey.includes('left');
+        const hasRight = textureKey.includes('right');
+        const hasTop = textureKey.includes('top');
+        
+        // Logique de rotation selon les ouvertures
+        if (hasBottom) {
+            if (!hasLeft && !hasRight) {
+                // Table ouverte seulement en bas -> rotation vers la gauche (-90°)
+                craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.LEFT);
+            } else if (!hasLeft) {
+                // Table ouverte en bas et à droite -> rotation vers la gauche (-90°)
+                craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.LEFT);
+            } else if (!hasRight) {
+                // Table ouverte en bas et à gauche -> rotation vers la droite (90°)
+                craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.RIGHT);
+            } else {
+                // Table ouverte partout -> rotation normale (0°)
+                craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.NORMAL);
+            }
+        } else if (!hasTop) {
+            // Table pas ouverte en haut -> rotation à 180°
+            craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.UPSIDE_DOWN);
+        } else {
+            // Table pas ouverte en bas -> rotation normale (0°)
+            craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.NORMAL);
+        }
+        
+        console.log(`🔄 Craft plan rotation pour ${textureKey}: ${craftPlan.rotation} rad (${(craftPlan.rotation * 180 / Math.PI).toFixed(0)}°)`);
+    }
+
+    /**
+     * Vérifie si une position a un craft_plan overlay
+     */
+    private hasCraftPlanOverlay(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        return this.craftPlanOverlays.has(key);
     }
 
     /**
@@ -251,15 +334,19 @@ export class MapManager {
     }
 
     /**
-     * Vérifie si une position est une table de transformation (type 10 - pour actions spécifiques)
+     * Vérifie si une position est une table de transformation (avec craft_plan)
      */
     isTransformationTable(gridX: number, gridY: number): boolean {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
-        const isTransformationTable = tile?.texture.key === 'iso-transformation-table';
         const isCounter = this.isoMap.isCounter(gridX, gridY);
-        console.log(`isTransformationTable(${gridX}, ${gridY}): texture=${tile?.texture.key}, isTransformationTable=${isTransformationTable}, isCounter=${isCounter}`);
-        return isTransformationTable;
+        
+        // Vérifier si c'est une table (texture commence par 'table-') ET si elle a un craft_plan
+        const isTable = tile?.texture.key?.startsWith('table-') || false;
+        const hasCraftPlan = this.hasCraftPlanOverlay(gridX, gridY);
+        
+        console.log(`isTransformationTable(${gridX}, ${gridY}): texture=${tile?.texture.key}, isTable=${isTable}, hasCraftPlan=${hasCraftPlan}, isCounter=${isCounter}`);
+        return isTable && hasCraftPlan;
     }
 
     /**

@@ -79,9 +79,9 @@ export class TableTileManager {
     /**
      * Génère le nom de texture selon les adjacences
      * Fichiers disponibles :
-     * - table-mono / iso-transformation-table (texture de base)
-     * - table-open-[right|left|right-left]-[top]-[bottom] (pour les tables normales avec adjacences)
-     * - iso-transformation-table (pour les tables de transformation, texture procédurale temporaire)
+     * - table-mono (texture de base pour tables isolées)
+     * - table-open-[right|left|right-left]-[top]-[bottom] (pour les tables avec adjacences)
+     * Les tables de transformation utilisent maintenant les mêmes textures que les tables normales
      */
     private getTableTexture(
         hasTop: boolean,
@@ -90,13 +90,8 @@ export class TableTileManager {
         hasRight: boolean,
         isTransformationTable: boolean = false
     ): string {
-        // Pour les tables de transformation, utiliser la texture procédurale pour l'instant
-        // Plus tard, on pourra créer des textures spéciales comme les tables
-        if (isTransformationTable) {
-            return "iso-transformation-table";
-        }
+        // Pour toutes les tables (normales et de transformation), utiliser les vraies textures
         
-        // Pour les tables normales
         // Si aucune table adjacente, c'est une table isolée
         if (!hasTop && !hasBottom && !hasLeft && !hasRight) {
             return "table-mono";

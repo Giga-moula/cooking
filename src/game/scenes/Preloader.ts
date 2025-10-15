@@ -71,6 +71,7 @@ export default class Preloader extends Phaser.Scene {
         
         // Charger les objets du jeu
         this.load.image("oven", "assets/oven.png");
+        this.load.image("craft_plan", "assets/craft_plan.png");
 
         // Charger les caisses d'ingrédients pour la récupération
         this.load.image("butter_box", "assets/butter_box.png");

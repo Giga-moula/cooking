@@ -23,13 +23,25 @@ export class GameConfig {
     static readonly PARTICLE_LIFESPAN = 800;
     static readonly MESSAGE_DURATION = 2000;
     static readonly MESSAGE_OFFSET_Y = -50;
+    static readonly CRAFT_PLAN_SCALE = 1.5; // Échelle du craft_plan
+    static readonly CRAFT_PLAN_ALPHA = 1; // Transparence du craft_plan
+    static readonly CRAFT_PLAN_OFFSET_Y = -5; // Décalage vertical du craft_plan
+    
+    // Configuration des rotations du craft_plan
+    static readonly CRAFT_PLAN_ROTATIONS = {
+        NORMAL: 0,                    // 0°
+        LEFT: -Math.PI / 2,          // -90°
+        RIGHT: Math.PI / 2,          // 90°
+        UPSIDE_DOWN: Math.PI,        // 180°
+    } as const;
 
     // Configuration des textures
     static readonly TEXTURE_KEYS = {
         WALL: "iso-wall",
         DELIVERY_ZONE: "iso-delivery-zone",
-        TRANSFORMATION_TABLE: "iso-transformation-table",
+        TRANSFORMATION_TABLE: "table-mono", // Maintenant utilise les vraies tables
         OVEN: "oven",
+        CRAFT_PLAN: "craft_plan",
         BUTTER: "butter",
         FLOUR: "flour",
         CHOCOLATE: "chocolate",
