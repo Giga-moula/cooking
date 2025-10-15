@@ -1,14 +1,16 @@
+/* START OF COMPILED CODE */
+
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { EventBus } from "../EventBus";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
 import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
-import { InventoryManager } from "../managers/InventoryManager";
 import { MapManager } from "../managers/MapManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
+import { InventoryManager } from "../managers/InventoryManager";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = 272;
@@ -20,12 +22,16 @@ export default class Game extends Phaser.Scene {
     private playerList: PlayerManager[];
 
     private mapManager?: MapManager;
-    private inventoryManager?: InventoryManager;
+
     private counterManager?: CounterInteractionManager;
     private orderDisplayManager?: OrderDisplayManager;
+
     private deliveryManager?: DeliveryManager;
     private scoreManager?: ScoreManager;
+
     private ingredientManager?: IngredientInteractionManager;
+
+    private inventoryManager: InventoryManager = new InventoryManager(this);
 
     constructor() {
         super("Game");
@@ -43,7 +49,6 @@ export default class Game extends Phaser.Scene {
 
     create() {
         this.editorCreate();
-
         // Fond de couleur
         this.cameras.main.setBackgroundColor(0x87ceeb); // Bleu ciel
 
@@ -94,6 +99,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
+
         this.scoreManager = new ScoreManager(this);
         this.ingredientManager = new IngredientInteractionManager();
 
@@ -125,7 +131,7 @@ export default class Game extends Phaser.Scene {
                 const playerSprite = player.getPlayer();
                 if (playerSprite) {
                     this.physics.add.collider(playerSprite, walls);
-        }
+                }
             }
         }
 
@@ -169,9 +175,9 @@ export default class Game extends Phaser.Scene {
         for (const player of this.playerList) {
             player.initializeDebugCircle();
             player.initializeDebugText(
-            this.cameras.main.width,
-            this.cameras.main.height
-        );
+                this.cameras.main.width,
+                this.cameras.main.height
+            );
         }
 
         // Touche espace pour retourner au menu
@@ -185,29 +191,30 @@ export default class Game extends Phaser.Scene {
     update(time: number, delta: number) {
         this.player1.update();
         this.player2.update();
+        this.interactWithCounter();
     }
 
-    // interactWithCounter() {
-    //     if (
-    //         !this.playerManager ||
-    //         !this.mapManager ||
-    //         !this.inventoryManager ||
-    //         !this.counterManager
-    //     )
-    //         return;
+    interactWithCounter() {
+        if (
+            !this.playerList ||
+            !this.mapManager ||
+            !this.inventoryManager ||
+            !this.counterManager
+        )
+            return;
 
-    //     const isoMap = this.mapManager.getIsoMap();
-    //     if (!isoMap) return;
+        const isoMap = this.mapManager.getIsoMap();
+        if (!isoMap) return;
 
-    //     const playerGridX = this.playerManager.getPlayerGridX();
-    //     const playerGridY = this.playerManager.getPlayerGridY();
-    //     const lastDirection = this.playerManager.getLastDirection();
-    //     const player = this.playerManager.getPlayer();
-    //     if (!player) return;
+        const playerGridX = this.player1.getPlayerGridX();
+        const playerGridY = this.player1.getPlayerGridY();
+        const lastDirection = this.player1.getLastDirection();
+        const player = this.player1.getPlayer();
+        if (!player) return;
 
-    //     // Calculer la tile adjacente dans la direction regardée
-    //     let targetX = playerGridX + lastDirection.x;
-    //     let targetY = playerGridY + lastDirection.y;
+        // Calculer la tile adjacente dans la direction regardée
+        let targetX = playerGridX + lastDirection.x;
+        let targetY = playerGridY + lastDirection.y;
 
         // Si le joueur est sur une tile interactive, interagir avec cette même position
         if (
@@ -391,7 +398,7 @@ export default class Game extends Phaser.Scene {
      */
     processDelivery() {
         if (
-            !this.playerManager ||
+            !this.playerList ||
             !this.deliveryManager ||
             !this.inventoryManager ||
             !this.orderDisplayManager ||
@@ -400,9 +407,9 @@ export default class Game extends Phaser.Scene {
         )
             return;
 
-        const playerGridX = this.playerManager.getPlayerGridX();
-        const playerGridY = this.playerManager.getPlayerGridY();
-        const lastDirection = this.playerManager.getLastDirection();
+        const playerGridX = this.player1.getPlayerGridX();
+        const playerGridY = this.player1.getPlayerGridY();
+        const lastDirection = this.player1.getLastDirection();
 
         console.log(
             `🚚 processDelivery appelé - Position joueur: (${playerGridX}, ${playerGridY}), Inventaire: ${
@@ -476,4 +483,3 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
-
