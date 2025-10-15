@@ -123,6 +123,7 @@ export class RecipeBox {
      * Met à jour la boîte avec une recette
      */
     updateWithRecipe(recipe: any): void {
+        console.log("RecipeBox: updateWithRecipe appelée avec:", recipe);
         this.data.orderId = recipe.result;
 
         // Couleur de la barre selon le type de plat
@@ -136,9 +137,16 @@ export class RecipeBox {
         this.data.dishIcon.setVisible(true);
 
         // Icônes des ingrédients
-        const ingredients = [recipe.ingredient1, recipe.ingredient2];
+        const ingredients = recipe.displayIngredients || [
+            recipe.ingredient1,
+            recipe.ingredient2,
+        ];
+        console.log("RecipeBox: ingrédients à afficher:", ingredients);
         this.data.ingredientIcons.forEach((icon, index) => {
             if (index < ingredients.length) {
+                console.log(
+                    `RecipeBox: affichage ingrédient ${index}: ${ingredients[index]}`
+                );
                 icon.setTexture(ingredients[index]);
                 icon.setVisible(true);
             } else {
@@ -157,12 +165,22 @@ export class RecipeBox {
      */
     private getRecipeColor(result: string): number {
         switch (result) {
+            case "cookie-mix-choco":
+                return 0x8d6e63; // Marron pour chocolat
+            case "cookie-mix-cara":
+                return 0xff9800; // Orange pour caramel
+            case "cookie-mix-choco-cara":
+                return 0xff5722; // Rouge-orange pour combo
             case "cookie-choco":
-                return 0xff9800;
-            case "dough":
-                return 0x8bc34a;
+                return 0x8d6e63; // Marron pour chocolat (cuit)
+            case "cookie-cara":
+                return 0xff9800; // Orange pour caramel (cuit)
+            case "cookie-choco-cara":
+                return 0xff5722; // Rouge-orange pour combo (cuit)
+            case "cookie-dead":
+                return 0x424242; // Gris pour brûlé
             default:
-                return 0x4caf50;
+                return 0x4caf50; // Vert par défaut
         }
     }
 
@@ -170,6 +188,7 @@ export class RecipeBox {
      * Démarre le timer pour cette recette
      */
     startTimer(orderDuration: number): void {
+        console.log(`RecipeBox: démarrage timer pour ${orderDuration}s`);
         // Arrêter le timer existant s'il y en a un
         if (this.timerEvent) {
             this.timerEvent.destroy();
@@ -188,6 +207,7 @@ export class RecipeBox {
             callbackScope: this,
             loop: true,
         });
+        console.log("RecipeBox: timer créé et démarré");
     }
 
     /**

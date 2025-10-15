@@ -53,16 +53,17 @@ export const RECIPES: Recipe[] = [
         name: "Cookie Mix avec caramel",
     },
 
-    // Cookie Mix Choco + Caramel = Cookie Mix Choco Cara / Cookie Mix Cara + Chocolat = Cookie Mix Choco Cara
+    // Cookie Mix Choco + Caramel = Cookie Mix Choco Cara
     {
-        id: "dough_caramel_cookie_mix_choco_cara",
+        id: "cookie_mix_choco_caramel_choco_cara",
         ingredient1: "cookie-mix-choco",
         ingredient2: "caramel",
         result: "cookie-mix-choco-cara",
         name: "Cookie Mix avec caramel et chocolat",
     },
+    // Cookie Mix Cara + Chocolat = Cookie Mix Choco Cara
     {
-        id: "dough_caramel_cookie_mix_choco_cara",
+        id: "cookie_mix_cara_chocolate_choco_cara",
         ingredient1: "cookie-mix-cara",
         ingredient2: "chocolate",
         result: "cookie-mix-choco-cara",
@@ -80,6 +81,21 @@ export const SPECIAL_TRANSFORMATIONS: SpecialTransformation[] = [
         to: "chocolate-chunks",
         name: "Chocolat en chunks",
     },
+    {
+        from: "cookie-mix-choco",
+        to: "cookie-dead",
+        name: "Cookie brûlé (choco)",
+    },
+    {
+        from: "cookie-mix-cara",
+        to: "cookie-dead",
+        name: "Cookie brûlé (cara)",
+    },
+    {
+        from: "cookie-mix-choco-cara",
+        to: "cookie-dead",
+        name: "Cookie brûlé (choco-cara)",
+    },
 ];
 
 /**
@@ -94,7 +110,7 @@ export const OVEN_COOKING: OvenCooking[] = [
     {
         from: "sugar",
         to: "caramel",
-        name: "Sucre → Caramel",
+        name: "Caramel",
     },
     {
         from: "cookie-mix-choco",

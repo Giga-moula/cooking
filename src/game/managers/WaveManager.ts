@@ -67,27 +67,47 @@ export class WaveManager {
      */
     private initializeWaves(): void {
         this.waves = [
+            // VAGUE 1 - Premier cookie chocolat
             {
                 waveNumber: 1,
-                name: "Premiers pas",
+                name: "Premier cookie",
                 targetRecipes: 1,
                 orderCount: 1,
-                orderDuration: 45,
-                difficulty: "easy",
-                unlockedRecipe: "dough",
-                description: "Apprenez les bases de la cuisine !",
-                specificRecipes: ["cookie-choco"],
-            },
-            {
-                waveNumber: 2,
-                name: "Service du midi",
-                targetRecipes: 2,
-                orderCount: 2,
-                orderDuration: 35,
+                orderDuration: 60,
                 difficulty: "easy",
                 unlockedRecipe: "cookie-choco",
-                description: "Le rush commence !",
-                specificRecipes: ["cookie-choco", "cookie-choco"],
+                description: "Créez votre premier cookie chocolat !",
+                specificRecipes: ["cookie-choco"],
+            },
+
+            // VAGUE 2 - Cookie caramel
+            {
+                waveNumber: 2,
+                name: "Cookie caramel",
+                targetRecipes: 2,
+                orderCount: 1,
+                orderDuration: 50,
+                difficulty: "easy",
+                unlockedRecipe: "cookie-cara",
+                description: "Créez des cookies caramel !",
+                specificRecipes: ["cookie-choco", "cookie-cara"],
+            },
+
+            // VAGUE 3 - Mélange des saveurs
+            {
+                waveNumber: 3,
+                name: "Mélange des saveurs",
+                targetRecipes: 3,
+                orderCount: 2,
+                orderDuration: 45,
+                difficulty: "medium",
+                unlockedRecipe: "cookie-choco-cara",
+                description: "Combinez chocolat et caramel !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                ],
             },
         ];
     }
@@ -154,15 +174,40 @@ export class WaveManager {
         for (let i = 0; i < this.currentWaveConfig.targetRecipes; i++) {
             const recipeId = this.currentWaveConfig.specificRecipes[i];
             if (recipeId) {
-                // Trouver le plat correspondant
-                const dishes = this.recipeManager.getDishes();
-                const dish = dishes.find((d) => d.id === recipeId);
+                // Trouver la recette qui produit le cookie-mix correspondant
+                const allRecipes = this.recipeManager.getAllRecipes();
+                let recipe = allRecipes.find((r) => r.result === recipeId);
 
-                if (dish) {
-                    this.orderDisplayManager.assignRecipeToBox(i, dish);
+                // Si c'est un cookie cuit, trouver la recette du cookie-mix correspondant
+                if (
+                    !recipe &&
+                    recipeId.includes("cookie-") &&
+                    !recipeId.includes("cookie-mix-")
+                ) {
+                    const cookieMixId = recipeId.replace(
+                        "cookie-",
+                        "cookie-mix-"
+                    );
+                    recipe = allRecipes.find((r) => r.result === cookieMixId);
+                }
+
+                if (recipe) {
+                    // Créer un objet recette avec le cookie cuit comme résultat mais les ingrédients du cookie-mix
+                    const displayRecipe = {
+                        ...recipe,
+                        result: recipeId, // Afficher le cookie cuit
+                        displayIngredients: [
+                            recipe.ingredient1,
+                            recipe.ingredient2,
+                        ], // Mais garder les ingrédients du cookie-mix
+                    };
+                    this.orderDisplayManager.assignRecipeToBox(
+                        i,
+                        displayRecipe
+                    );
                 } else {
                     console.warn(
-                        `Plat non trouvé pour la recette: ${recipeId}`
+                        `Recette non trouvée pour le plat: ${recipeId}`
                     );
                 }
             }

@@ -77,8 +77,14 @@ export class OrderDisplayManager {
             const dish = availableDishes[randomIndex];
             availableDishes.splice(randomIndex, 1);
 
-            this.activeOrders.push(dish.id);
-            this.assignRecipeToBox(i, dish);
+            // Trouver la recette qui produit ce plat
+            const allRecipes = recipeManager.getAllRecipes();
+            const recipe = allRecipes.find((r) => r.result === dish.id);
+
+            if (recipe) {
+                this.activeOrders.push(dish.id);
+                this.assignRecipeToBox(i, recipe);
+            }
         }
     }
 
@@ -239,12 +245,8 @@ export class OrderDisplayManager {
     /**
      * Assigne une recette à une boîte spécifique
      */
-    public assignRecipeToBox(boxIndex: number, dish: any): void {
+    public assignRecipeToBox(boxIndex: number, recipe: any): void {
         if (boxIndex >= this.recipeBoxes.length) return;
-
-        const recipeManager = this.ingredientManager.getRecipeManager();
-        const allRecipes = recipeManager.getAllRecipes();
-        const recipe = allRecipes.find((r) => r.result === dish.id);
 
         if (!recipe) {
             return;
@@ -253,7 +255,7 @@ export class OrderDisplayManager {
         const box = this.recipeBoxes[boxIndex];
 
         // Ajouter la commande à la liste active
-        this.activeOrders.push(dish.id);
+        this.activeOrders.push(recipe.result);
 
         // Mettre à jour la boîte avec la recette
         box.updateWithRecipe(recipe);
