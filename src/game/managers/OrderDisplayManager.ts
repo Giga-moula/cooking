@@ -286,6 +286,68 @@ export class OrderDisplayManager {
     }
 
     /**
+     * Affiche un effet visuel dramatique quand une commande expire
+     */
+    private showExpirationEffect(box: RecipeBox): void {
+        const container = box.container;
+        
+        // Effet de tremblement violent
+        this.scene.tweens.add({
+            targets: container,
+            x: container.x - 10,
+            duration: 50,
+            yoyo: true,
+            repeat: 10,
+            ease: "Linear",
+        });
+
+        // Flash rouge
+        const redFlash = this.scene.add.graphics();
+        redFlash.fillStyle(0xff0000, 0.8);
+        redFlash.fillRect(0, 0, 1024, 768);
+        redFlash.setDepth(9999);
+        redFlash.setScrollFactor(0);
+
+        this.scene.tweens.add({
+            targets: redFlash,
+            alpha: 0,
+            duration: 800,
+            ease: "Cubic.easeOut",
+            onComplete: () => redFlash.destroy(),
+        });
+
+        // Afficher un message d'avertissement au centre de l'écran
+        const warningText = this.scene.add.text(512, 384, "⚠️ COMMANDE RATÉE !\nGAME OVER", {
+            fontFamily: "Arial Black",
+            fontSize: "72px",
+            color: "#FF0000",
+            stroke: "#FFFF00",
+            strokeThickness: 8,
+            align: "center",
+        });
+        warningText.setOrigin(0.5);
+        warningText.setDepth(10000);
+        warningText.setScrollFactor(0);
+        warningText.setScale(0);
+
+        // Animation d'explosion du texte
+        this.scene.tweens.add({
+            targets: warningText,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            duration: 300,
+            ease: "Back.easeOut",
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => {
+                this.scene.time.delayedCall(400, () => {
+                    warningText.destroy();
+                });
+            },
+        });
+    }
+
+    /**
      * Ajoute une nouvelle commande progressivement (pour le système d'apparition progressive)
      */
     public addNewOrder(recipe: any): void {
@@ -307,21 +369,30 @@ export class OrderDisplayManager {
         // Définir le callback d'expiration
         box.onExpired = () => {
             console.log(`⏰ Commande expirée: ${recipe.result}`);
+            
+            // EFFET VISUEL DRAMATIQUE !
+            this.showExpirationEffect(box);
+            
             // Retirer de la liste des commandes actives
             const expiredIndex = this.activeOrders.indexOf(recipe.result);
             if (expiredIndex !== -1) {
                 this.activeOrders.splice(expiredIndex, 1);
             }
             
-            // Notifier le système de vagues
-            if (this.onOrderExpired) {
-                this.onOrderExpired();
-            }
+            // Attendre la fin de l'animation avant de notifier
+            this.scene.time.delayedCall(1000, () => {
+                // Notifier le système de vagues (GAME OVER)
+                if (this.onOrderExpired) {
+                    this.onOrderExpired();
+                }
+            });
 
-            // Supprimer la boîte avec animation
+            // Supprimer la boîte avec animation après un délai
             const boxIndex = this.recipeBoxes.indexOf(box);
             if (boxIndex !== -1) {
-                this.removeBoxWithAnimation(boxIndex);
+                this.scene.time.delayedCall(800, () => {
+                    this.removeBoxWithAnimation(boxIndex);
+                });
             }
         };
 

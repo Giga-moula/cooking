@@ -13,6 +13,7 @@ export default class GameOver extends Phaser.Scene {
     private deliveries: number = 0;
     private scoreSaved: boolean = false;
     private playerRank?: number;
+    private reason: "time" | "expired" = "time";
 
     constructor() {
         super("GameOver");
@@ -51,10 +52,11 @@ export default class GameOver extends Phaser.Scene {
 
     // Write your code here
 
-    init(data: { score: number; deliveries: number }) {
+    init(data: { score: number; deliveries: number; reason?: "time" | "expired" }) {
         // Récupérer les données passées depuis la scène Game
         this.score = data.score || 0;
         this.deliveries = data.deliveries || 0;
+        this.reason = data.reason || "time";
     }
 
     create() {
@@ -62,11 +64,19 @@ export default class GameOver extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor(0x000000);
 
-        // Titre "Temps écoulé !"
-        const titleText = this.add.text(512, 200, "⏱️ Temps écoulé !", {
+        // Titre selon la raison de la défaite
+        let titleMessage = "⏱️ Temps écoulé !";
+        let titleColor = "#ffffff";
+        
+        if (this.reason === "expired") {
+            titleMessage = "💀 COMMANDE EXPIRÉE !";
+            titleColor = "#FF4444"; // Rouge pour la défaite
+        }
+
+        const titleText = this.add.text(512, 200, titleMessage, {
             fontFamily: "Arial Black",
             fontSize: "48px",
-            color: "#ffffff",
+            color: titleColor,
             stroke: "#000000",
             strokeThickness: 6,
             align: "center",

@@ -396,20 +396,39 @@ export class WaveManager {
 
     /**
      * Marque une commande comme expirée (timer à 0)
+     * GAME OVER - Une commande expirée = défaite immédiate !
      */
     public expireOrder(): void {
         if (!this.waveState.isActive || !this.currentWaveConfig) return;
 
-        this.waveState.currentActiveOrders--;
-
         console.log(
-            `⏰ Commande expirée - Commandes actives: ${this.waveState.currentActiveOrders}`
+            `💀 COMMANDE EXPIRÉE ! L'équipe a échoué...`
         );
 
-        // Tenter de faire apparaître une nouvelle commande immédiatement
-        if (this.waveState.pendingOrderIndex < this.currentWaveConfig.targetRecipes) {
-            this.spawnNextOrders();
+        // Arrêter le timer de spawn
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.destroy();
+            this.orderSpawnTimer = undefined;
         }
+
+        this.waveState.isActive = false;
+
+        // Déclencher le callback de défaite si défini
+        if (this.onGameOverByExpiration) {
+            this.onGameOverByExpiration();
+        }
+    }
+
+    /**
+     * Callback appelé quand une commande expire (Game Over)
+     */
+    private onGameOverByExpiration?: () => void;
+
+    /**
+     * Définit le callback de Game Over par expiration
+     */
+    public setGameOverCallback(callback: () => void): void {
+        this.onGameOverByExpiration = callback;
     }
 
     /**

@@ -207,6 +207,12 @@ export default class Game extends Phaser.Scene {
             this.waveManager?.expireOrder();
         });
 
+        // Connecter le callback de Game Over par expiration de commande
+        this.waveManager.setGameOverCallback(() => {
+            console.log("💀 GAME OVER - Une commande a expiré !");
+            this.endGame("expired");
+        });
+
         // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
         this.timerManager = new TimerManager(this);
         this.timerManager.initializeTimerDisplay(
@@ -462,11 +468,16 @@ export default class Game extends Phaser.Scene {
     /**
      * Termine la partie et passe à l'écran GameOver
      */
-    endGame() {
+    endGame(reason: "time" | "expired" = "time") {
+        console.log(`🏁 Fin du jeu ! Raison: ${reason}`);
+
         // Arrêter le timer s'il est actif
         if (this.timerManager) {
             this.timerManager.stop();
         }
+
+        // Arrêter les timers des commandes
+        this.orderDisplayManager?.stopAllTimers();
 
         // Passer le score à la scène GameOver
         const finalScore = this.scoreManager?.getScore() || 0;
@@ -475,6 +486,7 @@ export default class Game extends Phaser.Scene {
         this.scene.start("GameOver", {
             score: finalScore,
             deliveries: totalDeliveries,
+            reason: reason,
         });
     }
 
