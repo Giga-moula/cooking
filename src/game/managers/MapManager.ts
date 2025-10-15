@@ -82,7 +82,7 @@ export class MapManager {
             [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
-            [4, 7, 8, 1, 1, 1, 1, 1, 9, 4],
+            [4, 7, 8, 1, 1, 11, 1, 1, 9, 4], // 11 = Four (pour cuisson)
             [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
         ];
 
@@ -119,6 +119,7 @@ export class MapManager {
             8: "flour_box",            // Caisse de farine
             9: "iso-delivery-zone",
             10: "iso-transformation-table", // Table de transformation (pour actions spécifiques)
+            11: "oven",            // Four (pour cuisson) - utilise l'image oven.png directement
         };
     }
 
@@ -230,7 +231,7 @@ export class MapManager {
     initializeIngredientTiles(): void {
         this.ingredientTiles.set("1,1", "chocolate");
         this.ingredientTiles.set("1,8", "butter");
-        this.ingredientTiles.set("2,8", "wheat_floor");
+        this.ingredientTiles.set("2,8", "flour");
     }
 
     /**
@@ -266,6 +267,25 @@ export class MapManager {
      */
     getTransformationTable(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
         if (!this.isTransformationTable(gridX, gridY)) return undefined;
+        return this.isoMap?.getSolidTile(gridX, gridY);
+    }
+
+    /**
+     * Vérifie si une position est un four (type 11 - pour cuisson)
+     */
+    isOven(gridX: number, gridY: number): boolean {
+        if (!this.isoMap) return false;
+        const tile = this.isoMap.getSolidTile(gridX, gridY);
+        const isOven = tile?.texture.key === 'oven';
+        console.log(`isOven(${gridX}, ${gridY}): texture=${tile?.texture.key}, isOven=${isOven}`);
+        return isOven;
+    }
+
+    /**
+     * Récupère le four à une position donnée
+     */
+    getOven(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+        if (!this.isOven(gridX, gridY)) return undefined;
         return this.isoMap?.getSolidTile(gridX, gridY);
     }
 

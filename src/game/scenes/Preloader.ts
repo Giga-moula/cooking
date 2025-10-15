@@ -60,13 +60,17 @@ export default class Preloader extends Phaser.Scene {
 
         // Charger les ingrédients
         this.load.image("butter", "assets/ingredients/butter.png");
-        this.load.image("flour", "assets/ingredients/flour.png");
+        this.load.image("flour", "assets/ingredients/wheat_floor.png");
         this.load.image("chocolate", "assets/ingredients/chocolate.png");
         this.load.image("chocolate-chunks", "assets/ingredients/chocolate-chunks.png");
         this.load.image("cookie-mix", "assets/ingredients/cookie-mix.png");
+        this.load.image("molten_butter", "assets/ingredients/molten_butter.png");
         this.load.image("dough", "assets/crafted/dough.png");
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("favicon", "assets/favicon.png");
+        
+        // Charger les objets du jeu
+        this.load.image("oven", "assets/oven.png");
 
         // Charger les caisses d'ingrédients pour la récupération
         this.load.image("butter_box", "assets/butter_box.png");
