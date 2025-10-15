@@ -12,6 +12,7 @@ import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
+import { WaveManager } from "../managers/WaveManager";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = 272;
@@ -35,6 +36,7 @@ export default class Game extends Phaser.Scene {
     private interactionSystem?: InteractionSystem;
 
     private timerManager?: TimerManager;
+    private waveManager?: WaveManager;
     constructor() {
         super("Game");
 
@@ -149,10 +151,26 @@ export default class Game extends Phaser.Scene {
             this.ingredientManager
         );
         this.orderDisplayManager.initializeRecipeDisplay();
-        this.orderDisplayManager.generateNewOrders();
 
         this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
+
+        // Initialiser le système de vagues
+        this.waveManager = new WaveManager(
+            this,
+            this.orderDisplayManager,
+            this.scoreManager,
+            this.ingredientManager.getRecipeManager()
+        );
+        this.waveManager.initializeWaveDisplay();
+
+        // Connecter le système de vagues avec OrderDisplayManager
+        this.orderDisplayManager.setOrderCompletedCallback(() => {
+            this.waveManager?.completeRecipe();
+        });
+
+        // Démarrer la première vague
+        this.waveManager.startWave(1);
 
         // Initialiser les affichages d'inventaire pour chaque joueur
         this.player1.getInventory().initializeInventoryDisplay(10, 220);

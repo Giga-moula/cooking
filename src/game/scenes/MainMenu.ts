@@ -4,9 +4,12 @@
 
 /* START-USER-IMPORTS */
 import { EventBus } from "../EventBus";
+import { LeaderboardService, ScoreEntry } from "../services/LeaderboardService";
 /* END-USER-IMPORTS */
 
 export default class MainMenu extends Phaser.Scene {
+    private topScores: ScoreEntry[] = [];
+
     constructor() {
         super("MainMenu");
 
@@ -44,6 +47,9 @@ export default class MainMenu extends Phaser.Scene {
             });
             this.music.play();
         }
+
+        // Charger les données du leaderboard pour le top 3
+        this.loadTop3Scores();
 
         // Créer un groupe pour les cookies tombants
         this.fallingCookies = this.add.group();
@@ -397,23 +403,34 @@ export default class MainMenu extends Phaser.Scene {
         });
     }
 
-    createLeaderboardPreview() {
-        // Créer un conteneur pour l'aperçu du leaderboard
-        const previewContainer = this.add.container(150, 485);
-        previewContainer.setDepth(10); // Leaderboard au premier plan
+    /**
+     * Charge les 3 meilleurs scores depuis l'API
+     */
+    async loadTop3Scores() {
+        try {
+            const result = await LeaderboardService.getTopScores(3);
+            this.topScores =
+                result.success && result.scores ? result.scores : [];
+        } catch (error) {
+            console.error("Erreur chargement leaderboard:", error);
+            this.topScores = [];
+        }
+        this.createLeaderboardPreview();
+    }
 
-        // Fond de l'aperçu - forme de pilule (plus grande)
+    createLeaderboardPreview() {
+        const previewContainer = this.add.container(150, 485);
+        previewContainer.setDepth(10);
+
+        // Fond
         const previewBg = this.add.graphics();
         previewBg.fillGradientStyle(0x4a4a4a, 0x2a2a2a, 0x4a4a4a, 0x2a2a2a, 1);
         previewBg.fillRoundedRect(-130, -155, 260, 310, 20);
-
-        // Bordure dorée
         previewBg.lineStyle(4, 0xffd700, 1);
         previewBg.strokeRoundedRect(-130, -155, 260, 310, 20);
-
         previewContainer.add(previewBg);
 
-        // Titre "TOP 3"
+        // Titre
         const titleText = this.add.text(0, -115, "TOP 3", {
             fontFamily: "Arial Black",
             fontSize: "32px",
@@ -424,64 +441,9 @@ export default class MainMenu extends Phaser.Scene {
         titleText.setOrigin(0.5, 0.5);
         previewContainer.add(titleText);
 
-        // 1er place
-        const firstPlace = this.add.text(0, -50, "1. CHEF_MAMA", {
-            fontFamily: "Arial Black",
-            fontSize: "20px",
-            color: "#ffd700",
-            stroke: "#8b4513",
-            strokeThickness: 3,
-        });
-        firstPlace.setOrigin(0.5, 0.5);
-        previewContainer.add(firstPlace);
+        this.displayTop3Scores(previewContainer);
 
-        const firstScore = this.add.text(0, -22, "12,450 pts", {
-            fontFamily: "Arial",
-            fontSize: "18px",
-            color: "#ffffff",
-        });
-        firstScore.setOrigin(0.5, 0.5);
-        previewContainer.add(firstScore);
-
-        // 2ème place
-        const secondPlace = this.add.text(0, 18, "2. BURNING_COOK", {
-            fontFamily: "Arial Black",
-            fontSize: "20px",
-            color: "#c0c0c0",
-            stroke: "#8b4513",
-            strokeThickness: 3,
-        });
-        secondPlace.setOrigin(0.5, 0.5);
-        previewContainer.add(secondPlace);
-
-        const secondScore = this.add.text(0, 46, "11,890 pts", {
-            fontFamily: "Arial",
-            fontSize: "18px",
-            color: "#ffffff",
-        });
-        secondScore.setOrigin(0.5, 0.5);
-        previewContainer.add(secondScore);
-
-        // 3ème place
-        const thirdPlace = this.add.text(0, 86, "3. HOT_KITCHEN", {
-            fontFamily: "Arial Black",
-            fontSize: "20px",
-            color: "#cd7f32",
-            stroke: "#8b4513",
-            strokeThickness: 3,
-        });
-        thirdPlace.setOrigin(0.5, 0.5);
-        previewContainer.add(thirdPlace);
-
-        const thirdScore = this.add.text(0, 114, "10,720 pts", {
-            fontFamily: "Arial",
-            fontSize: "18px",
-            color: "#ffffff",
-        });
-        thirdScore.setOrigin(0.5, 0.5);
-        previewContainer.add(thirdScore);
-
-        // Animation de pulsation subtile
+        // Animation
         this.tweens.add({
             targets: previewContainer,
             scaleX: 1.02,
@@ -491,6 +453,74 @@ export default class MainMenu extends Phaser.Scene {
             yoyo: true,
             repeat: -1,
         });
+    }
+
+    displayTop3Scores(container: Phaser.GameObjects.Container) {
+        const positions = [
+            { y: -50, color: "#ffd700" },
+            { y: 18, color: "#c0c0c0" },
+            { y: 86, color: "#cd7f32" },
+        ];
+
+        // Afficher seulement les vraies données, pas de données par défaut
+        if (this.topScores.length === 0) {
+            const noScoresText = this.add.text(
+                0,
+                0,
+                "Aucun score pour le moment\nSoyez le premier !",
+                {
+                    fontFamily: "Arial",
+                    fontSize: "18px",
+                    color: "#ffffff",
+                    stroke: "#8b4513",
+                    strokeThickness: 2,
+                    align: "center",
+                }
+            );
+            noScoresText.setOrigin(0.5, 0.5);
+            container.add(noScoresText);
+            return;
+        }
+
+        for (let i = 0; i < Math.min(3, this.topScores.length); i++) {
+            const pos = positions[i];
+            const scoreData = this.topScores[i];
+            const playerName = scoreData.playerName;
+
+            const playerText = this.add.text(
+                0,
+                pos.y,
+                `${i + 1}. ${playerName}`,
+                {
+                    fontFamily: "Arial Black",
+                    fontSize: "20px",
+                    color: pos.color,
+                    stroke: "#8b4513",
+                    strokeThickness: 3,
+                }
+            );
+            playerText.setOrigin(0.5, 0.5);
+            container.add(playerText);
+
+            const scoreText = this.add.text(
+                0,
+                pos.y + 28,
+                `${this.formatScore(scoreData.score)} pts`,
+                {
+                    fontFamily: "Arial",
+                    fontSize: "18px",
+                    color: "#ffffff",
+                }
+            );
+            scoreText.setOrigin(0.5, 0.5);
+            container.add(scoreText);
+        }
+    }
+
+    formatScore(score: number | string): string {
+        return typeof score === "string"
+            ? score
+            : score.toLocaleString("fr-FR");
     }
 
     createMusicButton() {
