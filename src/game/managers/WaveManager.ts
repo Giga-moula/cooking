@@ -128,11 +128,6 @@ export class WaveManager {
         // Générer les recettes de la vague (une par boîte)
         this.generateWaveRecipes();
 
-        // Débloquer la nouvelle recette si applicable
-        if (waveConfig.unlockedRecipe) {
-            this.unlockRecipe(waveConfig.unlockedRecipe);
-        }
-
         console.log(
             `🌊 Vague ${waveNumber} démarrée: ${waveConfig.name} - ${waveConfig.targetRecipes} recettes à faire`
         );
@@ -270,50 +265,6 @@ export class WaveManager {
             return Math.floor((targetTime - elapsedTime) * 10);
         }
         return 0;
-    }
-
-    /**
-     * Débloque une nouvelle recette
-     */
-    private unlockRecipe(recipeId: string): void {
-        // Ici vous pouvez ajouter la logique pour débloquer la recette
-        // Par exemple, l'ajouter au RecipeManager ou afficher une notification
-        console.log(`🔓 Nouvelle recette débloquée: ${recipeId}`);
-
-        // Afficher une notification de déblocage
-        this.showRecipeUnlockEffect(recipeId);
-    }
-
-    /**
-     * Affiche l'effet de déblocage de recette
-     */
-    private showRecipeUnlockEffect(recipeId: string): void {
-        const x = this.scene.cameras.main.width / 2;
-        const y = this.scene.cameras.main.height / 2 - 50;
-
-        const message = this.scene.add.text(
-            x,
-            y,
-            `🔓 Nouvelle recette débloquée !`,
-            {
-                fontFamily: "Arial",
-                fontSize: "24px",
-                color: "#f39c12",
-                stroke: "#ffffff",
-                strokeThickness: 2,
-            }
-        );
-        message.setOrigin(0.5);
-        message.setScrollFactor(0);
-        message.setDepth(4000);
-
-        this.scene.tweens.add({
-            targets: message,
-            y: y - 20,
-            alpha: 0,
-            duration: 2000,
-            onComplete: () => message.destroy(),
-        });
     }
 
     /**
