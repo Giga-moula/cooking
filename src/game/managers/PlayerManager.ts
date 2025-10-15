@@ -69,9 +69,6 @@ export class PlayerManager {
         return Phaser.Input.Keyboard.JustDown(this.controls.interactKey);
     }
 
-    private handleInventory(): void {
-        if (!this.player) return;
-    }
     /**
      * Crée le joueur à la position initiale
      */

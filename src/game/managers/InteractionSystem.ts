@@ -6,6 +6,7 @@ import { MapManager } from "./MapManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
 import { PlayerManager } from "./PlayerManager";
 import { ScoreManager } from "./ScoreManager";
+import { TimerManager } from "./TimerManager";
 
 /**
  * Système d'interaction orienté objet
@@ -19,6 +20,7 @@ export class InteractionSystem {
     private ingredientManager: IngredientInteractionManager;
     private orderDisplayManager: OrderDisplayManager;
     private scoreManager: ScoreManager;
+    private timerManager?: TimerManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -27,7 +29,8 @@ export class InteractionSystem {
         deliveryManager: DeliveryManager,
         ingredientManager: IngredientInteractionManager,
         orderDisplayManager: OrderDisplayManager,
-        scoreManager: ScoreManager
+        scoreManager: ScoreManager,
+        timerManager?: TimerManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -36,6 +39,7 @@ export class InteractionSystem {
         this.ingredientManager = ingredientManager;
         this.orderDisplayManager = orderDisplayManager;
         this.scoreManager = scoreManager;
+        this.timerManager = timerManager;
     }
 
     /**
@@ -192,6 +196,12 @@ export class InteractionSystem {
                     this.scoreManager.calculateRecipePoints(carriedItem);
                 this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
 
+                // Bonus de temps : +15 secondes par livraison
+                if (this.timerManager && this.timerManager.isTimerRunning()) {
+                    this.timerManager.addTime(15);
+                }
+
+                console.log(`🎉 Plat livré avec succès: ${carriedItem} (+15s bonus)`);
                 this.deliveryManager.showDeliverySuccessEffect();
             } else {
                 console.log(`❌ Ce plat n'est pas dans les commandes`);

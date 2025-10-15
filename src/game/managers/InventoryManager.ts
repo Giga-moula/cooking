@@ -142,6 +142,31 @@ export class InventoryManager {
         return this.inventory.length >= 1;
     }
 
+    /**
+     * Vérifie si un item spécifique est dans l'inventaire
+     */
+    hasItem(itemType: string): boolean {
+        return this.inventory.includes(itemType);
+    }
+
+    /**
+     * Retire un item spécifique de l'inventaire
+     * @returns true si l'item a été retiré, false sinon
+     */
+    removeSpecificItem(itemType: string): boolean {
+        const index = this.inventory.indexOf(itemType);
+        if (index === -1) return false;
+
+        this.inventory.splice(index, 1);
+        
+        // Si c'était l'item porté, détruire le visuel
+        if (this.carriedItem && this.carriedItem.texture.key === itemType) {
+            this.removeCarriedItem();
+        }
+        
+        return true;
+    }
+
     // Getters
     getCarriedItem(): Phaser.GameObjects.Image | undefined {
         return this.carriedItem;
