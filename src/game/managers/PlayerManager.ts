@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
+import { GameConfig } from "../config/GameConfig";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -10,13 +11,13 @@ export class PlayerManager {
     private scene: Phaser.Scene;
 
     private player?: Phaser.Physics.Arcade.Sprite;
-    private playerColor: string = "blue"; // Couleur par défaut
+    private playerColor: string = GameConfig.COLORS.PLAYER_1; // Couleur par défaut
     private playerNumber: number; // 1 ou 2
-    private playerSpeed: number = 150; // Pixels par seconde
+    private playerSpeed: number = GameConfig.PLAYER_SPEED;
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
     private lastPlayerY: number = 0;
-    private playerGridX: number = 2; // Position en grille du joueur
-    private playerGridY: number = 2;
+    private playerGridX: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
+    private playerGridY: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private mapOffsetX: number;
     private mapOffsetY: number;
@@ -24,10 +25,6 @@ export class PlayerManager {
     private controls: PlayerControls;
 
     private inventory: InventoryManager;
-
-    // Debug
-    private debugCircle?: Phaser.GameObjects.Graphics;
-    private debugText?: Phaser.GameObjects.Text;
 
     constructor(
         scene: Phaser.Scene,
@@ -43,9 +40,13 @@ export class PlayerManager {
         this.inventory = new InventoryManager(scene);
 
         if (playerNumber === 1) {
-            this.playerColor = "blue";
+            this.playerColor = GameConfig.COLORS.PLAYER_1;
+            this.playerGridX = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
+            this.playerGridY = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
         } else {
-            this.playerColor = "red";
+            this.playerColor = GameConfig.COLORS.PLAYER_2;
+            this.playerGridX = GameConfig.PLAYER_START_POSITIONS.PLAYER_2.x;
+            this.playerGridY = GameConfig.PLAYER_START_POSITIONS.PLAYER_2.y;
         }
     }
 
@@ -73,9 +74,14 @@ export class PlayerManager {
         return Phaser.Input.Keyboard.JustDown(this.controls.interactKey);
     }
 
-    private handleInventory(): void {
-        if (!this.player) return;
+    /**
+     * Vérifie si la touche de transformation vient d'être pressée
+     * Utilise JustDown pour éviter les répétitions
+     */
+    public isTransformPressed(): boolean {
+        return Phaser.Input.Keyboard.JustDown(this.controls.craftKey);
     }
+
     /**
      * Crée le joueur à la position initiale
      */
@@ -179,16 +185,6 @@ export class PlayerManager {
         const newGridX = gridPos.x;
         const newGridY = gridPos.y;
 
-        // Debug log
-        if (this.playerGridX !== newGridX || this.playerGridY !== newGridY) {
-            console.log(
-                `Centre: (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`
-            );
-            console.log(
-                `Grille changée: (${this.playerGridX}, ${this.playerGridY}) -> (${newGridX}, ${newGridY})`
-            );
-        }
-
         this.playerGridX = newGridX;
         this.playerGridY = newGridY;
     }
@@ -283,108 +279,6 @@ export class PlayerManager {
         body.setOffset(offsetX, offsetY);
     }
 
-    /**
-     * Initialise le cercle de debug pour visualiser le centre de la hitbox
-     */
-    initializeDebugCircle(): void {
-        this.debugCircle = this.scene.add.graphics();
-        this.debugCircle.setDepth(10000);
-    }
-
-    /**
-     * Met à jour le cercle de debug
-     */
-    updateDebugCircle(): void {
-        if (!this.debugCircle || !this.player) return;
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-
-        this.debugCircle.clear();
-
-        // Cercle au centre de la hitbox
-        this.debugCircle.fillStyle(0xff0000, 0.8);
-        this.debugCircle.fillCircle(body.center.x, body.center.y, 3);
-
-        // Cercle aux pieds
-        this.debugCircle.fillStyle(0x00ff00, 0.8);
-        this.debugCircle.fillCircle(body.center.x, body.bottom, 5);
-
-        // Ligne verticale
-        this.debugCircle.lineStyle(1, 0xffff00, 0.5);
-        this.debugCircle.lineBetween(
-            body.center.x,
-            body.center.y,
-            body.center.x,
-            body.bottom
-        );
-    }
-
-    /**
-     * Initialise le texte de debug
-     */
-    initializeDebugText(width: number, height: number): void {
-        this.debugText = this.scene.add.text(width - 10, height - 10, "", {
-            fontFamily: "Arial",
-            fontSize: "12px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 5, y: 5 },
-        });
-        this.debugText.setOrigin(1, 1);
-        this.debugText.setScrollFactor(0);
-        this.debugText.setDepth(1000);
-    }
-
-    /**
-     * Met à jour le texte de debug
-     */
-    updateDebugText(
-        isPlayerOnCounter: boolean,
-        hasCounterAtTarget: boolean,
-        totalCounters: number
-    ): void {
-        if (!this.debugText || !this.player) return;
-
-        const targetX = this.playerGridX + this.lastDirection.x;
-        const targetY = this.playerGridY + this.lastDirection.y;
-
-        // Convertir la direction en texte
-        let directionText = "";
-        if (this.lastDirection.x === 0 && this.lastDirection.y === -1)
-            directionText = "HAUT";
-        else if (this.lastDirection.x === 1 && this.lastDirection.y === 0)
-            directionText = "DROITE";
-        else if (this.lastDirection.x === 0 && this.lastDirection.y === 1)
-            directionText = "BAS";
-        else if (this.lastDirection.x === -1 && this.lastDirection.y === 0)
-            directionText = "GAUCHE";
-
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-        const playerLeft = this.player.x - body.halfWidth;
-        const playerRight = this.player.x + body.halfWidth;
-        const playerTop = this.player.y - body.halfHeight;
-        const playerBottom = this.player.y + body.halfHeight;
-
-        this.debugText.setText(
-            `Position joueur: (${this.player.x.toFixed(
-                0
-            )}, ${this.player.y.toFixed(0)})\n` +
-                `Limites joueur: (${playerLeft.toFixed(0)}, ${playerTop.toFixed(
-                    0
-                )}) à (${playerRight.toFixed(0)}, ${playerBottom.toFixed(
-                    0
-                )})\n` +
-                `Grille (majorité): (${this.playerGridX}, ${this.playerGridY})\n` +
-                `Sur plan de travail: ${isPlayerOnCounter ? "OUI" : "NON"}\n` +
-                `Direction: ${directionText} (${this.lastDirection.x}, ${this.lastDirection.y})\n` +
-                `Position cible: (${targetX}, ${targetY})\n` +
-                `Plan de travail à la cible: ${
-                    hasCounterAtTarget ? "OUI" : "NON"
-                }\n` +
-                `Plans disponibles: ${totalCounters}`
-        );
-    }
-
     // Getters
     getPlayer(): Phaser.Physics.Arcade.Sprite | undefined {
         return this.player;
@@ -416,5 +310,15 @@ export class PlayerManager {
 
     getPlayerColor(): string {
         return this.playerColor;
+    }
+
+    /**
+     * Calcule la position cible devant le joueur (basée sur la dernière direction)
+     */
+    getTargetPosition(): { x: number; y: number } {
+        return {
+            x: this.playerGridX + this.lastDirection.x,
+            y: this.playerGridY + this.lastDirection.y
+        };
     }
 }

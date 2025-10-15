@@ -136,14 +136,12 @@ export class IsometricMap {
                     (scaledHeight - collisionHeight) / 2
                 );
                 
-                console.log(`Zone de collision pour ${texture}: ${collisionWidth.toFixed(1)}x${collisionHeight.toFixed(1)} (sprite: ${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}, ratio: ${collisionRatio})`);
             }
             
             // Différencier les murs des plans de travail / tables
-            if (texture === 'iso-counter' || texture.startsWith('table-') || isCounter) {
+            if (texture === 'iso-counter' || texture.startsWith('iso-transformation-table') || texture.startsWith('table-') || isCounter) {
                 // Plan de travail / Table : impassable mais interactif
                 this.counterTiles.set(key, tile as Phaser.Physics.Arcade.Sprite);
-                console.log(`Plan de travail/table créé à la position (${gridX}, ${gridY}) avec texture: ${texture}`);
             }
             
             // Tous les tiles solides (murs + plans de travail) vont dans solidTiles pour les collisions
@@ -200,7 +198,6 @@ export class IsometricMap {
                 const scale = IsometricUtils.calculateTileScale(imageWidth, imageHeight);
                 tile.setScale(scale);
                 
-                console.log(`Scale appliqué à ${texture}: ${scale} (image: ${imageWidth}x${imageHeight}, tile: ${IsometricUtils.TILE_WIDTH}x${IsometricUtils.TILE_HEIGHT})`);
             }
         } catch (error) {
             console.warn(`Impossible de calculer le scale pour ${texture}:`, error);

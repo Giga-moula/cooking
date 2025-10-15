@@ -6,6 +6,8 @@ import { MapManager } from "./MapManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
 import { PlayerManager } from "./PlayerManager";
 import { ScoreManager } from "./ScoreManager";
+import { TimerManager } from "./TimerManager";
+import { OvenManager } from "./OvenManager";
 
 /**
  * Système d'interaction orienté objet
@@ -19,6 +21,8 @@ export class InteractionSystem {
     private ingredientManager: IngredientInteractionManager;
     private orderDisplayManager: OrderDisplayManager;
     private scoreManager: ScoreManager;
+    private timerManager: TimerManager;
+    private ovenManager: OvenManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -27,7 +31,9 @@ export class InteractionSystem {
         deliveryManager: DeliveryManager,
         ingredientManager: IngredientInteractionManager,
         orderDisplayManager: OrderDisplayManager,
-        scoreManager: ScoreManager
+        scoreManager: ScoreManager,
+        timerManager: TimerManager,
+        ovenManager: OvenManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -36,11 +42,44 @@ export class InteractionSystem {
         this.ingredientManager = ingredientManager;
         this.orderDisplayManager = orderDisplayManager;
         this.scoreManager = scoreManager;
+        this.timerManager = timerManager;
+        this.ovenManager = ovenManager;
+    }
+
+    /**
+     * Traite une transformation pour un joueur donné
+     * Cette méthode doit être appelée uniquement lors de l'appui sur la touche de transformation (R/P)
+     */
+    public handlePlayerTransformation(player: PlayerManager): void {
+        const playerSprite = player.getPlayer();
+        if (!playerSprite) return;
+
+        const playerGridX = player.getPlayerGridX();
+        const playerGridY = player.getPlayerGridY();
+        const target = player.getTargetPosition();
+        const targetX = target.x;
+        const targetY = target.y;
+
+        console.log(
+            `⚗️ Tentative de transformation - Position: (${playerGridX}, ${playerGridY}), Cible: (${targetX}, ${targetY})`
+        );
+
+        // Seules les tables de transformation peuvent être utilisées
+        if (this.handleTransformationTableInteraction(targetX, targetY, player)) {
+            return;
+        }
+
+        // Vérifier aussi le four pour la cuisson
+        if (this.handleOvenCooking(targetX, targetY, player)) {
+            return;
+        }
+
+        console.log(`❌ Aucune table de transformation ou four à (${targetX}, ${targetY})`);
     }
 
     /**
      * Traite une interaction pour un joueur donné
-     * Cette méthode doit être appelée uniquement lors de l'appui sur la touche d'interaction
+     * Cette méthode doit être appelée uniquement lors de l'appui sur la touche d'interaction (E/O)
      */
     public handlePlayerInteraction(player: PlayerManager): void {
         const playerSprite = player.getPlayer();
@@ -54,11 +93,9 @@ export class InteractionSystem {
 
         const playerGridX = player.getPlayerGridX();
         const playerGridY = player.getPlayerGridY();
-        const lastDirection = player.getLastDirection();
-
-        // Calculer la tile adjacente dans la direction regardée
-        let targetX = playerGridX + lastDirection.x;
-        let targetY = playerGridY + lastDirection.y;
+        const target = player.getTargetPosition();
+        let targetX = target.x;
+        let targetY = target.y;
 
         // Si le joueur est sur une tile interactive, interagir avec cette même position
         if (this.isInteractiveTile(playerGridX, playerGridY, isoMap)) {
@@ -73,7 +110,9 @@ export class InteractionSystem {
         // Prioriser les interactions dans cet ordre:
         // 1. Ingrédient
         // 2. Zone de livraison
-        // 3. Plan de travail
+        // 3. Four (cuisson)
+        // 4. Plan de travail (normal et table de transformation)
+        // Note: Les transformations spécifiques utilisent la touche R/P
 
         if (this.handleIngredientInteraction(targetX, targetY, player)) {
             return;
@@ -83,6 +122,11 @@ export class InteractionSystem {
             return;
         }
 
+        if (this.handleOvenInteraction(targetX, targetY, player)) {
+            return;
+        }
+
+        // Les tables de transformation sont aussi des comptoirs, donc on peut y poser/prendre des objets
         if (this.handleCounterInteraction(targetX, targetY, player, isoMap)) {
             return;
         }
@@ -192,6 +236,12 @@ export class InteractionSystem {
                     this.scoreManager.calculateRecipePoints(carriedItem);
                 this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
 
+                // Bonus de temps : +15 secondes par livraison
+                if (this.timerManager && this.timerManager.isTimerRunning()) {
+                    this.timerManager.addTime(15);
+                }
+
+                console.log(`🎉 Plat livré avec succès: ${carriedItem} (+15s bonus)`);
                 this.deliveryManager.showDeliverySuccessEffect();
             } else {
                 console.log(`❌ Ce plat n'est pas dans les commandes`);
@@ -206,7 +256,126 @@ export class InteractionSystem {
     }
 
     /**
-     * Gère l'interaction avec les plans de travail
+     * Gère l'interaction avec les tables de transformation
+     * Cette méthode gère les transformations ET les combinaisons (appelée avec R/P)
+     */
+    private handleTransformationTableInteraction(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isTransformationTable(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`⚗️ Tentative de transformation/combinaison à (${targetX}, ${targetY})`);
+
+        const inventory = player.getInventory();
+        const playerSprite = player.getPlayer();
+        if (!inventory || !playerSprite) return false;
+
+        const hasItemOnTable = this.counterManager.hasItemOnCounter(
+            targetX,
+            targetY
+        );
+        const hasItemInHand = !inventory.isEmpty();
+
+        console.log(
+            `État: Table=${hasItemOnTable ? "pleine" : "vide"}, Inventaire=${hasItemInHand ? "plein" : "vide"}`
+        );
+
+        // Cas 1: Table pleine + Main pleine = Essayer de combiner (recette)
+        if (hasItemOnTable && hasItemInHand) {
+            const itemInHand = inventory.peekItem();
+            const itemOnTable = this.counterManager.getItemTypeOnCounter(targetX, targetY);
+            
+            if (itemInHand && itemOnTable) {
+                // Essayer d'abord une recette (combinaison)
+                const resultId = this.ingredientManager
+                    .getRecipeManager()
+                    .combineIngredients(itemInHand, itemOnTable);
+
+                if (resultId) {
+                    console.log(
+                        `✨ Recette trouvée: ${itemInHand} + ${itemOnTable} = ${resultId}`
+                    );
+
+                    // Retirer les ingrédients
+                    inventory.removeItem();
+                    player.removeCarriedItem();
+                    this.counterManager.removeItemFromCounter(targetX, targetY);
+
+                    // Créer le résultat
+                    this.counterManager.placeItemOnCounter(targetX, targetY, resultId);
+
+                    // Effets visuels
+                    this.counterManager.playFusionEffect(targetX, targetY);
+                    const ingredient = this.ingredientManager
+                        .getRecipeManager()
+                        .getIngredient(resultId);
+                    if (ingredient) {
+                        this.counterManager.showCombinationMessage(
+                            `✨ ${ingredient.name} créé !`,
+                            targetX,
+                            targetY
+                        );
+                    }
+
+                    return true;
+                }
+            }
+
+            // Si pas de recette, essayer transformation spéciale
+            const success = this.counterManager.performSpecialTransformation(targetX, targetY, inventory);
+            if (success) {
+                console.log(`✅ Transformation spéciale réussie`);
+                player.updateCarriedItem();
+                return true;
+            }
+
+            console.log(`❌ Aucune recette pour ${itemInHand} + ${itemOnTable}`);
+            this.counterManager.showCombinationMessage(
+                "❌ Pas de recette",
+                targetX,
+                targetY
+            );
+            return true;
+        }
+
+        // Cas 2: Table pleine + Main vide = Essayer transformation simple
+        if (hasItemOnTable && !hasItemInHand) {
+            const success = this.counterManager.performSpecialTransformation(targetX, targetY, inventory);
+            if (success) {
+                console.log(`✅ Transformation simple réussie`);
+                player.updateCarriedItem();
+                return true;
+            } else {
+                console.log(`❌ Aucune transformation possible pour cet ingrédient`);
+                this.counterManager.showCombinationMessage(
+                    "❌ Pas de transformation",
+                    targetX,
+                    targetY
+                );
+                return true;
+            }
+        }
+
+        // Cas 3: Table vide
+        if (!hasItemOnTable) {
+            console.log(`❌ Table vide - posez d'abord un ingrédient avec E/O`);
+            this.counterManager.showCombinationMessage(
+                "❌ Table vide",
+                targetX,
+                targetY
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Gère l'interaction avec les plans de travail (normaux et tables de transformation)
+     * Avec E/O : Poser/Prendre uniquement (pas de combinaison)
      */
     private handleCounterInteraction(
         targetX: number,
@@ -218,9 +387,8 @@ export class InteractionSystem {
             return false;
         }
 
-        console.log(
-            `🔨 Interaction avec plan de travail à (${targetX}, ${targetY})`
-        );
+        const isTransformTable = this.mapManager.isTransformationTable(targetX, targetY);
+        console.log(`📦 Interaction avec ${isTransformTable ? 'table bleue' : 'table normale'} à (${targetX}, ${targetY})`);
 
         const inventory = player.getInventory();
         const playerSprite = player.getPlayer();
@@ -233,27 +401,40 @@ export class InteractionSystem {
         const inventoryEmpty = inventory.isEmpty();
 
         console.log(
-            `État: Comptoir=${
-                hasItemOnCounter ? "plein" : "vide"
-            }, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
+            `État: Table=${hasItemOnCounter ? "pleine" : "vide"}, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
         );
 
-        // Cas 1: Ramasser un objet du comptoir
+        // Cas 1: Ramasser un objet de la table
         if (hasItemOnCounter && inventoryEmpty) {
             return this.pickupFromCounter(targetX, targetY, player);
         }
 
-        // Cas 2: Poser un objet sur le comptoir
+        // Cas 2: Poser un objet sur la table
         if (!hasItemOnCounter && !inventoryEmpty) {
             return this.placeOnCounter(targetX, targetY, player);
         }
 
-        // Cas 3: Combiner deux objets
+        // Cas 3: Table occupée et inventaire plein = Combiner (uniquement sur table bleue avec R/P)
         if (hasItemOnCounter && !inventoryEmpty) {
-            return this.combineIngredients(targetX, targetY, player);
+            if (isTransformTable) {
+                console.log(`💡 Utilisez R/P pour combiner sur la table bleue !`);
+                this.counterManager.showCombinationMessage(
+                    "💡 Appuyez sur R/P",
+                    targetX,
+                    targetY
+                );
+            } else {
+                console.log(`❌ Table occupée. Utilisez la table bleue (R/P) pour combiner !`);
+                this.counterManager.showCombinationMessage(
+                    "❌ Table occupée",
+                    targetX,
+                    targetY
+                );
+            }
+            return true;
         }
 
-        console.log(`ℹ️ Aucune action possible sur ce comptoir`);
+        console.log(`ℹ️ Aucune action possible sur cette table`);
         return true;
     }
 
@@ -306,9 +487,61 @@ export class InteractionSystem {
     }
 
     /**
-     * Combine deux ingrédients
+     * Gère l'interaction avec le four
+     * Avec E/O : Poser/Prendre des ingrédients
+     * Avec R/P : Cuire les ingrédients
      */
-    private combineIngredients(
+    private handleOvenInteraction(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isOven(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🔥 Interaction avec le four à (${targetX}, ${targetY})`);
+
+        const inventory = player.getInventory();
+        const playerSprite = player.getPlayer();
+        if (!inventory || !playerSprite) return false;
+
+        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+        const inventoryEmpty = inventory.isEmpty();
+
+        console.log(
+            `État: Four=${hasItemInOven ? "plein" : "vide"}, Inventaire=${inventoryEmpty ? "vide" : "plein"}`
+        );
+
+        // Cas 1: Ramasser un objet du four
+        if (hasItemInOven && inventoryEmpty) {
+            return this.pickupFromOven(targetX, targetY, player);
+        }
+
+        // Cas 2: Poser un objet dans le four
+        if (!hasItemInOven && !inventoryEmpty) {
+            return this.placeInOven(targetX, targetY, player);
+        }
+
+        // Cas 3: Four occupé et inventaire plein
+        if (hasItemInOven && !inventoryEmpty) {
+            console.log(`💡 Utilisez R/P pour cuire dans le four !`);
+            this.ovenManager.showCookingMessage(
+                "💡 Appuyez sur R/P",
+                targetX,
+                targetY
+            );
+            return true;
+        }
+
+        console.log(`ℹ️ Aucune action possible sur ce four`);
+        return true;
+    }
+
+    /**
+     * Ramasse un objet du four
+     */
+    private pickupFromOven(
         targetX: number,
         targetY: number,
         player: PlayerManager
@@ -316,52 +549,80 @@ export class InteractionSystem {
         const inventory = player.getInventory();
         if (!inventory) return false;
 
-        const itemInHand = inventory.peekItem();
-        const itemOnCounter = this.counterManager.getItemTypeOnCounter(
-            targetX,
-            targetY
-        );
+        const itemType = this.ovenManager.removeItemFromOven(targetX, targetY);
 
-        if (!itemInHand || !itemOnCounter) return false;
+        if (itemType) {
+            inventory.addItem(itemType);
+            player.updateCarriedItem();
+            console.log(`✅ Ramassé du four: ${itemType}`);
+            return true;
+        }
 
-        const resultId = this.ingredientManager
-            .getRecipeManager()
-            .combineIngredients(itemInHand, itemOnCounter);
+        return false;
+    }
 
-        if (resultId) {
-            // Retirer les ingrédients
-            inventory.removeItem();
+    /**
+     * Pose un objet dans le four
+     */
+    private placeInOven(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const inventory = player.getInventory();
+        if (!inventory) return false;
+
+        const itemType = inventory.removeItem();
+        if (itemType) {
+            this.ovenManager.placeItemInOven(targetX, targetY, itemType);
             player.removeCarriedItem();
-            this.counterManager.removeItemFromCounter(targetX, targetY);
+            console.log(`✅ Posé dans le four: ${itemType}`);
+            return true;
+        }
 
-            // Créer le résultat
-            this.counterManager.placeItemOnCounter(targetX, targetY, resultId);
+        return false;
+    }
 
-            // Effets visuels
-            this.counterManager.playFusionEffect(targetX, targetY);
-            const ingredient = this.ingredientManager
-                .getRecipeManager()
-                .getIngredient(resultId);
-            if (ingredient) {
-                this.counterManager.showCombinationMessage(
-                    `✨ ${ingredient.name} créé !`,
+    /**
+     * Gère la cuisson dans le four (appelée avec R/P)
+     */
+    private handleOvenCooking(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        if (!this.mapManager.isOven(targetX, targetY)) {
+            return false;
+        }
+
+        console.log(`🔥 Tentative de cuisson à (${targetX}, ${targetY})`);
+
+        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+
+        if (hasItemInOven) {
+            const success = this.ovenManager.performCooking(targetX, targetY);
+            if (success) {
+                console.log(`✅ Cuisson réussie dans le four`);
+                return true;
+            } else {
+                console.log(`❌ Aucune cuisson possible pour cet ingrédient`);
+                this.ovenManager.showCookingMessage(
+                    "❌ Pas de cuisson",
                     targetX,
                     targetY
                 );
+                return true;
             }
-
-            return true;
         } else {
-            console.log(
-                `❌ Aucune recette pour ${itemInHand} + ${itemOnCounter}`
-            );
-            this.counterManager.showCombinationMessage(
-                "❌ Pas de recette",
+            console.log(`❌ Four vide - posez d'abord un ingrédient avec E/O`);
+            this.ovenManager.showCookingMessage(
+                "❌ Four vide",
                 targetX,
                 targetY
             );
-            return true;
         }
+
+        return true;
     }
 }
 

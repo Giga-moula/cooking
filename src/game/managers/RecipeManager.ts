@@ -36,9 +36,9 @@ export class RecipeManager {
         });
 
         this.addIngredient({
-            id: "wheat_floor",
+            id: "flour",
             name: "Farine",
-            texture: "wheat_floor",
+            texture: "flour",
             isDish: false,
         });
 
@@ -57,6 +57,20 @@ export class RecipeManager {
             isDish: false, // La pâte est un ingrédient intermédiaire, pas un plat fini
         });
 
+        this.addIngredient({
+            id: "molten_butter",
+            name: "Beurre fondu",
+            texture: "molten_butter",
+            isDish: false, // Le beurre fondu est un ingrédient intermédiaire
+        });
+
+        this.addIngredient({
+            id: "cookie-mix",
+            name: "Cookie Mix",
+            texture: "cookie-mix",
+            isDish: false, // Le cookie mix est un ingrédient intermédiaire
+        });
+
         // Plats finis
         this.addIngredient({
             id: "cookie",
@@ -64,29 +78,42 @@ export class RecipeManager {
             texture: "cookie",
             isDish: true, // Le cookie est un plat fini
         });
+
+        // Ingrédients bonus
+        this.addIngredient({
+            id: "star",
+            name: "Étoile",
+            texture: "star",
+            isDish: false,
+        });
+
+        this.addIngredient({
+            id: "chocolate-chunks",
+            name: "Chunks de chocolat",
+            texture: "chocolate-chunks",
+            isDish: false,
+        });
     }
 
     private initializeRecipes() {
-        // Beurre + Farine = Pâte
+
+        // Beurre fondu + Farine = Pâte (SEULEMENT avec beurre fondu)
         this.addRecipe({
-            id: "butter_flour_dough",
-            ingredient1: "butter",
-            ingredient2: "wheat_floor",
+            id: "molten_butter_flour_dough",
+            ingredient1: "molten_butter",
+            ingredient2: "flour",
             result: "dough",
-            name: "Pâte à biscuits",
+            name: "Pâte avec beurre fondu",
         });
 
-        // Chocolat + Pâte = Cookie
+        // Pâte + Chunks de chocolat = Cookie Mix
         this.addRecipe({
-            id: "chocolate_dough_cookie",
-            ingredient1: "chocolate",
-            ingredient2: "dough",
-            result: "cookie",
-            name: "Cookie au chocolat",
+            id: "dough_chocolate_chunks_cookie_mix",
+            ingredient1: "dough",
+            ingredient2: "chocolate-chunks",
+            result: "cookie-mix",
+            name: "Cookie Mix avec chunks",
         });
-
-        // Chocolat + Beurre + Farine = Cookie (recette directe)
-        // Note: Cette recette sera gérée différemment car elle nécessite 3 ingrédients
     }
 
     private addIngredient(ingredient: Ingredient) {
@@ -118,13 +145,9 @@ export class RecipeManager {
         const recipe = this.recipes.get(key);
 
         if (recipe) {
-            console.log(
-                `Recette trouvée: ${recipe.ingredient1} + ${recipe.ingredient2} = ${recipe.result}`
-            );
             return recipe.result;
         }
 
-        console.log(`Aucune recette pour ${ingredient1} + ${ingredient2}`);
         return null;
     }
 
@@ -142,6 +165,25 @@ export class RecipeManager {
             uniqueRecipes.set(recipe.id, recipe);
         });
         return Array.from(uniqueRecipes.values());
+    }
+
+    /**
+     * Effectue une transformation spéciale (1 ingrédient → 1 autre ingrédient)
+     * Utilisé pour les transformations comme chocolat → chunks
+     */
+    public performSpecialTransformation(ingredientId: string): string | null {
+        const transformations: { [key: string]: string } = {
+            "chocolate": "chocolate-chunks",
+        };
+
+        return transformations[ingredientId] || null;
+    }
+
+    /**
+     * Vérifie si un ingrédient peut être transformé spécialement
+     */
+    public canPerformSpecialTransformation(ingredientId: string): boolean {
+        return this.performSpecialTransformation(ingredientId) !== null;
     }
 
     /**

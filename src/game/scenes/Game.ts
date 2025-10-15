@@ -12,11 +12,13 @@ import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
+import { OvenManager } from "../managers/OvenManager";
 import { WaveManager } from "../managers/WaveManager";
+import { GameConfig } from "../config/GameConfig";
 
 export default class Game extends Phaser.Scene {
-    private mapOffsetX: number = 272;
-    private mapOffsetY: number = 144;
+    private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
+    private mapOffsetY: number = GameConfig.MAP_OFFSET_Y;
 
     // Managers
     private player1: PlayerManager;
@@ -36,6 +38,8 @@ export default class Game extends Phaser.Scene {
     private interactionSystem?: InteractionSystem;
 
     private timerManager?: TimerManager;
+
+    private ovenManager?: OvenManager;
     private waveManager?: WaveManager;
     constructor() {
         super("Game");
@@ -54,7 +58,7 @@ export default class Game extends Phaser.Scene {
     create() {
         this.editorCreate();
         // Fond de couleur
-        this.cameras.main.setBackgroundColor(0x87ceeb); // Bleu ciel
+        this.cameras.main.setBackgroundColor(GameConfig.COLORS.BACKGROUND);
 
         // 🎵 Continuer la musique si elle n'est pas déjà en cours
         if (
@@ -74,7 +78,10 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             1
         );
-        this.player1.createPlayer(2, 2);
+        this.player1.createPlayer(
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x,
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y
+        );
 
         this.player2 = new PlayerManager(
             this,
@@ -82,7 +89,10 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             2
         );
-        this.player2.createPlayer(4, 4);
+        this.player2.createPlayer(
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.x,
+            GameConfig.PLAYER_START_POSITIONS.PLAYER_2.y
+        );
 
         this.playerList = [this.player1, this.player2];
 
@@ -98,6 +108,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
+        
         this.deliveryManager = new DeliveryManager(
             this,
             this.mapOffsetX,
@@ -106,6 +117,15 @@ export default class Game extends Phaser.Scene {
 
         this.scoreManager = new ScoreManager(this);
         this.ingredientManager = new IngredientInteractionManager();
+
+        this.ovenManager = new OvenManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY
+        );
+
+        // Passer le RecipeManager partagé au CounterInteractionManager
+        this.counterManager.setRecipeManager(this.ingredientManager.getRecipeManager());
 
         // Créer les tiles procéduralement
         this.mapManager.createIsometricTiles();
@@ -142,8 +162,6 @@ export default class Game extends Phaser.Scene {
         // Initialiser les tiles d'ingrédients
         this.mapManager.initializeIngredientTiles();
 
-        // Initialiser le gestionnaire d'ingrédients
-        this.ingredientManager.printDebugInfo();
 
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
@@ -172,16 +190,14 @@ export default class Game extends Phaser.Scene {
         // Démarrer la première vague
         this.waveManager.startWave(1);
 
-        // Initialiser les affichages d'inventaire pour chaque joueur
-        this.player1.getInventory().initializeInventoryDisplay(10, 220);
-        this.player2.getInventory().initializeInventoryDisplay(10, 260);
-
-        // Initialiser le timer (5 minutes) AVANT InteractionSystem
+        // Initialiser le timer AVANT InteractionSystem
         this.timerManager = new TimerManager(this);
-        this.timerManager.initializeTimerDisplay(512, 20);
-        this.timerManager.start(300, () => {
+        this.timerManager.initializeTimerDisplay(
+            GameConfig.TIMER.DISPLAY_X,
+            GameConfig.TIMER.DISPLAY_Y
+        );
+        this.timerManager.start(GameConfig.TIMER.GAME_DURATION, () => {
             // Callback quand le temps est écoulé
-            console.log("⏱️ Temps écoulé !");
             this.endGame();
         });
 
@@ -193,36 +209,10 @@ export default class Game extends Phaser.Scene {
             this.deliveryManager,
             this.ingredientManager,
             this.orderDisplayManager,
-            this.scoreManager
+            this.scoreManager,
+            this.timerManager,
+            this.ovenManager
         );
-
-        // Texte d'aide
-        const helpText = this.add.text(
-            10,
-            650,
-            "🎮 JOUEUR 1 (Bleu): ZQSD + E | JOUEUR 2 (Rouge): IJKL + O | Espace : Menu\n" +
-                "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
-                "🎯 Coopérez pour gagner plus de points !",
-            {
-                fontFamily: "Arial",
-                fontSize: "14px",
-                color: "#ffffff",
-                backgroundColor: "#000000",
-                padding: { x: 10, y: 10 },
-            }
-        );
-        helpText.setScrollFactor(0);
-        helpText.setDepth(1000);
-
-        // Initialiser le debug des joueurs
-        for (const player of this.playerList) {
-            player.initializeDebugCircle();
-            player.initializeDebugText(
-                this.cameras.main.width,
-                this.cameras.main.height
-            );
-        }
 
         // Touche espace pour retourner au menu
         this.input.keyboard?.on("keydown-SPACE", () => {
@@ -239,21 +229,33 @@ export default class Game extends Phaser.Scene {
 
         // Gestion des interactions pour chaque joueur
         if (this.interactionSystem) {
+            // Touche d'interaction normale (E/O) : prendre/poser/combiner
             if (this.player1.isInteractionPressed()) {
-                console.log("🎮 Joueur 1 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player1);
             }
 
             if (this.player2.isInteractionPressed()) {
-                console.log("🎮 Joueur 2 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player2);
+            }
+
+            // Touche de transformation (R/P) : transformer sur table de transformation
+            if (this.player1.isTransformPressed()) {
+                this.interactionSystem.handlePlayerTransformation(this.player1);
+            }
+
+            if (this.player2.isTransformPressed()) {
+                this.interactionSystem.handlePlayerTransformation(this.player2);
             }
         }
     }
 
+    /**
+     * Change de scène (retour au menu)
+     */
     changeScene() {
         this.endGame();
     }
+
 
     /**
      * Termine la partie et passe à l'écran GameOver
