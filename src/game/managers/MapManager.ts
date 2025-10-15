@@ -39,7 +39,7 @@ export class MapManager {
         const tiles = [
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
-            { key: "iso-special-counter", color: 0x4a9eff, darkColor: 0x2b7fd9 }, // Plan de travail spécial (bleu)
+            { key: "iso-transformation-table", color: 0x4a9eff, darkColor: 0x2b7fd9 }, // Table de transformation (bleu)
         ];
 
         tiles.forEach(({ key, color, darkColor }) => {
@@ -78,7 +78,7 @@ export class MapManager {
             [4, 6, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
             [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Tile spéciale (plan de travail pour actions spécifiques)
+            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Table de transformation (pour actions spécifiques)
             [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
             [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
@@ -118,7 +118,7 @@ export class MapManager {
             7: "butter_box",           // Caisse de beurre
             8: "flour_box",            // Caisse de farine
             9: "iso-delivery-zone",
-            10: "iso-special-counter", // Plan de travail spécial (pour actions spécifiques)
+            10: "iso-transformation-table", // Table de transformation (pour actions spécifiques)
         };
     }
 
@@ -250,22 +250,22 @@ export class MapManager {
     }
 
     /**
-     * Vérifie si une position est une tile spéciale (type 10 - pour actions spécifiques)
+     * Vérifie si une position est une table de transformation (type 10 - pour actions spécifiques)
      */
-    isSpecialTile(gridX: number, gridY: number): boolean {
+    isTransformationTable(gridX: number, gridY: number): boolean {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
-        const isSpecialTexture = tile?.texture.key === 'iso-special-counter';
+        const isTransformationTable = tile?.texture.key === 'iso-transformation-table';
         const isCounter = this.isoMap.isCounter(gridX, gridY);
-        console.log(`isSpecialTile(${gridX}, ${gridY}): texture=${tile?.texture.key}, isSpecial=${isSpecialTexture}, isCounter=${isCounter}`);
-        return isSpecialTexture;
+        console.log(`isTransformationTable(${gridX}, ${gridY}): texture=${tile?.texture.key}, isTransformationTable=${isTransformationTable}, isCounter=${isCounter}`);
+        return isTransformationTable;
     }
 
     /**
-     * Récupère la tile spéciale à une position donnée
+     * Récupère la table de transformation à une position donnée
      */
-    getSpecialTile(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
-        if (!this.isSpecialTile(gridX, gridY)) return undefined;
+    getTransformationTable(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+        if (!this.isTransformationTable(gridX, gridY)) return undefined;
         return this.isoMap?.getSolidTile(gridX, gridY);
     }
 

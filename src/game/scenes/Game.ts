@@ -97,8 +97,6 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY
         );
         
-        // Connecter l'inventory manager au counter manager
-        this.counterManager.setInventoryManager(this.player1.getInventory());
         this.deliveryManager = new DeliveryManager(
             this,
             this.mapOffsetX,
@@ -183,10 +181,10 @@ export default class Game extends Phaser.Scene {
         const helpText = this.add.text(
             10,
             650,
-            "🎮 JOUEUR 1 (Bleu): ZQSD + E | JOUEUR 2 (Rouge): IJKL + O | Espace : Menu\n" +
+            "🎮 J1 (Bleu): ZQSD + E (prendre/poser) + R (combiner) | J2 (Rouge): IJKL + O (prendre/poser) + P (combiner)\n" +
+                "💡 TOUTES les recettes se font sur la TABLE BLEUE avec R/P ! Tables normales = stockage uniquement\n" +
                 "🧈 Beurre + 🌾 Farine = 🥖 Pâte | 🍫 Chocolat + 🥖 Pâte = 🍪 Cookie\n" +
-                "💡 Réalisez les commandes (en haut à gauche) et livrez-les dans la zone rouge !\n" +
-                "🎯 Coopérez pour gagner plus de points !",
+                "🎯 Réalisez les commandes (en haut à gauche) et livrez dans la zone rouge !",
             {
                 fontFamily: "Arial",
                 fontSize: "14px",
@@ -213,6 +211,7 @@ export default class Game extends Phaser.Scene {
 
         // Gestion des interactions pour chaque joueur
         if (this.interactionSystem) {
+            // Touche d'interaction normale (E/O) : prendre/poser/combiner
             if (this.player1.isInteractionPressed()) {
                 console.log("🎮 Joueur 1 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player1);
@@ -221,6 +220,17 @@ export default class Game extends Phaser.Scene {
             if (this.player2.isInteractionPressed()) {
                 console.log("🎮 Joueur 2 interagit");
                 this.interactionSystem.handlePlayerInteraction(this.player2);
+            }
+
+            // Touche de transformation (R/P) : transformer sur table de transformation
+            if (this.player1.isTransformPressed()) {
+                console.log("⚗️ Joueur 1 transforme");
+                this.interactionSystem.handlePlayerTransformation(this.player1);
+            }
+
+            if (this.player2.isTransformPressed()) {
+                console.log("⚗️ Joueur 2 transforme");
+                this.interactionSystem.handlePlayerTransformation(this.player2);
             }
         }
     }
@@ -235,9 +245,12 @@ export default class Game extends Phaser.Scene {
     displayControls() {
         const controlsText = this.add.text(10, 10, 
             "Contrôles:\n" +
-            "• Flèches: Se déplacer\n" +
-            "• E: Tables normales (poser/prendre)\n" +
-            "• T: Tiles bleues (transformer)\n" +
+            "• JOUEUR 1: ZQSD (déplacement) + E (prendre/poser) + R (combiner/transformer)\n" +
+            "• JOUEUR 2: IJKL (déplacement) + O (prendre/poser) + P (combiner/transformer)\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "• E/O: Poser/Prendre sur TOUTES les tables\n" +
+            "• R/P sur TABLE BLEUE: Combiner/Transformer les ingrédients\n" +
+            "• Tables normales: Stockage temporaire uniquement\n" +
             "• ESPACE: Menu", 
             {
                 fontFamily: "Arial",
@@ -250,81 +263,6 @@ export default class Game extends Phaser.Scene {
             }
         );
         controlsText.setDepth(1000);
-    }
-
-    /**
-     * Transforme les ingrédients sur une tile spéciale
-     */
-    transformIngredientsOnSpecialTile() {
-                if (!this.player1 || !this.mapManager || !this.counterManager || !this.player1.getInventory()) {
-            console.log("Managers manquants 1");
-            return;
-        }
-
-        const playerGridX = this.player1.getPlayerGridX();
-        const playerGridY = this.player1.getPlayerGridY();
-        const lastDirection = this.player1.getLastDirection();
-
-        console.log(`Joueur en position: (${playerGridX}, ${playerGridY}), direction: (${lastDirection.x}, ${lastDirection.y})`);
-
-        // Calculer la position adjacente selon la direction
-        const adjacentX = playerGridX + lastDirection.x;
-        const adjacentY = playerGridY + lastDirection.y;
-
-        console.log(`Position adjacente calculée: (${adjacentX}, ${adjacentY})`);
-        console.log(`Est une tile spéciale: ${this.mapManager.isSpecialTile(adjacentX, adjacentY)}`);
-        
-        // Vérifier aussi si le joueur est directement sur une tile spéciale
-        console.log(`Joueur sur tile spéciale: ${this.mapManager.isSpecialTile(playerGridX, playerGridY)}`);
-
-        // Vérifier si la position adjacente est une tile spéciale
-        if (this.mapManager.isSpecialTile(adjacentX, adjacentY)) {
-            console.log(`Tile spéciale trouvée en (${adjacentX}, ${adjacentY})`);
-            
-            // Vérifier s'il y a un objet sur cette tile
-            if (this.counterManager.hasItemOnCounter(adjacentX, adjacentY)) {
-                console.log("Objet trouvé sur la tile spéciale, tentative de transformation");
-                // Effectuer la transformation
-                const success = this.counterManager.performSpecialTransformation(adjacentX, adjacentY);
-                if (success) {
-                    console.log("Transformation réussie !");
-                } else {
-                    console.log("Aucune transformation possible");
-                }
-            } else if (!this.player1.getInventory().isEmpty()) {
-                console.log("Inventaire non vide, tentative de placement");
-                // Poser un ingrédient sur la tile spéciale
-                const player = this.player1.getPlayer();
-                if (player) {
-                    const itemType = this.player1.getInventory().removeItem();
-                    if (itemType) {
-                        console.log(`Tentative de placer ${itemType} sur la tile spéciale`);
-                        const placed = this.counterManager.placeItemOnCounter(
-                            adjacentX,
-                            adjacentY,
-                            itemType
-                        );
-                        if (placed) {
-                            this.player1.getInventory().removeCarriedItem();
-                            this.counterManager.showCombinationMessage(
-                                `📦 ${itemType} posé`,
-                                adjacentX,
-                                adjacentY
-                            );
-                            console.log("Ingrédient placé avec succès");
-                        } else {
-                            console.log("Échec du placement de l'ingrédient");
-                            // Remettre l'ingrédient dans l'inventaire
-                            this.player1.getInventory().addItem(itemType);
-                        }
-                    }
-                }
-            } else {
-                console.log("Aucun ingrédient dans l'inventaire");
-            }
-        } else {
-            console.log("Pas de tile spéciale à côté du joueur");
-        }
     }
 
     /**

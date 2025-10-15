@@ -70,6 +70,14 @@ export class PlayerManager {
     }
 
     /**
+     * Vérifie si la touche de transformation vient d'être pressée
+     * Utilise JustDown pour éviter les répétitions
+     */
+    public isTransformPressed(): boolean {
+        return Phaser.Input.Keyboard.JustDown(this.controls.craftKey);
+    }
+
+    /**
      * Crée le joueur à la position initiale
      */
     createPlayer(

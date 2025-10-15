@@ -144,12 +144,13 @@ export class CounterInteractionManager {
     }
 
     /**
-     * Effectue une transformation d'ingrédients sur une tile spéciale (type 10)
+     * Effectue une transformation d'ingrédients sur une table de transformation (type 10)
      * @param gridX Position X de la grille
      * @param gridY Position Y de la grille
+     * @param playerInventory Inventaire du joueur effectuant la transformation (optionnel)
      * @returns true si une transformation a eu lieu, false sinon
      */
-    performSpecialTransformation(gridX: number, gridY: number): boolean {
+    performSpecialTransformation(gridX: number, gridY: number, playerInventory?: any): boolean {
         const key = `${gridX},${gridY}`;
         const item = this.itemsOnCounters.get(key);
 
@@ -157,45 +158,52 @@ export class CounterInteractionManager {
 
         const currentType = item.texture.key;
         
-        // Transformation 1: Chocolat → Chunks de chocolat
+        // Transformation 1: Chocolat → Chunks de chocolat (ne nécessite pas d'inventaire)
         if (currentType === "chocolate") {
             this.transformItem(gridX, gridY, "chocolate-chunks", "🍫 Chocolat → Chunks");
             return true;
         }
         
-        // Transformation 2: Beurre + Farine → Pâte
-        if (currentType === "butter") {
-            // Chercher de la farine dans l'inventaire
-            if (this.hasIngredientAvailable("wheat_floor")) {
-                this.consumeIngredient("wheat_floor");
-                this.transformItem(gridX, gridY, "dough", "🧈 Beurre + Farine → Pâte");
-                return true;
+        // Si un inventaire est fourni, on peut faire des transformations combinées
+        if (playerInventory) {
+            // Transformation 2: Beurre + Farine → Pâte
+            if (currentType === "butter") {
+                // Chercher de la farine dans l'inventaire
+                if (playerInventory.hasItem && playerInventory.hasItem("wheat_floor")) {
+                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("wheat_floor")) {
+                        this.transformItem(gridX, gridY, "dough", "🧈 Beurre + Farine → Pâte");
+                        return true;
+                    }
+                }
             }
-        }
-        
-        if (currentType === "wheat_floor") {
-            // Chercher du beurre dans l'inventaire
-            if (this.hasIngredientAvailable("butter")) {
-                this.consumeIngredient("butter");
-                this.transformItem(gridX, gridY, "dough", "🌾 Farine + Beurre → Pâte");
-                return true;
+            
+            if (currentType === "wheat_floor") {
+                // Chercher du beurre dans l'inventaire
+                if (playerInventory.hasItem && playerInventory.hasItem("butter")) {
+                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("butter")) {
+                        this.transformItem(gridX, gridY, "dough", "🌾 Farine + Beurre → Pâte");
+                        return true;
+                    }
+                }
             }
-        }
-        
-        // Transformation 3: Pâte + Chunks de chocolat → Cookie Mix
-        if (currentType === "dough") {
-            if (this.hasIngredientAvailable("chocolate-chunks")) {
-                this.consumeIngredient("chocolate-chunks");
-                this.transformItem(gridX, gridY, "cookie-mix", "🥣 Pâte + Chunks → Cookie Mix");
-                return true;
+            
+            // Transformation 3: Pâte + Chunks de chocolat → Cookie Mix
+            if (currentType === "dough") {
+                if (playerInventory.hasItem && playerInventory.hasItem("chocolate-chunks")) {
+                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("chocolate-chunks")) {
+                        this.transformItem(gridX, gridY, "cookie-mix", "🥣 Pâte + Chunks → Cookie Mix");
+                        return true;
+                    }
+                }
             }
-        }
-        
-        if (currentType === "chocolate-chunks") {
-            if (this.hasIngredientAvailable("dough")) {
-                this.consumeIngredient("dough");
-                this.transformItem(gridX, gridY, "cookie-mix", "🍫 Chunks + Pâte → Cookie Mix");
-                return true;
+            
+            if (currentType === "chocolate-chunks") {
+                if (playerInventory.hasItem && playerInventory.hasItem("dough")) {
+                    if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem("dough")) {
+                        this.transformItem(gridX, gridY, "cookie-mix", "🍫 Chunks + Pâte → Cookie Mix");
+                        return true;
+                    }
+                }
             }
         }
 
@@ -221,6 +229,7 @@ export class CounterInteractionManager {
 
     /**
      * Vérifie si un ingrédient est disponible (dans l'inventaire du joueur)
+     * @deprecated Utiliser playerInventory.hasItem() directement
      */
     private hasIngredientAvailable(ingredientType: string): boolean {
         if (!this.inventoryManager) return false;
@@ -229,6 +238,7 @@ export class CounterInteractionManager {
 
     /**
      * Consomme un ingrédient de l'inventaire du joueur
+     * @deprecated Utiliser playerInventory.removeSpecificItem() directement
      */
     private consumeIngredient(ingredientType: string): boolean {
         if (!this.inventoryManager) return false;
