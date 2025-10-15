@@ -40,6 +40,7 @@ export class PlayerManager {
         this.mapOffsetY = mapOffsetY;
         this.playerNumber = playerNumber;
         this.controls = this.initializeControls(playerNumber);
+        this.inventory = new InventoryManager(scene);
 
         if (playerNumber === 1) {
             this.playerColor = "blue";
@@ -59,22 +60,17 @@ export class PlayerManager {
 
     update(): void {
         this.handleMovement();
-        // this.updateGridPosition();
-        this.handleInteraction();
-        this.handleInventory();
+        this.updateGridPosition();
+        this.updateCarriedItemPosition();
+        this.updatePlayerDepth();
     }
 
-    private handleInteraction(): void {
-        if (!this.player) return;
-        // Logique d'interaction (à implémenter)
-        if (this.controls.interactKey.isDown) {
-            console.log(`Joueur ${this.playerNumber} interagit`);
-        }
-    }
-
-    private handleInventory(): void {
-        if (!this.player) return;
-        // Logique d'inventaire (à implémenter)
+    /**
+     * Vérifie si la touche d'interaction vient d'être pressée
+     * Utilise JustDown pour éviter les répétitions
+     */
+    public isInteractionPressed(): boolean {
+        return Phaser.Input.Keyboard.JustDown(this.controls.interactKey);
     }
 
     /**
@@ -197,7 +193,7 @@ export class PlayerManager {
     /**
      * Met à jour la profondeur du joueur pour le rendu isométrique
      */
-    updatePlayerDepth(carriedItem?: Phaser.GameObjects.Image): void {
+    updatePlayerDepth(): void {
         if (!this.player) return;
 
         // Utiliser directement la position Y du joueur
@@ -205,6 +201,7 @@ export class PlayerManager {
         this.lastPlayerY = this.player.y;
 
         // Mettre à jour la profondeur de l'objet porté
+        const carriedItem = this.inventory.getCarriedItem();
         if (carriedItem) {
             if (this.lastDirection.y === -1) {
                 carriedItem.setDepth(this.player.depth - 1); // Derrière (vers le haut)
@@ -212,6 +209,48 @@ export class PlayerManager {
                 carriedItem.setDepth(this.player.depth + 1); // Devant (autres directions)
             }
         }
+    }
+
+    /**
+     * Met à jour la position de l'objet porté
+     */
+    private updateCarriedItemPosition(): void {
+        if (!this.player || !this.inventory) return;
+
+        const carriedItem = this.inventory.getCarriedItem();
+        if (carriedItem) {
+            this.inventory.updateCarriedItemPosition(
+                this.player.x,
+                this.player.y,
+                this.lastDirection
+            );
+        }
+    }
+
+    /**
+     * Met à jour l'objet porté (crée ou détruit selon l'inventaire)
+     */
+    public updateCarriedItem(): void {
+        if (!this.player || !this.inventory) return;
+
+        const item = this.inventory.peekItem();
+        if (item) {
+            this.inventory.createCarriedItem(
+                item,
+                this.player.x,
+                this.player.y,
+                this.lastDirection,
+                this.player.depth
+            );
+        }
+    }
+
+    /**
+     * Supprime l'objet porté visuellement
+     */
+    public removeCarriedItem(): void {
+        if (!this.inventory) return;
+        this.inventory.removeCarriedItem();
     }
 
     /**
@@ -362,5 +401,17 @@ export class PlayerManager {
 
     hasPlayerMoved(): boolean {
         return this.player ? this.player.y !== this.lastPlayerY : false;
+    }
+
+    getInventory(): InventoryManager {
+        return this.inventory;
+    }
+
+    getPlayerNumber(): number {
+        return this.playerNumber;
+    }
+
+    getPlayerColor(): string {
+        return this.playerColor;
     }
 }
