@@ -8,6 +8,8 @@ import { DeliveryManager } from "../managers/DeliveryManager";
 import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
+import { DynamicMapManager } from "../managers/DynamicMapManager";
+import { CommunicationManager } from "../managers/CommunicationManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { PlayerManager } from "../managers/PlayerManager";
@@ -26,7 +28,8 @@ export default class Game extends Phaser.Scene {
     private player2: PlayerManager;
     private playerList: PlayerManager[];
 
-    private mapManager?: MapManager;
+    private mapManager?: DynamicMapManager;
+    private communicationManager?: CommunicationManager;
 
     private counterManager?: CounterInteractionManager;
     private orderDisplayManager?: OrderDisplayManager;
@@ -90,8 +93,15 @@ export default class Game extends Phaser.Scene {
         this.playerList = [this.player1, this.player2];
 
         // Initialiser les managers
-        this.mapManager = new MapManager(
+        this.mapManager = new DynamicMapManager(
             this,
+            this.mapOffsetX,
+            this.mapOffsetY
+        );
+        
+        this.communicationManager = new CommunicationManager(
+            this,
+            this.mapManager,
             this.mapOffsetX,
             this.mapOffsetY
         );
@@ -128,6 +138,9 @@ export default class Game extends Phaser.Scene {
 
         // Créer la carte en grille
         const isoMap = this.mapManager.createMap();
+        
+        // Initialiser les comptoirs de communication
+        this.communicationManager.initializeCommunicationCounters();
 
         // Créer les joueurs avec les points de spawn de la carte
         const spawnPoints = this.mapManager.getAllSpawnPoints();
@@ -254,6 +267,81 @@ export default class Game extends Phaser.Scene {
                 );
                 // Mettre à jour la position en grille du joueur
                 this.player2.setGridPosition(spawnPoints.player2.x, spawnPoints.player2.y);
+            }
+        }
+    }
+
+    /**
+     * Met à jour le niveau de vague et génère une nouvelle carte
+     */
+    updateWaveLevel(waveLevel: number): void {
+        if (this.mapManager) {
+            this.mapManager.updateWaveLevel(waveLevel);
+            
+            // Recréer la carte avec la nouvelle configuration
+            this.mapManager.createMap();
+            
+            // Réinitialiser les comptoirs de communication
+            this.communicationManager?.initializeCommunicationCounters();
+            
+            // Repositionner les joueurs
+            this.repositionPlayers();
+            
+            console.log(`🌊 Vague ${waveLevel} - Nouvelle carte générée`);
+        }
+    }
+
+    /**
+     * Met à jour le nombre d'actions disponibles
+     */
+    updateAvailableActions(actions: number): void {
+        if (this.mapManager) {
+            this.mapManager.updateAvailableActions(actions);
+            
+            // Recréer la carte avec la nouvelle configuration
+            this.mapManager.createMap();
+            
+            // Réinitialiser les comptoirs de communication
+            this.communicationManager?.initializeCommunicationCounters();
+            
+            // Repositionner les joueurs
+            this.repositionPlayers();
+            
+            console.log(`⚡ Actions disponibles: ${actions} - Nouvelle carte générée`);
+        }
+    }
+
+    /**
+     * Gère l'interaction avec les comptoirs de communication
+     */
+    handleCommunicationInteraction(player: PlayerManager): void {
+        if (!this.communicationManager) return;
+        
+        const counters = this.communicationManager.getCommunicationCounters();
+        
+        for (let i = 0; i < counters.length; i++) {
+            if (this.communicationManager.isPlayerNearCommunicationCounter(player, i)) {
+                const availableIngredients = this.communicationManager.getAvailableIngredients(i);
+                
+                if (availableIngredients.length > 0) {
+                    // Prendre le premier ingrédient disponible
+                    const ingredient = availableIngredients[0];
+                    if (this.communicationManager.takeIngredient(player, ingredient, i)) {
+                        console.log(`📥 ${player.getPlayerNumber()} a récupéré ${ingredient} du comptoir de communication`);
+                    }
+                } else {
+                    // Déposer un ingrédient si le comptoir est vide
+                    const inventory = player.getInventory();
+                    const ingredients = inventory.getAllIngredients();
+                    
+                    if (ingredients.length > 0) {
+                        const ingredient = ingredients[0];
+                        if (this.communicationManager.depositIngredient(player, ingredient, i)) {
+                            console.log(`📤 ${player.getPlayerNumber()} a déposé ${ingredient} sur le comptoir de communication`);
+                        }
+                    }
+                }
+                break;
             }
         }
     }
