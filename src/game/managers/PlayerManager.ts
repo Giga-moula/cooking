@@ -4,7 +4,12 @@ import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
 import { GameConfig } from "../config/GameConfig";
 import { CraftActions, type CraftDirection } from "../actions/CraftActions";
-import { PHYSICS_CONSTANTS, PLAYER_OFFSET, DEPTH_CONSTANTS } from "../config/Constants";
+import { DashAction } from "../actions/dashAction";
+import {
+    PHYSICS_CONSTANTS,
+    PLAYER_OFFSET,
+    DEPTH_CONSTANTS,
+} from "../config/Constants";
 import { IMapManager } from "../types/interfaces";
 
 /**
@@ -19,7 +24,8 @@ export class PlayerManager {
     private baseSpeed: number = GameConfig.PLAYER_SPEED;
     private playerSpeed: number = GameConfig.PLAYER_SPEED;
     private speedMultiplier: number = 1.0;
-    private readonly DIAGONAL_FACTOR = PHYSICS_CONSTANTS.DIAGONAL_MOVEMENT_FACTOR;
+    private readonly DIAGONAL_FACTOR =
+        PHYSICS_CONSTANTS.DIAGONAL_MOVEMENT_FACTOR;
     private lastPlayerY: number = 0;
     private playerGridX: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
     private playerGridY: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
@@ -32,6 +38,7 @@ export class PlayerManager {
 
     private inventory: InventoryManager;
     private craftActions: CraftActions | null = null;
+    private dashAction: DashAction;
 
     constructor(
         scene: Phaser.Scene,
@@ -45,6 +52,7 @@ export class PlayerManager {
         this.playerNumber = playerNumber;
         this.controls = this.initializeControls(playerNumber);
         this.inventory = new InventoryManager(scene);
+        this.dashAction = new DashAction(scene, this);
         // CraftActions sera initialisé plus tard via setMapManager
 
         if (playerNumber === 1) {
@@ -73,6 +81,8 @@ export class PlayerManager {
         this.updateCarriedItemPosition();
         this.updatePlayerDepth();
         this.handleCraftActions();
+        this.handleDashInput();
+        this.dashAction.update();
     }
 
     /**
@@ -122,14 +132,16 @@ export class PlayerManager {
 
         // Hitbox rectangulaire adaptée aux sprites de grand-mère
         const hitboxWidth = this.player.width;
-        const hitboxHeight = this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
+        const hitboxHeight =
+            this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
 
         // Positionner la hitbox au niveau des pieds
         body.setSize(hitboxWidth, hitboxHeight);
 
         // Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
         const offsetX = (this.player.width - hitboxWidth) / 2;
-        const offsetY = this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
+        const offsetY =
+            this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
         body.setOffset(offsetX, offsetY);
 
         this.lastPlayerY = startY;
@@ -141,7 +153,7 @@ export class PlayerManager {
     }
 
     handleMovement(): void {
-        if (!this.player || !this.movementEnabled) return;
+        if (!this.player || !this.movementEnabled || this.isDashing()) return;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -176,7 +188,7 @@ export class PlayerManager {
     /**
      * Met à jour la position en grille du joueur
      */
-    updateGridPosition(): void {
+    public updateGridPosition(): void {
         if (!this.player) return;
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -201,20 +213,29 @@ export class PlayerManager {
     /**
      * Met à jour la profondeur du joueur pour le rendu isométrique
      */
-    updatePlayerDepth(): void {
+    public updatePlayerDepth(): void {
         if (!this.player) return;
 
         // Utiliser directement la position Y du joueur
-        this.player.setDepth(this.player.y * DEPTH_CONSTANTS.PLAYER_DEPTH_MULTIPLIER + DEPTH_CONSTANTS.PLAYER_DEPTH_OFFSET);
+        this.player.setDepth(
+            this.player.y * DEPTH_CONSTANTS.PLAYER_DEPTH_MULTIPLIER +
+                DEPTH_CONSTANTS.PLAYER_DEPTH_OFFSET
+        );
         this.lastPlayerY = this.player.y;
 
         // Mettre à jour la profondeur de l'objet porté
         const carriedItem = this.inventory.getCarriedItem();
         if (carriedItem) {
             if (this.lastDirection.y === -1) {
-                carriedItem.setDepth(this.player.depth + DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_BEHIND); // Derrière (vers le haut)
+                carriedItem.setDepth(
+                    this.player.depth +
+                        DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_BEHIND
+                ); // Derrière (vers le haut)
             } else {
-                carriedItem.setDepth(this.player.depth + DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_FRONT); // Devant (autres directions)
+                carriedItem.setDepth(
+                    this.player.depth +
+                        DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_FRONT
+                ); // Devant (autres directions)
             }
         }
     }
@@ -279,12 +300,14 @@ export class PlayerManager {
         // Ajuster la hitbox selon la nouvelle texture
         const body = this.player.body as Phaser.Physics.Arcade.Body;
         const hitboxWidth = this.player.width;
-        const hitboxHeight = this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
+        const hitboxHeight =
+            this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
 
         body.setSize(hitboxWidth, hitboxHeight);
 
         const offsetX = (this.player.width - hitboxWidth) / 2;
-        const offsetY = this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
+        const offsetY =
+            this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
         body.setOffset(offsetX, offsetY);
     }
 
@@ -327,6 +350,13 @@ export class PlayerManager {
 
     getPlayerColor(): string {
         return this.playerColor;
+    }
+
+    /**
+     * Récupère les contrôles du joueur
+     */
+    getControls(): PlayerControls {
+        return this.controls;
     }
 
     /**
@@ -410,5 +440,31 @@ export class PlayerManager {
             this.playerNumber,
             mapManager
         );
+
+        // Passer la référence du MapManager au DashAction
+        this.dashAction.setMapManager(mapManager);
+    }
+
+    /**
+     * Gère l'input du dash
+     */
+    private handleDashInput(): void {
+        if (this.controls.dashKey) {
+            this.dashAction.handleDashInput(this.controls.dashKey);
+        }
+    }
+
+    /**
+     * Récupère l'instance DashAction (pour debug ou usage externe)
+     */
+    public getDashAction(): DashAction {
+        return this.dashAction;
+    }
+
+    /**
+     * Vérifie si le joueur est actuellement en train de dasher
+     */
+    public isDashing(): boolean {
+        return this.dashAction.isDashActive();
     }
 }

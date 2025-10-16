@@ -9,6 +9,7 @@ export interface PlayerControls {
     craftDownKey: Phaser.Input.Keyboard.Key;
     craftLeftKey: Phaser.Input.Keyboard.Key;
     craftRightKey: Phaser.Input.Keyboard.Key;
+    dashKey?: Phaser.Input.Keyboard.Key;
 }
 
 export class ControlsManager {
@@ -18,33 +19,35 @@ export class ControlsManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        
+
         // Contrôles Joueur 1 : ZQSD + E/SPACE + Flèches
         this.player1Controls = {
-            upKey: this.scene.input.keyboard!.addKey('Z'),
-            downKey: this.scene.input.keyboard!.addKey('S'),
-            leftKey: this.scene.input.keyboard!.addKey('Q'),
-            rightKey: this.scene.input.keyboard!.addKey('D'),
-            interactKey: this.scene.input.keyboard!.addKey('E'),
-            craftKey: this.scene.input.keyboard!.addKey('R'),
-            craftUpKey: this.scene.input.keyboard!.addKey('UP'),
-            craftDownKey: this.scene.input.keyboard!.addKey('DOWN'),
-            craftLeftKey: this.scene.input.keyboard!.addKey('LEFT'),
-            craftRightKey: this.scene.input.keyboard!.addKey('RIGHT')
+            upKey: this.scene.input.keyboard!.addKey("Z"),
+            downKey: this.scene.input.keyboard!.addKey("S"),
+            leftKey: this.scene.input.keyboard!.addKey("Q"),
+            rightKey: this.scene.input.keyboard!.addKey("D"),
+            interactKey: this.scene.input.keyboard!.addKey("E"),
+            craftKey: this.scene.input.keyboard!.addKey("R"),
+            craftUpKey: this.scene.input.keyboard!.addKey("UP"),
+            craftDownKey: this.scene.input.keyboard!.addKey("DOWN"),
+            craftLeftKey: this.scene.input.keyboard!.addKey("LEFT"),
+            craftRightKey: this.scene.input.keyboard!.addKey("RIGHT"),
+            dashKey: this.scene.input.keyboard!.addKey("T"),
         };
 
         // Contrôles Joueur 2 : IJKL + O/P + Pavé numérique
         this.player2Controls = {
-            upKey: this.scene.input.keyboard!.addKey('I'),
-            downKey: this.scene.input.keyboard!.addKey('K'),
-            leftKey: this.scene.input.keyboard!.addKey('J'),
-            rightKey: this.scene.input.keyboard!.addKey('L'),
-            interactKey: this.scene.input.keyboard!.addKey('O'),
-            craftKey: this.scene.input.keyboard!.addKey('P'),
-            craftUpKey: this.scene.input.keyboard!.addKey('NUMPAD_EIGHT'),
-            craftDownKey: this.scene.input.keyboard!.addKey('NUMPAD_TWO'),
-            craftLeftKey: this.scene.input.keyboard!.addKey('NUMPAD_FOUR'),
-            craftRightKey: this.scene.input.keyboard!.addKey('NUMPAD_SIX')
+            upKey: this.scene.input.keyboard!.addKey("I"),
+            downKey: this.scene.input.keyboard!.addKey("K"),
+            leftKey: this.scene.input.keyboard!.addKey("J"),
+            rightKey: this.scene.input.keyboard!.addKey("L"),
+            interactKey: this.scene.input.keyboard!.addKey("O"),
+            craftKey: this.scene.input.keyboard!.addKey("P"),
+            craftUpKey: this.scene.input.keyboard!.addKey("NUMPAD_EIGHT"),
+            craftDownKey: this.scene.input.keyboard!.addKey("NUMPAD_TWO"),
+            craftLeftKey: this.scene.input.keyboard!.addKey("NUMPAD_FOUR"),
+            craftRightKey: this.scene.input.keyboard!.addKey("NUMPAD_SIX"),
+            dashKey: this.scene.input.keyboard!.addKey("NUMPAD_ZERO"),
         };
     }
 
