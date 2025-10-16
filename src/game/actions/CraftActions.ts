@@ -218,8 +218,8 @@ export class CraftActions {
                 );
                 return (
                     itemInCasserole &&
-                    recipeManager.canCookInOven &&
-                    recipeManager.canCookInOven(itemInCasserole)
+                    recipeManager.canCookInCasserole &&
+                    recipeManager.canCookInCasserole(itemInCasserole)
                 );
 
             default:
@@ -576,6 +576,8 @@ export class CraftActions {
         } else {
             // Mauvaise direction dans la rotation
             this.playErrorAnimation(() => {
+                // Enregistrer l'échec sur le four si c'est un four
+                this.recordCraftFailure();
                 this.resetRotationTracker();
                 this.rotationTracker.isRotating = true;
                 this.rotationTracker.expectedRotation = expectedRotation;
@@ -601,6 +603,8 @@ export class CraftActions {
         } else {
             // Mauvaise direction
             this.playErrorAnimation(() => {
+                // Enregistrer l'échec sur le four si c'est un four
+                this.recordCraftFailure();
                 this.isProcessingInput = false;
             });
         }
@@ -722,6 +726,9 @@ export class CraftActions {
                 console.log(
                     `Player ${this.playerNumber}: Transformation réussie!`
                 );
+
+                // Reset les échecs pour les fours après succès
+                this.resetCraftFailures();
             } else {
                 console.log(
                     `Player ${this.playerNumber}: Échec de la transformation`
@@ -806,5 +813,35 @@ export class CraftActions {
      */
     public canStop(): boolean {
         return !this.isPlayingErrorAnimation;
+    }
+
+    /**
+     * Enregistre un échec de craft pour les fours
+     */
+    private recordCraftFailure(): void {
+        // Seulement pour les fours (tileTypeId 11)
+        if (this.craftSequence.tileTypeId === 11) {
+            const target = this.playerManager.getTargetPosition();
+            const ovenManager = this.mapManager.getOvenManager();
+
+            if (ovenManager && ovenManager.recordCraftFailure) {
+                ovenManager.recordCraftFailure(target.x, target.y);
+            }
+        }
+    }
+
+    /**
+     * Reset les échecs de craft pour les fours
+     */
+    private resetCraftFailures(): void {
+        // Seulement pour les fours (tileTypeId 11)
+        if (this.craftSequence.tileTypeId === 11) {
+            const target = this.playerManager.getTargetPosition();
+            const ovenManager = this.mapManager.getOvenManager();
+
+            if (ovenManager && ovenManager.resetCraftFailures) {
+                ovenManager.resetCraftFailures(target.x, target.y);
+            }
+        }
     }
 }
