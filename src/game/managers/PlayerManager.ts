@@ -84,6 +84,7 @@ export class PlayerManager {
         this.handleCraftActions();
         this.handleDashInput();
         this.dashAction.update();
+        this.applyDashTilt();
     }
 
     /**
@@ -571,6 +572,35 @@ export class PlayerManager {
      */
     public getDashAction(): DashAction {
         return this.dashAction;
+    }
+
+    /**
+     * Applique l'effet d'inclinaison pour le dash avec skate
+     */
+    public applyDashTilt(): void {
+        if (!this.player || !this.hasSkates) return;
+
+        if (this.isDashing()) {
+            const currentTexture = this.player.texture.key;
+            const direction = this.lastDirection;
+
+            // Appliquer l'inclinaison seulement pour les sprites côté avec skate
+            if (
+                currentTexture.includes("skating-grandma") &&
+                currentTexture.includes("-side")
+            ) {
+                if (direction.x > 0) {
+                    // Mouvement vers la droite : incliner vers l'avant-droite
+                    this.player.setRotation(-0.5); // -8.6 degrés
+                } else if (direction.x < 0) {
+                    // Mouvement vers la gauche : incliner vers l'avant-gauche
+                    this.player.setRotation(0.5); // 8.6 degrés
+                }
+            }
+        } else {
+            // Remettre à zéro la rotation quand le dash est terminé
+            this.player.setRotation(0);
+        }
     }
 
     /**
