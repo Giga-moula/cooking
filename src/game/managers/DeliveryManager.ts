@@ -29,38 +29,6 @@ export class DeliveryManager {
         this.mapManager = mapManager;
     }
 
-    /**
-     * Initialise la zone de livraison
-     * Maintenant que la zone est une tile de la carte, on n'affiche qu'un texte indicateur
-     */
-    initializeDeliveryZone(): void {
-        // Détruire l'ancien graphique s'il existe
-        if (this.deliveryZoneGraphics) {
-            this.deliveryZoneGraphics.destroy();
-        }
-        
-        // Récupérer la vraie position de la zone de livraison
-        const position = this.getRealDeliveryZonePosition();
-        
-        const screenPos = IsometricUtils.gridToScreen(
-            position.x,
-            position.y
-        );
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY;
-
-        // Ne plus afficher de graphique, la zone est déjà visible sur la carte
-        // On affiche juste un texte indicateur au-dessus
-        const deliveryText = this.scene.add.text(x, y - 40, "📦 LIVRAISON", {
-            fontFamily: "Arial Black",
-            fontSize: "14px",
-            color: "#FFFFFF",
-            stroke: "#FF6B6B",
-            strokeThickness: 4,
-        });
-        deliveryText.setOrigin(0.5);
-        deliveryText.setDepth(10001);
-    }
 
     /**
      * Vérifie si une position est une zone de livraison
