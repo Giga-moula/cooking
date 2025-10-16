@@ -55,10 +55,10 @@ export default class Game extends Phaser.Scene {
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
     private livesManager?: LivesManager;
-    
+
     // Handler pour l'event listener (pour pouvoir le retirer)
     private spaceKeyHandler?: () => void;
-    
+
     constructor() {
         super("Game");
 
@@ -224,7 +224,7 @@ export default class Game extends Phaser.Scene {
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades
-        this.currencyManager = new CurrencyManager(this, 100);
+        this.currencyManager = new CurrencyManager(this, 9999);
         this.upgradeManager = new UpgradeManager();
 
         // Initialiser l'affichage de la monnaie
@@ -596,24 +596,32 @@ export default class Game extends Phaser.Scene {
             const p2Interact = this.player2.isInteractionPressed();
             const p1Transform = this.player1.isTransformPressed();
             const p2Transform = this.player2.isTransformPressed();
-            
+
             // Traiter les interactions normales si nécessaire
             if (p1Interact || p2Interact) {
                 if (p1Interact) {
-                    this.interactionSystem.handlePlayerInteraction(this.player1);
+                    this.interactionSystem.handlePlayerInteraction(
+                        this.player1
+                    );
                 }
                 if (p2Interact) {
-                    this.interactionSystem.handlePlayerInteraction(this.player2);
+                    this.interactionSystem.handlePlayerInteraction(
+                        this.player2
+                    );
                 }
             }
 
             // Traiter les transformations si nécessaire
             if (p1Transform || p2Transform) {
                 if (p1Transform) {
-                    this.interactionSystem.handlePlayerTransformation(this.player1);
+                    this.interactionSystem.handlePlayerTransformation(
+                        this.player1
+                    );
                 }
                 if (p2Transform) {
-                    this.interactionSystem.handlePlayerTransformation(this.player2);
+                    this.interactionSystem.handlePlayerTransformation(
+                        this.player2
+                    );
                 }
             }
         }
@@ -634,12 +642,14 @@ export default class Game extends Phaser.Scene {
 
         const effects = this.upgradeManager.getActiveEffects();
 
-        // Vitesse de déplacement des joueurs
+        // Vitesse de déplacement des joueurs et changement de skin
         if (this.player1) {
             this.player1.applySpeedMultiplier(effects.speedMultiplier);
+            this.player1.changeSkin(effects.skinChange);
         }
         if (this.player2) {
             this.player2.applySpeedMultiplier(effects.speedMultiplier);
+            this.player2.changeSkin(effects.skinChange);
         }
 
         // Vitesse de cuisson du four
@@ -711,7 +721,7 @@ export default class Game extends Phaser.Scene {
 
         // Mettre le jeu en pause
         this.scene.pause();
-        
+
         // Mettre en pause tous les timers
         this.timerManager?.pause();
         this.orderDisplayManager?.pauseAllTimers();
@@ -726,7 +736,7 @@ export default class Game extends Phaser.Scene {
             onClose: () => {
                 // Reprendre le jeu immédiatement
                 this.scene.resume();
-                
+
                 // Reprendre uniquement le timer principal du jeu
                 this.timerManager?.resume();
 
@@ -780,7 +790,7 @@ export default class Game extends Phaser.Scene {
             this.input.keyboard?.off("keydown-SPACE", this.spaceKeyHandler);
             this.spaceKeyHandler = undefined;
         }
-        
+
         // RecipeManager n'a pas besoin de cleanup
         if (this.casseroleManager) {
             this.casseroleManager.cleanup();
@@ -799,4 +809,3 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
-
