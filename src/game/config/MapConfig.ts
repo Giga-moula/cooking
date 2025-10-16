@@ -11,6 +11,7 @@ export interface TileTypeConfig {
     isOven?: boolean; // True si c'est un four
     isTransformationTable?: boolean; // True si c'est une table de transformation
     isCasserole?: boolean; // True si c'est une casserole de cuisson
+    isTrash?: boolean; // True si c'est une poubelle
     rotation?: number; // Rotation en radians (optionnel)
 }
 
@@ -46,4 +47,5 @@ export const DEFAULT_TILE_TYPES: { [key: number]: TileTypeConfig } = {
     11: { texture: "oven", isSolid: true, isCounter: false, isOven: true }, // Four
     12: { texture: "sugar-box", isSolid: true, isCounter: false, isIngredient: "sugar", rotation: Math.PI }, // Boîte sucre
     13: { texture: "casserole_cuisson", isSolid: true, isCounter: false, isCasserole: true }, // Casserole de cuisson
+    14: { texture: "thrash", isSolid: true, isCounter: false, isTrash: true }, // Poubelle
 };

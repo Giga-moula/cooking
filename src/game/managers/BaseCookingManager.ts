@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
 import { VisualEffectsManager } from "./VisualEffectsManager";
+import { SCALE_CONSTANTS, DEPTH_CONSTANTS } from "../config/Constants";
 
 /**
  * Classe abstraite de base pour les gestionnaires de cuisson (Four, Casserole, etc.)
@@ -48,8 +49,8 @@ export abstract class BaseCookingManager {
         // Créer une image simple
         const item = this.scene.add.image(x, y, itemType);
         item.setOrigin(0.5, 0.5);
-        item.setScale(1.2);
-        item.setDepth(y + 100);
+        item.setScale(SCALE_CONSTANTS.ITEM_IN_OVEN);
+        item.setDepth(y + DEPTH_CONSTANTS.ITEM_ON_COUNTER_OFFSET);
         this.itemsInDevice.set(key, item);
         return true;
     }

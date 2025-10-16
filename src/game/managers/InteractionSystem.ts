@@ -9,6 +9,8 @@ import { ScoreManager } from "./ScoreManager";
 import { TimerManager } from "./TimerManager";
 import { OvenManager } from "./OvenManager";
 import { CasseroleManager } from "./CasseroleManager";
+import { TrashManager } from "./TrashManager";
+import { Logger } from "../utils/Logger";
 
 /**
  * Système d'interaction orienté objet
@@ -25,6 +27,7 @@ export class InteractionSystem {
     private timerManager: TimerManager;
     private ovenManager: OvenManager;
     private casseroleManager: CasseroleManager;
+    private trashManager: TrashManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -36,7 +39,8 @@ export class InteractionSystem {
         scoreManager: ScoreManager,
         timerManager: TimerManager,
         ovenManager: OvenManager,
-        casseroleManager: CasseroleManager
+        casseroleManager: CasseroleManager,
+        trashManager: TrashManager
     ) {
         this.scene = scene;
         this.mapManager = mapManager;
@@ -48,6 +52,7 @@ export class InteractionSystem {
         this.timerManager = timerManager;
         this.ovenManager = ovenManager;
         this.casseroleManager = casseroleManager;
+        this.trashManager = trashManager;
     }
 
     /**
@@ -68,7 +73,7 @@ export class InteractionSystem {
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
         if (this.isCraftingTile(tileTypeId)) {
             // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
-            console.log(
+            Logger.log(
                 `Bloc de craft détecté - utilisez le système de craft à la place`
             );
             return;
@@ -131,7 +136,9 @@ export class InteractionSystem {
         // 1. Ingrédient
         // 2. Zone de livraison
         // 3. Four (cuisson)
-        // 4. Plan de travail (normal et table de transformation)
+        // 4. Casserole (cuisson)
+        // 5. Poubelle (jeter un objet)
+        // 6. Plan de travail (normal et table de transformation)
         // Note: Les transformations spécifiques utilisent la touche R/P
 
         if (this.handleIngredientInteraction(targetX, targetY, player)) {
@@ -150,6 +157,10 @@ export class InteractionSystem {
             return;
         }
 
+        if (this.handleTrashInteraction(targetX, targetY, player)) {
+            return;
+        }
+
         // Les tables de transformation sont aussi des comptoirs, donc on peut y poser/prendre des objets
         if (this.handleCounterInteraction(targetX, targetY, player, isoMap)) {
             return;
@@ -162,7 +173,7 @@ export class InteractionSystem {
     private isInteractiveTile(
         gridX: number,
         gridY: number,
-        isoMap: any
+        isoMap: { isCounter: (x: number, y: number) => boolean }
     ): boolean {
         return (
             isoMap.isCounter(gridX, gridY) ||
@@ -356,7 +367,7 @@ export class InteractionSystem {
         targetX: number,
         targetY: number,
         player: PlayerManager,
-        isoMap: any
+        isoMap: { isCounter: (x: number, y: number) => boolean }
     ): boolean {
         if (!isoMap.isCounter(targetX, targetY)) {
             return false;
@@ -658,5 +669,17 @@ export class InteractionSystem {
             );
             return true;
         }
+    }
+
+    /**
+     * Gère l'interaction avec la poubelle (jeter un objet)
+     */
+    private handleTrashInteraction(
+        targetX: number,
+        targetY: number,
+        player: PlayerManager
+    ): boolean {
+        const mapData = this.mapManager.getCurrentMapConfig().mapData;
+        return this.trashManager.handleTrashInteraction(player, targetX, targetY, mapData);
     }
 }

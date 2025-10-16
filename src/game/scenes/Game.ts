@@ -18,6 +18,7 @@ import { PlayerManager } from "../managers/PlayerManager";
 import { RecipeManager } from "../managers/RecipeManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
+import { TrashManager } from "../managers/TrashManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
 import { WaveManager } from "../managers/WaveManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
@@ -48,10 +49,16 @@ export default class Game extends Phaser.Scene {
 
     private ovenManager?: OvenManager;
     private casseroleManager?: CasseroleManager;
+    private trashManager?: TrashManager;
+
     private waveManager?: WaveManager;
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
     private livesManager?: LivesManager;
+    
+    // Handler pour l'event listener (pour pouvoir le retirer)
+    private spaceKeyHandler?: () => void;
+    
     constructor() {
         super("Game");
 
@@ -143,6 +150,12 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY,
             this.recipeManager
+        );
+
+        this.trashManager = new TrashManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY
         );
 
         // Passer le RecipeManager partagé au CounterInteractionManager
@@ -277,13 +290,15 @@ export default class Game extends Phaser.Scene {
             this.scoreManager,
             this.timerManager,
             this.ovenManager,
-            this.casseroleManager
+            this.casseroleManager,
+            this.trashManager
         );
 
         // Touche espace pour retourner au menu
-        this.input.keyboard?.on("keydown-SPACE", () => {
+        this.spaceKeyHandler = () => {
             this.changeScene();
-        });
+        };
+        this.input.keyboard?.on("keydown-SPACE", this.spaceKeyHandler);
 
         EventBus.emit("current-scene-ready", this);
 
@@ -453,6 +468,7 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
+            this.trashManager?.cleanup();
 
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
@@ -483,6 +499,7 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
+            this.trashManager?.cleanup();
 
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
@@ -572,24 +589,32 @@ export default class Game extends Phaser.Scene {
         this.player1.update();
         this.player2.update();
 
-        // Gestion des interactions pour chaque joueur
+        // Gestion des interactions pour chaque joueur (optimisé)
         if (this.interactionSystem) {
-            // Touche d'interaction normale (E/O) : prendre/poser/combiner
-            if (this.player1.isInteractionPressed()) {
-                this.interactionSystem.handlePlayerInteraction(this.player1);
+            // Vérifier les inputs une seule fois
+            const p1Interact = this.player1.isInteractionPressed();
+            const p2Interact = this.player2.isInteractionPressed();
+            const p1Transform = this.player1.isTransformPressed();
+            const p2Transform = this.player2.isTransformPressed();
+            
+            // Traiter les interactions normales si nécessaire
+            if (p1Interact || p2Interact) {
+                if (p1Interact) {
+                    this.interactionSystem.handlePlayerInteraction(this.player1);
+                }
+                if (p2Interact) {
+                    this.interactionSystem.handlePlayerInteraction(this.player2);
+                }
             }
 
-            if (this.player2.isInteractionPressed()) {
-                this.interactionSystem.handlePlayerInteraction(this.player2);
-            }
-
-            // Touche de transformation (R/P) : transformer sur table de transformation
-            if (this.player1.isTransformPressed()) {
-                this.interactionSystem.handlePlayerTransformation(this.player1);
-            }
-
-            if (this.player2.isTransformPressed()) {
-                this.interactionSystem.handlePlayerTransformation(this.player2);
+            // Traiter les transformations si nécessaire
+            if (p1Transform || p2Transform) {
+                if (p1Transform) {
+                    this.interactionSystem.handlePlayerTransformation(this.player1);
+                }
+                if (p2Transform) {
+                    this.interactionSystem.handlePlayerTransformation(this.player2);
+                }
             }
         }
     }
@@ -738,6 +763,12 @@ export default class Game extends Phaser.Scene {
      * Nettoyage quand on quitte la scène
      */
     shutdown() {
+        // Retirer l'event listener pour éviter les fuites mémoire
+        if (this.spaceKeyHandler) {
+            this.input.keyboard?.off("keydown-SPACE", this.spaceKeyHandler);
+            this.spaceKeyHandler = undefined;
+        }
+        
         // RecipeManager n'a pas besoin de cleanup
         if (this.casseroleManager) {
             this.casseroleManager.cleanup();
