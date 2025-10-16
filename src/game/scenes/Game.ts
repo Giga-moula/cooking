@@ -196,8 +196,6 @@ export default class Game extends Phaser.Scene {
             this.recipeManager
         );
         this.orderDisplayManager.initializeRecipeDisplay();
-
-        this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades
@@ -439,9 +437,14 @@ export default class Game extends Phaser.Scene {
      */
     updateWaveLevel(waveLevel: number): void {
         if (this.mapManager) {
-            // Nettoyer les fours et casseroles avant de régénérer la carte
+            // Nettoyer tous les objets avant de régénérer la carte
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
+            this.counterManager?.cleanup();
+
+            // Vider les inventaires des joueurs
+            this.player1?.getInventory().clear();
+            this.player2?.getInventory().clear();
 
             this.mapManager.updateWaveLevel(waveLevel);
 
@@ -464,9 +467,14 @@ export default class Game extends Phaser.Scene {
      */
     updateAvailableActions(actions: number): void {
         if (this.mapManager) {
-            // Nettoyer les fours et casseroles avant de régénérer la carte
+            // Nettoyer tous les objets avant de régénérer la carte
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
+            this.counterManager?.cleanup();
+
+            // Vider les inventaires des joueurs
+            this.player1?.getInventory().clear();
+            this.player2?.getInventory().clear();
 
             this.mapManager.updateAvailableActions(actions);
 

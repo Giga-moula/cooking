@@ -178,9 +178,6 @@ export class CounterInteractionManager {
         if (item) {
             // Changer la texture
             item.setTexture(newType);
-            // Afficher le message de transformation
-            this.showCombinationMessage(message, gridX, gridY);
-            // Effet visuel
             this.playFusionEffect(gridX, gridY);
         }
     }
@@ -201,6 +198,19 @@ export class CounterInteractionManager {
     private consumeIngredient(ingredientType: string): boolean {
         if (!this.inventoryManager) return false;
         return this.inventoryManager.removeSpecificItem(ingredientType);
+    }
+
+    /**
+     * Nettoie tous les objets posés sur les comptoirs
+     * Appelé lors du changement de carte entre les vagues
+     */
+    cleanup(): void {
+        this.itemsOnCounters.forEach((item) => {
+            if (item && item.scene) {
+                item.destroy();
+            }
+        });
+        this.itemsOnCounters.clear();
     }
 }
 

@@ -22,6 +22,7 @@ export interface PlayerZone {
     tables: SpawnPoint[];
     transformationTables: SpawnPoint[];
     ovens: SpawnPoint[];
+    casseroles: SpawnPoint[];
 }
 
 export class RandomMapGenerator {
@@ -151,7 +152,8 @@ export class RandomMapGenerator {
                 ingredientBoxes: [],
                 tables: [],
                 transformationTables: [],
-                ovens: []
+                ovens: [],
+                casseroles: []
             });
             
             // Zone joueur 2 (droite)
@@ -164,7 +166,8 @@ export class RandomMapGenerator {
                 ingredientBoxes: [],
                 tables: [],
                 transformationTables: [],
-                ovens: []
+                ovens: [],
+                casseroles: []
             });
         } else {
             // Zones côte à côte sans séparation
@@ -180,7 +183,8 @@ export class RandomMapGenerator {
                 ingredientBoxes: [],
                 tables: [],
                 transformationTables: [],
-                ovens: []
+                ovens: [],
+                casseroles: []
             });
             
             // Zone joueur 2 (droite)
@@ -193,7 +197,8 @@ export class RandomMapGenerator {
                 ingredientBoxes: [],
                 tables: [],
                 transformationTables: [],
-                ovens: []
+                ovens: [],
+                casseroles: []
             });
         }
         
@@ -202,7 +207,9 @@ export class RandomMapGenerator {
 
     /**
      * Peuple les zones des joueurs avec les éléments
-     * Distribution exclusive : pas de duplication d'éléments spéciaux entre les zones
+     * Distribution spécifique :
+     * - Zone A : 2 caisses de base + table de transformation (+ sucre vague 2+)
+     * - Zone B : 1 caisse de base + four + casserole
      */
     private static populatePlayerZones(
         mapData: number[][], 
@@ -213,136 +220,85 @@ export class RandomMapGenerator {
     ): void {
         if (zones.length < 2) return;
         
-        // Distribuer les éléments de manière exclusive entre les zones
         const zone1 = zones[0];
         const zone2 = zones[1];
         
-        // Décider aléatoirement quelle zone a le four (l'autre aura la table de transformation)
-        const zone1HasOven = Math.random() < 0.5;
-        // La table de transformation est TOUJOURS dans la zone opposée au four
-        const zone1HasTransformTable = !zone1HasOven;
+        // Décider aléatoirement quelle zone a 2 caisses
+        const zone1Has2Boxes = Math.random() < 0.5;
         
-        // Distribution aléatoire des ingrédients (1 type par zone, ~équilibré)
-        const ingredientDistribution = this.randomizeIngredientDistribution(waveLevel);
+        // Distribution des ingrédients de base (chocolat, beurre, farine)
+        const baseIngredients = [
+            { type: 6, name: 'chocolat' },   // choco_box
+            { type: 7, name: 'beurre' },     // butter_box
+            { type: 8, name: 'farine' }      // flour_box
+        ];
         
-        // Distribution aléatoire de la zone de livraison (uniquement pour la vague 1)
+        // Mélanger aléatoirement les ingrédients de base
+        const shuffled = [...baseIngredients].sort(() => Math.random() - 0.5);
+        
+        let zoneWith2Boxes: PlayerZone;
+        let zoneWith1Box: PlayerZone;
+        let ingredientsFor2BoxZone: typeof baseIngredients;
+        let ingredientsFor1BoxZone: typeof baseIngredients;
+        
+        if (zone1Has2Boxes) {
+            zoneWith2Boxes = zone1;
+            zoneWith1Box = zone2;
+            ingredientsFor2BoxZone = shuffled.slice(0, 2); // 2 premiers ingrédients
+            ingredientsFor1BoxZone = [shuffled[2]]; // Le dernier ingrédient
+        } else {
+            zoneWith2Boxes = zone2;
+            zoneWith1Box = zone1;
+            ingredientsFor2BoxZone = shuffled.slice(0, 2);
+            ingredientsFor1BoxZone = [shuffled[2]];
+        }
+        
+        // Placer les 2 caisses dans la zone avec 2 caisses
+        ingredientsFor2BoxZone.forEach(ingredient => {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith2Boxes);
+            if (position) {
+                mapData[position.y][position.x] = ingredient.type;
+                zoneWith2Boxes.ingredientBoxes.push(position);
+            }
+        });
+        
+        // À partir de la vague 2, ajouter le sucre dans la zone avec 2 caisses
+        if (waveLevel >= 2) {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith2Boxes);
+            if (position) {
+                mapData[position.y][position.x] = 12; // sugar-box
+                zoneWith2Boxes.ingredientBoxes.push(position);
+            }
+        }
+        
+        // Placer la 1 caisse dans la zone avec 1 caisse
+        ingredientsFor1BoxZone.forEach(ingredient => {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith1Box);
+            if (position) {
+                mapData[position.y][position.x] = ingredient.type;
+                zoneWith1Box.ingredientBoxes.push(position);
+            }
+        });
+        
+        // Placer les tables normales (équilibré)
+        const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
+        this.placeNormalTables(mapData, zone1, elementsPerPlayer);
+        this.placeNormalTables(mapData, zone2, elementsPerPlayer);
+        
+        // Zone avec 2 caisses : Table de transformation
+        this.placeTransformationTables(mapData, zoneWith2Boxes, 1); // Toujours 1 seule table
+        
+        // Zone avec 1 caisse : Four + Casserole
+        this.placeOvens(mapData, zoneWith1Box, 1); // 1 four
+        this.placeCasseroles(mapData, zoneWith1Box, 1); // 1 casserole
+        
+        // Zone de livraison : aléatoire (50/50)
         const deliveryInZone1 = Math.random() < 0.5;
-
-        // Placer les ingrédients selon la distribution aléatoire
-        this.placeRandomIngredients(
-            mapData, 
-            zone1, 
-            zone2, 
-            ingredientDistribution
-        );
-        
-        // Stocker la zone de livraison pour plus tard (uniquement pour la vague 1)
         if (waveLevel === 1) {
             (zone1 as any).hasDeliveryZone = deliveryInZone1;
             (zone2 as any).hasDeliveryZone = !deliveryInZone1;
         }
-        
-            // Placer les tables normales (équilibré) - Plus de tables pour plus d'interaction
-            const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
-            this.placeNormalTables(mapData, zone1, elementsPerPlayer);
-            this.placeNormalTables(mapData, zone2, elementsPerPlayer);
-        
-        // Distribution exclusive des éléments spéciaux
-        // Chaque zone a exactement 1 élément spécial (four XOR table de transformation)
-        if (zone1HasOven) {
-            // Zone 1 : Four
-            this.placeOvens(mapData, zone1, complexity);
-            // Zone 2 : Table de transformation
-            this.placeTransformationTables(mapData, zone2, complexity);
-        } else {
-            // Zone 1 : Table de transformation
-            this.placeTransformationTables(mapData, zone1, complexity);
-            // Zone 2 : Four
-            this.placeOvens(mapData, zone2, complexity);
-        }
     }
-
-    /**
-     * Génère une distribution aléatoire des ingrédients
-     * Garantit ~équilibre entre les zones (1 ou 2 types par zone)
-     */
-    private static randomizeIngredientDistribution(waveLevel: number): {
-        zone1Ingredients: string[];
-        zone2Ingredients: string[];
-        zone1Types: number[];
-        zone2Types: number[];
-    } {
-        const allIngredients = [
-            { type: 6, name: '🍫 Chocolat' },
-            { type: 7, name: '🧈 Beurre' },
-            { type: 8, name: '🌾 Farine' },
-            { type: 12, name: '🍬 Sucre' }
-        ];
-        
-        // Mélanger les ingrédients de base (sans le sucre)
-        const baseIngredients = allIngredients.slice(0, 3); // Chocolat, Beurre, Farine
-        const shuffled = [...baseIngredients].sort(() => Math.random() - 0.5);
-        
-        // Distribution selon les règles : casserole dans zone avec 1 caisse, sucre dans zone avec 2 caisses
-        const zone1Count = Math.random() < 0.5 ? 2 : 1;
-        const zone2Count = 3 - zone1Count;
-        
-        const zone1Ingredients = shuffled.slice(0, zone1Count);
-        const zone2Ingredients = shuffled.slice(zone1Count);
-        
-        // Ajouter casserole et sucre selon les règles (seulement à partir de la vague 2)
-        const shouldIncludeCasserole = waveLevel >= 2;
-        
-        if (shouldIncludeCasserole) {
-            if (zone1Count === 1) {
-                // Zone 1 a 1 caisse → elle aura la casserole
-                zone1Ingredients.push({ type: 13, name: '🍳 Casserole' });
-                // Zone 2 a 2 caisses → elle aura le sucre
-                zone2Ingredients.push({ type: 12, name: '🍬 Sucre' });
-            } else {
-                // Zone 1 a 2 caisses → elle aura le sucre
-                zone1Ingredients.push({ type: 12, name: '🍬 Sucre' });
-                // Zone 2 a 1 caisse → elle aura la casserole
-                zone2Ingredients.push({ type: 13, name: '🍳 Casserole' });
-            }
-        }
-        
-        return {
-            zone1Ingredients: zone1Ingredients.map(i => i.name),
-            zone2Ingredients: zone2Ingredients.map(i => i.name),
-            zone1Types: zone1Ingredients.map(i => i.type),
-            zone2Types: zone2Ingredients.map(i => i.type)
-        };
-    }
-
-    /**
-     * Place les ingrédients selon la distribution aléatoire
-     */
-    private static placeRandomIngredients(
-        mapData: number[][], 
-        zone1: PlayerZone, 
-        zone2: PlayerZone,
-        distribution: { zone1Types: number[]; zone2Types: number[] }
-    ): void {
-        // Placer les ingrédients de la zone 1 avec validation
-        distribution.zone1Types.forEach(ingredientType => {
-            const position = this.findSafeEmptyPosition(mapData, zone1);
-            if (position) {
-                mapData[position.y][position.x] = ingredientType;
-                zone1.ingredientBoxes.push(position);
-            }
-        });
-        
-        // Placer les ingrédients de la zone 2 avec validation
-        distribution.zone2Types.forEach(ingredientType => {
-            const position = this.findSafeEmptyPosition(mapData, zone2);
-            if (position) {
-                mapData[position.y][position.x] = ingredientType;
-                zone2.ingredientBoxes.push(position);
-            }
-        });
-    }
-
 
     /**
      * Place les tables normales dans une zone
@@ -409,17 +365,25 @@ export class RandomMapGenerator {
     /**
      * Place les fours dans une zone
      */
-    private static placeOvens(mapData: number[][], zone: PlayerZone, complexity: number): void {
-        // Toujours placer au moins 1 four par zone
-        const minOvens = 1;
-        const maxOvens = Math.min(complexity, 2); // Max 2 fours par zone
-        const ovenCount = Math.max(minOvens, maxOvens);
-        
-        for (let i = 0; i < ovenCount; i++) {
+    private static placeOvens(mapData: number[][], zone: PlayerZone, count: number): void {
+        for (let i = 0; i < count; i++) {
             const position = this.findSafeEmptyPosition(mapData, zone);
             if (position) {
                 mapData[position.y][position.x] = 11; // Four
                 zone.ovens.push(position);
+            }
+        }
+    }
+
+    /**
+     * Place les casseroles dans une zone
+     */
+    private static placeCasseroles(mapData: number[][], zone: PlayerZone, count: number): void {
+        for (let i = 0; i < count; i++) {
+            const position = this.findSafeEmptyPosition(mapData, zone);
+            if (position) {
+                mapData[position.y][position.x] = 13; // Casserole
+                zone.casseroles.push(position);
             }
         }
     }
@@ -529,7 +493,7 @@ export class RandomMapGenerator {
             for (const tile of spawnTiles) {
                 if (tile.y >= 0 && tile.y < mapData.length && tile.x >= 0 && tile.x < mapData[0].length) {
                     const tileValue = mapData[tile.y][tile.x];
-                    if (tileValue !== 1 && tileValue !== 9) { // Doit être sol libre (1) ou zone de livraison (9)
+                    if (tileValue !== 1) { // Doit être sol libre uniquement
                         console.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
                         return false;
                     }
@@ -573,14 +537,23 @@ export class RandomMapGenerator {
                 }
             }
             
-            // 5. Vérifier la zone de livraison si elle est dans cette zone
+            // 5. Vérifier les casseroles
+            for (const pos of zone.casseroles) {
+                if (!this.isPositionAccessible(pos, accessiblePositions)) {
+                    console.warn(`❌ Zone ${i + 1}: Casserole à (${pos.x}, ${pos.y}) inaccessible`);
+                    return false;
+                }
+            }
+            
+            // 6. Vérifier la zone de livraison si elle est dans cette zone
+            // La zone de livraison est solide, on vérifie qu'elle est accessible (cases adjacentes)
             const deliveryZone = this.findDeliveryZone(mapData, zone);
-            if (deliveryZone && !accessiblePositions.has(`${deliveryZone.x},${deliveryZone.y}`)) {
+            if (deliveryZone && !this.isPositionAccessible(deliveryZone, accessiblePositions)) {
                 console.warn(`❌ Zone ${i + 1}: Zone de livraison à (${deliveryZone.x}, ${deliveryZone.y}) inaccessible`);
                 return false;
             }
             
-            // 6. Vérifier que TOUTES les cases de sol libre de la zone sont accessibles
+            // 7. Vérifier que TOUTES les cases de sol libre de la zone sont accessibles
             const totalFloorTiles = this.countFloorTiles(mapData, zone);
             const accessibleFloorTiles = accessiblePositions.size;
             
@@ -707,7 +680,7 @@ export class RandomMapGenerator {
     }
 
     /**
-     * Compte le nombre total de cases de sol libre et zones de livraison dans une zone
+     * Compte le nombre total de cases de sol libre dans une zone
      */
     private static countFloorTiles(mapData: number[][], zone: PlayerZone): number {
         let count = 0;
@@ -715,8 +688,8 @@ export class RandomMapGenerator {
         for (let y = zone.startY; y <= zone.endY; y++) {
             for (let x = zone.startX; x <= zone.endX; x++) {
                 const tile = mapData[y][x];
-                // Compter les cases marchables (sol libre + zone de livraison)
-                if (tile === 1 || tile === 9) {
+                // Compter uniquement les cases marchables (sol libre)
+                if (tile === 1) {
                     count++;
                 }
             }
@@ -752,10 +725,9 @@ export class RandomMapGenerator {
             // Vérifier si la position est valide
             const tile = mapData[current.y][current.x];
             
-            // Les joueurs peuvent marcher sur :
-            // - Sol libre (1)
-            // - Zones de livraison (9)
-            const isWalkable = tile === 1 || tile === 9;
+            // Les joueurs peuvent marcher uniquement sur le sol libre (1)
+            // La zone de livraison (9) est maintenant solide
+            const isWalkable = tile === 1;
             
             if (!isWalkable) continue;
             

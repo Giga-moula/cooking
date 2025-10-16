@@ -176,5 +176,14 @@ export class InventoryManager {
     getAllIngredients(): string[] {
         return [...this.inventory];
     }
+
+    /**
+     * Vide complètement l'inventaire et détruit l'objet visuel porté
+     * Appelé lors du changement de carte entre les vagues
+     */
+    clear(): void {
+        this.inventory = [];
+        this.removeCarriedItem();
+    }
 }
 
