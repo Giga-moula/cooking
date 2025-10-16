@@ -238,10 +238,12 @@ export class RecipeBox {
      */
     public resume(): void {
         if (!this.isPaused) return;
-        
+
         this.isPaused = false;
         // Recalculer le startTime pour que le temps restant soit correct
-        this.data.startTime = this.scene.time.now - (this.data.maxTime - this.pausedTimeRemaining) * 1000;
+        this.data.startTime =
+            this.scene.time.now -
+            (this.data.maxTime - this.pausedTimeRemaining) * 1000;
     }
 
     /**
@@ -390,10 +392,10 @@ export class RecipeBox {
     destroy(): void {
         this.isDestroyed = true;
         this.stopTimer();
-        
+
         // Tuer tous les tweens actifs sur ce container
         this.scene.tweens.killTweensOf(this.data.container);
-        
+
         this.data.container.destroy();
     }
 
@@ -468,4 +470,3 @@ export class RecipeBox {
      */
     onExpired?: () => void;
 }
-
