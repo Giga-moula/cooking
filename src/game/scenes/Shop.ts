@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { CurrencyManager } from "../managers/CurrencyManager";
-import { UpgradeManager, Upgrade, UpgradeType } from "../managers/UpgradeManager";
+import { Upgrade, UpgradeManager } from "../managers/UpgradeManager";
 
 /**
  * Scène Shop - Apparaît entre les vagues
@@ -11,7 +11,7 @@ export default class Shop extends Phaser.Scene {
     private coinsEarned: number = 0;
     private waveNumber: number = 1;
     private onClose?: () => void;
-    
+
     private upgradeButtons: Phaser.GameObjects.Container[] = [];
 
     constructor() {
@@ -54,33 +54,48 @@ export default class Shop extends Phaser.Scene {
         container.add(shopBg);
 
         // Titre
-        const titleText = this.add.text(0, -280, `🏪 BOUTIQUE - Vague ${this.waveNumber} Terminée !`, {
-            fontFamily: "Arial Black",
-            fontSize: "36px",
-            color: "#FFD700",
-            stroke: "#8B4513",
-            strokeThickness: 6,
-        });
+        const titleText = this.add.text(
+            0,
+            -280,
+            `🏪 BOUTIQUE - Vague ${this.waveNumber} Terminée !`,
+            {
+                fontFamily: "Arial Black",
+                fontSize: "36px",
+                color: "#FFD700",
+                stroke: "#8B4513",
+                strokeThickness: 6,
+            }
+        );
         titleText.setOrigin(0.5);
         container.add(titleText);
 
         // Affichage des gains
-        const earningsText = this.add.text(0, -230, `💰 Vous avez gagné ${this.coinsEarned} coins !`, {
-            fontFamily: "Arial",
-            fontSize: "24px",
-            color: "#00FF00",
-            stroke: "#004400",
-            strokeThickness: 3,
-        });
+        const earningsText = this.add.text(
+            0,
+            -230,
+            `💰 Vous avez gagné ${this.coinsEarned} coins !`,
+            {
+                fontFamily: "Arial",
+                fontSize: "24px",
+                color: "#00FF00",
+                stroke: "#004400",
+                strokeThickness: 3,
+            }
+        );
         earningsText.setOrigin(0.5);
         container.add(earningsText);
 
         // Solde actuel
-        const balanceText = this.add.text(0, -200, `Solde: ${this.currencyManager?.getTotalCoins() || 0} coins`, {
-            fontFamily: "Arial Black",
-            fontSize: "20px",
-            color: "#FFFFFF",
-        });
+        const balanceText = this.add.text(
+            0,
+            -200,
+            `Solde: ${this.currencyManager?.getTotalCoins() || 0} coins`,
+            {
+                fontFamily: "Arial Black",
+                fontSize: "20px",
+                color: "#FFFFFF",
+            }
+        );
         balanceText.setOrigin(0.5);
         container.add(balanceText);
 
@@ -112,7 +127,14 @@ export default class Shop extends Phaser.Scene {
             const x = startX + col * spacingX;
             const y = startY + row * spacingY;
 
-            this.createUpgradeCard(container, upgrade, x, y, cardWidth, cardHeight);
+            this.createUpgradeCard(
+                container,
+                upgrade,
+                x,
+                y,
+                cardWidth,
+                cardHeight
+            );
         });
     }
 
@@ -130,8 +152,10 @@ export default class Shop extends Phaser.Scene {
         const cardContainer = this.add.container(x, y);
         parentContainer.add(cardContainer);
 
-        const canAfford = this.currencyManager?.canAfford(upgrade.cost) || false;
-        const canPurchase = this.upgradeManager?.canPurchase(upgrade.id) || false;
+        const canAfford =
+            this.currencyManager?.canAfford(upgrade.cost) || false;
+        const canPurchase =
+            this.upgradeManager?.canPurchase(upgrade.id) || false;
         const isMaxed = upgrade.currentLevel >= upgrade.maxLevel;
 
         // Fond de la carte
@@ -179,11 +203,16 @@ export default class Shop extends Phaser.Scene {
 
         // Niveau actuel
         if (upgrade.maxLevel > 1) {
-            const levelText = this.add.text(0, 50, `Niveau ${upgrade.currentLevel}/${upgrade.maxLevel}`, {
-                fontFamily: "Arial",
-                fontSize: "12px",
-                color: "#FFD700",
-            });
+            const levelText = this.add.text(
+                0,
+                50,
+                `Niveau ${upgrade.currentLevel}/${upgrade.maxLevel}`,
+                {
+                    fontFamily: "Arial",
+                    fontSize: "12px",
+                    color: "#FFD700",
+                }
+            );
             levelText.setOrigin(0.5);
             cardContainer.add(levelText);
         }
@@ -198,7 +227,10 @@ export default class Shop extends Phaser.Scene {
             maxedText.setOrigin(0.5);
             cardContainer.add(maxedText);
         } else {
-            const buyButton = this.createBuyButton(upgrade, canAfford && canPurchase);
+            const buyButton = this.createBuyButton(
+                upgrade,
+                canAfford && canPurchase
+            );
             buyButton.setPosition(0, 75);
             cardContainer.add(buyButton);
         }
@@ -209,7 +241,10 @@ export default class Shop extends Phaser.Scene {
     /**
      * Crée un bouton d'achat
      */
-    private createBuyButton(upgrade: Upgrade, enabled: boolean): Phaser.GameObjects.Container {
+    private createBuyButton(
+        upgrade: Upgrade,
+        enabled: boolean
+    ): Phaser.GameObjects.Container {
         const buttonContainer = this.add.container(0, 0);
 
         // Fond du bouton
@@ -278,7 +313,9 @@ export default class Shop extends Phaser.Scene {
     /**
      * Crée le bouton continuer
      */
-    private createContinueButton(container: Phaser.GameObjects.Container): void {
+    private createContinueButton(
+        container: Phaser.GameObjects.Container
+    ): void {
         const buttonContainer = this.add.container(0, 270);
         container.add(buttonContainer);
 
@@ -330,7 +367,6 @@ export default class Shop extends Phaser.Scene {
      * Ferme le shop et continue le jeu
      */
     private closeShop(): void {
-        
         // Appeler le callback
         if (this.onClose) {
             this.onClose();

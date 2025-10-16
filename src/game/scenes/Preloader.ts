@@ -66,10 +66,22 @@ export default class Preloader extends Phaser.Scene {
 
         // === INGRÉDIENTS TRANSFORMÉS ===
         this.load.image("caramel", "assets/crafted/caramel.png");
-        this.load.image("chocolate-chunks", "assets/crafted/chocolate-chunks.png");
-        this.load.image("cookie-mix-cara", "assets/crafted/cookie-mix-cara.png");
-        this.load.image("cookie-mix-choco", "assets/crafted/cookie-mix-choco.png");
-        this.load.image("cookie-mix-choco-cara", "assets/crafted/cookie-mix-choco-cara.png");
+        this.load.image(
+            "chocolate-chunks",
+            "assets/crafted/chocolate-chunks.png"
+        );
+        this.load.image(
+            "cookie-mix-cara",
+            "assets/crafted/cookie-mix-cara.png"
+        );
+        this.load.image(
+            "cookie-mix-choco",
+            "assets/crafted/cookie-mix-choco.png"
+        );
+        this.load.image(
+            "cookie-mix-choco-cara",
+            "assets/crafted/cookie-mix-choco-cara.png"
+        );
         this.load.image("dough", "assets/crafted/dough.png");
         this.load.image("molten_butter", "assets/crafted/molten_butter.png");
 
@@ -77,7 +89,10 @@ export default class Preloader extends Phaser.Scene {
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("cookie-cara", "assets/meal/cookie-cara.png");
         this.load.image("cookie-choco", "assets/meal/cookie-choco.png");
-        this.load.image("cookie-choco-cara", "assets/meal/cookie-choco-cara.png");
+        this.load.image(
+            "cookie-choco-cara",
+            "assets/meal/cookie-choco-cara.png"
+        );
         this.load.image("cookie-dead", "assets/meal/cookie-dead.png");
 
         // === CAISSES D'INGRÉDIENTS ===
@@ -115,46 +130,118 @@ export default class Preloader extends Phaser.Scene {
         // Charger les tuiles de table
         // === SPRITES DES JOUEURS (GRAND-MÈRES) ===
         // Grand-mère bleue
-        this.load.image("blue-grandma-back", "assets/grandma/blue/grandma_blue_back.png");
-        this.load.image("blue-grandma-front", "assets/grandma/blue/grandma_blue_front.png");
-        this.load.image("blue-grandma-side", "assets/grandma/blue/grandma_blue_side.png");
-        
+        this.load.image(
+            "blue-grandma-back",
+            "assets/grandma/blue/grandma_blue_back.png"
+        );
+        this.load.image(
+            "blue-grandma-front",
+            "assets/grandma/blue/grandma_blue_front.png"
+        );
+        this.load.image(
+            "blue-grandma-side",
+            "assets/grandma/blue/grandma_blue_side.png"
+        );
+
         // Grand-mère rouge
-        this.load.image("red-grandma-back", "assets/grandma/red/grandma_red_back.png");
-        this.load.image("red-grandma-front", "assets/grandma/red/grandma_red_front.png");
-        this.load.image("red-grandma-side", "assets/grandma/red/grandma_red_side.png");
+        this.load.image(
+            "red-grandma-back",
+            "assets/grandma/red/grandma_red_back.png"
+        );
+        this.load.image(
+            "red-grandma-front",
+            "assets/grandma/red/grandma_red_front.png"
+        );
+        this.load.image(
+            "red-grandma-side",
+            "assets/grandma/red/grandma_red_side.png"
+        );
 
         // === TUILES DE TABLE (par ordre de complexité) ===
         this.load.image("table-mono", "assets/table/table-mono.png");
-        
+
         // 1 ouverture
-        this.load.image("table-open-bottom", "assets/table/table-open-bottom.png");
+        this.load.image(
+            "table-open-bottom",
+            "assets/table/table-open-bottom.png"
+        );
         this.load.image("table-open-left", "assets/table/table-open-left.png");
-        this.load.image("table-open-right", "assets/table/table-open-right.png");
+        this.load.image(
+            "table-open-right",
+            "assets/table/table-open-right.png"
+        );
         this.load.image("table-open-top", "assets/table/table-open-top.png");
-        
+
         // 2 ouvertures
-        this.load.image("table-open-left-bottom", "assets/table/table-open-left-bottom.png");
-        this.load.image("table-open-left-top", "assets/table/table-open-left-top.png");
-        this.load.image("table-open-right-bottom", "assets/table/table-open-right-bottom.png");
-        this.load.image("table-open-right-left", "assets/table/table-open-right-left.png");
-        this.load.image("table-open-right-top", "assets/table/table-open-right-top.png");
-        this.load.image("table-open-top-bottom", "assets/table/table-open-top-bottom.png");
-        
+        this.load.image(
+            "table-open-left-bottom",
+            "assets/table/table-open-left-bottom.png"
+        );
+        this.load.image(
+            "table-open-left-top",
+            "assets/table/table-open-left-top.png"
+        );
+        this.load.image(
+            "table-open-right-bottom",
+            "assets/table/table-open-right-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-left",
+            "assets/table/table-open-right-left.png"
+        );
+        this.load.image(
+            "table-open-right-top",
+            "assets/table/table-open-right-top.png"
+        );
+        this.load.image(
+            "table-open-top-bottom",
+            "assets/table/table-open-top-bottom.png"
+        );
+
         // 3 ouvertures
-        this.load.image("table-open-left-top-bottom", "assets/table/table-open-left-top-bottom.png");
-        this.load.image("table-open-right-left-top", "assets/table/table-open-right-left-top.png");
-        this.load.image("table-open-right-top-bottom", "assets/table/table-open-right-top-bottom.png");
-        this.load.image("table-open-right-left-bottom", "assets/table/table-open-right-left-bottom.png");
-        
+        this.load.image(
+            "table-open-left-top-bottom",
+            "assets/table/table-open-left-top-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-left-top",
+            "assets/table/table-open-right-left-top.png"
+        );
+        this.load.image(
+            "table-open-right-top-bottom",
+            "assets/table/table-open-right-top-bottom.png"
+        );
+        this.load.image(
+            "table-open-right-left-bottom",
+            "assets/table/table-open-right-left-bottom.png"
+        );
+
         // 4 ouvertures
-        this.load.image("table-open-right-left-top-bottom", "assets/table/table-open-right-left-top-bottom.png");
+        this.load.image(
+            "table-open-right-left-top-bottom",
+            "assets/table/table-open-right-left-top-bottom.png"
+        );
 
         // === TEXTURES DE SOL ===
         this.load.image("planks", "assets/planks.png");
 
         // === AUDIO ===
         this.load.audio("grandma-song", "assets/musics/grandma_song.mp3");
+
+        // === IMAGES DE TUTORIEL ===
+        this.load.image("craft-table", "assets/tuto/craft-table.png");
+        this.load.image("pan", "assets/tuto/pan.png");
+        this.load.image("crafting-butter", "assets/tuto/crafting-butter.png");
+        this.load.image("crafting-dough", "assets/tuto/crafting-dough.png");
+        this.load.image("crafting-choco", "assets/tuto/crafting-choco.png");
+        this.load.image("full-game", "assets/tuto/full-game.png");
+        this.load.image(
+            "global-time-score",
+            "assets/tuto/global-time-score.png"
+        );
+        this.load.image("recipe-heart", "assets/tuto/recipe-heart.png");
+        this.load.image("crafting-sugar", "assets/tuto/crafting-sugar.png");
+        this.load.image("crafting-mix", "assets/tuto/crafting-mix.png");
     }
 
     create() {

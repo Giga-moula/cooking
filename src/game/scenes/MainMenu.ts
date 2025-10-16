@@ -68,6 +68,7 @@ export default class MainMenu extends Phaser.Scene {
 
         // Créer les boutons stylisés
         this.createPlayButton();
+        this.createTutorialButton();
         this.createLeaderboardButton();
         this.createLeaderboardPreview();
         this.createMusicButton();
@@ -114,7 +115,7 @@ export default class MainMenu extends Phaser.Scene {
 
     createPlayButton() {
         // Créer un conteneur pour le bouton
-        const buttonContainer = this.add.container(512, 440);
+        const buttonContainer = this.add.container(512, 400);
         buttonContainer.setDepth(10); // Boutons au premier plan
 
         // Fond du bouton - forme de pilule avec dégradé
@@ -337,9 +338,75 @@ export default class MainMenu extends Phaser.Scene {
         });
     }
 
+    createTutorialButton() {
+        // Créer un conteneur pour le bouton Tutorial
+        const buttonContainer = this.add.container(512, 480);
+        buttonContainer.setDepth(10); // Boutons au premier plan
+
+        // Fond du bouton - forme de pilule avec dégradé
+        const buttonBg = this.add.graphics();
+
+        // Dessiner la forme de pilule (plus large)
+        buttonBg.fillGradientStyle(0xffd700, 0xff8c00, 0xffd700, 0xff8c00, 1);
+        buttonBg.fillRoundedRect(-160, -30, 320, 60, 30);
+
+        // Bordure marron foncé
+        buttonBg.lineStyle(6, 0x8b4513, 1);
+        buttonBg.strokeRoundedRect(-160, -30, 320, 60, 30);
+
+        buttonContainer.add(buttonBg);
+
+        // Texte TUTORIAL
+        const tutorialText = this.add.text(0, 0, "TUTORIEL", {
+            fontFamily: "Arial Black",
+            fontSize: "32px",
+            color: "#FFFFFF",
+            stroke: "#8b4513",
+            strokeThickness: 6,
+        });
+        tutorialText.setOrigin(0.5, 0.5);
+        buttonContainer.add(tutorialText);
+
+        // Rendre le bouton interactif
+        buttonContainer.setSize(320, 60);
+        buttonContainer.setInteractive({ useHandCursor: true });
+
+        buttonContainer.on("pointerout", () => {
+            buttonContainer.setScale(1);
+        });
+
+        // Action au clic avec effet - lance la scène Tutorial
+        buttonContainer.on("pointerdown", () => {
+            // Animation de clic
+            this.tweens.add({
+                targets: buttonContainer,
+                scaleX: 0.95,
+                scaleY: 0.95,
+                duration: 100,
+                yoyo: true,
+                repeat: 1,
+                onComplete: () => {
+                    // Lancer la scène Tutorial
+                    this.scene.start("Tutorial");
+                },
+            });
+        });
+
+        // Animation de pulsation continue subtile
+        this.tweens.add({
+            targets: buttonContainer,
+            scaleX: 1.02,
+            scaleY: 1.02,
+            duration: 2000,
+            ease: "Sine.easeInOut",
+            yoyo: true,
+            repeat: -1,
+        });
+    }
+
     createLeaderboardButton() {
         // Créer un conteneur pour le bouton Leaderboard
-        const buttonContainer = this.add.container(512, 530);
+        const buttonContainer = this.add.container(512, 560);
         buttonContainer.setDepth(10); // Boutons au premier plan
 
         // Fond du bouton - forme de pilule avec dégradé
