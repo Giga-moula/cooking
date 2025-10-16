@@ -139,6 +139,11 @@ export class CraftActions {
         const target = this.playerManager.getTargetPosition();
         const tileTypeId = this.mapManager.getTileTypeId(target.x, target.y);
 
+        // Le four (tileTypeId 11) n'utilise plus le système de craft, mais un timer à la place
+        if (tileTypeId === 11) {
+            return null;
+        }
+
         if (!tileTypeId || !getCraftingItem(tileTypeId)) {
             return null;
         }

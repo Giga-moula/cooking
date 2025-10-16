@@ -69,6 +69,16 @@ export class InteractionSystem {
         const targetX = target.x;
         const targetY = target.y;
 
+        // Vérifier d'abord le four pour la cuisson (utilise le timer, pas le système de craft)
+        if (this.handleOvenCooking(targetX, targetY, player)) {
+            return;
+        }
+
+        // Vérifier aussi la casserole pour la cuisson
+        if (this.handleCasseroleCooking(targetX, targetY, player)) {
+            return;
+        }
+
         // Vérifier si c'est un bloc de craft - si oui, ignorer la transformation automatique
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
         if (this.isCraftingTile(tileTypeId)) {
@@ -83,16 +93,6 @@ export class InteractionSystem {
         if (
             this.handleTransformationTableInteraction(targetX, targetY, player)
         ) {
-            return;
-        }
-
-        // Vérifier aussi le four pour la cuisson
-        if (this.handleOvenCooking(targetX, targetY, player)) {
-            return;
-        }
-
-        // Vérifier aussi la casserole pour la cuisson
-        if (this.handleCasseroleCooking(targetX, targetY, player)) {
             return;
         }
     }
