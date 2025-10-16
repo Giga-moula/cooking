@@ -274,35 +274,35 @@ export default class Tutorial extends Phaser.Scene {
         } else if (screenIndex === 2) {
             // Pour le slide 3 (table de préparation), afficher craft-table au-dessus et les deux autres côte à côte
             const craftTable = this.add.image(300, 250, "craft-table");
-            craftTable.setDisplaySize(200, 150);
+            craftTable.setDisplaySize(300, 250);
             craftTable.setDepth(0);
 
-            const craftingChoco = this.add.image(150, 450, "crafting-choco");
-            craftingChoco.setDisplaySize(180, 135);
+            const craftingChoco = this.add.image(150, 550, "crafting-choco");
+            craftingChoco.setDisplaySize(280, 235);
             craftingChoco.setDepth(0);
 
-            const craftingDough = this.add.image(450, 450, "crafting-dough");
-            craftingDough.setDisplaySize(180, 135);
+            const craftingDough = this.add.image(450, 550, "crafting-dough");
+            craftingDough.setDisplaySize(280, 235);
             craftingDough.setDepth(0);
         } else if (screenIndex === 3) {
             const pan = this.add.image(300, 250, "pan");
-            pan.setDisplaySize(200, 150);
+            pan.setDisplaySize(300, 250);
             pan.setDepth(0);
 
-            const craftingButter = this.add.image(150, 450, "crafting-butter");
-            craftingButter.setDisplaySize(180, 135);
+            const craftingButter = this.add.image(150, 550, "crafting-butter");
+            craftingButter.setDisplaySize(280, 235);
             craftingButter.setDepth(0);
 
-            const craftingSugar = this.add.image(450, 450, "crafting-sugar");
-            craftingSugar.setDisplaySize(180, 135);
+            const craftingSugar = this.add.image(450, 550, "crafting-sugar");
+            craftingSugar.setDisplaySize(280, 235);
             craftingSugar.setDepth(0);
         } else if (screenIndex === 4) {
             const oven = this.add.image(300, 250, "oven");
-            oven.setDisplaySize(200, 150);
+            oven.setDisplaySize(300, 250);
             oven.setDepth(0);
 
-            const craftingMix = this.add.image(300, 450, "crafting-mix");
-            craftingMix.setDisplaySize(180, 135);
+            const craftingMix = this.add.image(300, 550, "crafting-mix");
+            craftingMix.setDisplaySize(280, 235);
             craftingMix.setDepth(0);
         } else if (screenIndex === 5) {
             // Pour la dernière slide (tutoriel pratique), utiliser kitchen en background
@@ -639,10 +639,10 @@ export default class Tutorial extends Phaser.Scene {
     }
 
     /**
-     * Lance le jeu principal
+     * Lance le jeu tutorial avec la map cookie-choco
      */
     startGame() {
-        this.scene.start("Game");
+        this.scene.start("TutorialGame");
     }
 
     /* END-USER-CODE */

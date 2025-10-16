@@ -7,6 +7,7 @@ import MainMenu from "./scenes/MainMenu";
 import Preloader from "./scenes/Preloader";
 import Shop from "./scenes/Shop";
 import Tutorial from "./scenes/Tutorial";
+import TutorialGame from "./scenes/TutorialGame";
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -40,6 +41,7 @@ const config: Phaser.Types.Core.GameConfig = {
         Preloader,
         MainMenu,
         Tutorial,
+        TutorialGame,
         MainGame,
         Shop,
         GameOver,

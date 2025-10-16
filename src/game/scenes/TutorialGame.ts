@@ -9,7 +9,6 @@ import { CommunicationManager } from "../managers/CommunicationManager";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { CurrencyManager } from "../managers/CurrencyManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
-import { DynamicMapManager } from "../managers/DynamicMapManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { LivesManager } from "../managers/LivesManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
@@ -19,11 +18,11 @@ import { RecipeManager } from "../managers/RecipeManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
 import { TrashManager } from "../managers/TrashManager";
+import { TutorialMapManager } from "../managers/TutorialMapManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
 import { WaveManager } from "../managers/WaveManager";
-import { IsometricUtils } from "../utils/IsometricUtils";
 
-export default class Game extends Phaser.Scene {
+export default class TutorialGame extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
     private mapOffsetY: number = GameConfig.MAP_OFFSET_Y;
 
@@ -32,7 +31,7 @@ export default class Game extends Phaser.Scene {
     private player2: PlayerManager;
     private playerList: PlayerManager[];
 
-    private mapManager?: DynamicMapManager;
+    private mapManager?: TutorialMapManager;
     private communicationManager?: CommunicationManager;
 
     private counterManager?: CounterInteractionManager;
@@ -60,7 +59,7 @@ export default class Game extends Phaser.Scene {
     private spaceKeyHandler?: () => void;
 
     constructor() {
-        super("Game");
+        super("TutorialGame");
 
         /* START-USER-CTR-CODE */
         // Write your code here.
@@ -106,8 +105,8 @@ export default class Game extends Phaser.Scene {
 
         this.playerList = [this.player1, this.player2];
 
-        // Initialiser les managers
-        this.mapManager = new DynamicMapManager(
+        // Initialiser le MapManager spécial pour le tutoriel
+        this.mapManager = new TutorialMapManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY
@@ -164,7 +163,7 @@ export default class Game extends Phaser.Scene {
         // Créer les tiles procéduralement
         this.mapManager.createIsometricTiles();
 
-        // Créer la carte en grille
+        // Créer la carte spéciale cookie-choco 8x8
         const isoMap = this.mapManager.createMap();
 
         // Connecter les managers de cuisine au MapManager
@@ -213,8 +212,6 @@ export default class Game extends Phaser.Scene {
             }
         }
 
-        // Les tiles d'ingrédients sont maintenant initialisées automatiquement par la configuration
-
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
             this,
@@ -234,41 +231,9 @@ export default class Game extends Phaser.Scene {
         this.livesManager = new LivesManager(this);
         this.livesManager.initializeLivesDisplay(30, 200);
 
-        // Initialiser le système de vagues
-        this.waveManager = new WaveManager(
-            this,
-            this.orderDisplayManager,
-            this.scoreManager,
-            this.recipeManager
-        );
-        this.waveManager.initializeWaveDisplay();
-
-        // Connecter le système de vagues avec OrderDisplayManager
-        this.orderDisplayManager.setOrderCompletedCallback((dishId: string) => {
-            this.waveManager?.completeRecipe(dishId);
-        });
-
-        // Connecter le callback d'expiration pour décrémenter le compteur de commandes actives
-        this.orderDisplayManager.setOrderExpiredCallback(() => {
-            this.waveManager?.expireOrder();
-        });
-
-        // Connecter le callback de perte de vie
-        this.waveManager.setLoseLifeCallback(() => {
-            this.livesManager?.loseLife();
-        });
-
-        // Connecter le callback de Game Over quand toutes les vies sont perdues
-        this.livesManager.setGameOverCallback(() => {
-            this.endGame("expired");
-        });
-
-        // Connecter le callback de vague complétée pour ouvrir le shop
-        this.waveManager.setWaveCompletedCallback(
-            (waveNumber, timeSpent, recipeIds) => {
-                this.openShop(waveNumber, timeSpent, recipeIds);
-            }
-        );
+        // Pour le tutoriel, on désactive le système de vagues
+        // et on configure une seule commande de cookie-choco
+        this.setupTutorialMode();
 
         // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
         this.timerManager = new TimerManager(this);
@@ -276,8 +241,6 @@ export default class Game extends Phaser.Scene {
             GameConfig.TIMER.DISPLAY_X,
             GameConfig.TIMER.DISPLAY_Y
         );
-
-        // NE PAS démarrer immédiatement - attendre le countdown
 
         // Créer le système d'interaction orienté objet (APRÈS tous les managers)
         this.interactionSystem = new InteractionSystem(
@@ -365,223 +328,157 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
+     * Configure le mode tutoriel avec une seule commande
+     */
+    private setupTutorialMode(): void {
+        // Créer une seule commande de cookie-choco
+        if (this.orderDisplayManager && this.recipeManager) {
+            // Créer la recette pour le cookie-choco
+            const cookieChocoRecipe = {
+                id: "tutorial_cookie_choco",
+                ingredient1: "dough",
+                ingredient2: "chocolate-chunks",
+                result: "cookie-choco",
+                name: "Cookie Chocolat",
+                displayIngredients: ["dough", "chocolate-chunks"],
+            };
+
+            // Ajouter la commande avec une durée de 2 minutes (120 secondes)
+            this.orderDisplayManager.addNewOrder(cookieChocoRecipe, 120);
+        }
+
+        // Configurer le callback de succès
+        if (this.orderDisplayManager) {
+            this.orderDisplayManager.setOrderCompletedCallback(
+                (dishId: string) => {
+                    if (dishId === "cookie-choco") {
+                        // Succès ! Afficher un message et terminer le tutoriel
+                        this.showTutorialSuccess();
+                    }
+                }
+            );
+
+            // Pas de callback d'expiration pour le tutoriel
+            this.orderDisplayManager.setOrderExpiredCallback(() => {
+                // Ne rien faire, on laisse le joueur continuer à apprendre
+            });
+        }
+    }
+
+    /**
+     * Affiche le message de succès du tutoriel
+     */
+    private showTutorialSuccess(): void {
+        // Arrêter le timer
+        this.timerManager?.stop();
+
+        // Afficher un message de félicitations
+        const successText = this.add.text(
+            512,
+            300,
+            "Félicitations !\nVous avez réussi à faire un cookie-choco !",
+            {
+                fontFamily: "Arial Black",
+                fontSize: "32px",
+                color: "#FFD700",
+                stroke: "#8B4513",
+                strokeThickness: 4,
+                align: "center",
+            }
+        );
+        successText.setOrigin(0.5);
+        successText.setDepth(10000);
+        successText.setScrollFactor(0);
+
+        // Afficher un bouton pour continuer vers le jeu principal
+        const continueText = this.add.text(
+            512,
+            400,
+            "Appuyez sur ESPACE pour jouer au vrai jeu !",
+            {
+                fontFamily: "Arial",
+                fontSize: "20px",
+                color: "#FFFFFF",
+                stroke: "#000000",
+                strokeThickness: 2,
+                align: "center",
+            }
+        );
+        continueText.setOrigin(0.5);
+        continueText.setDepth(10000);
+        continueText.setScrollFactor(0);
+
+        // Animation de pulsation
+        this.tweens.add({
+            targets: [successText, continueText],
+            alpha: 0.7,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Écouter la touche espace pour continuer
+        this.input.keyboard?.on("keydown-SPACE", () => {
+            // Nettoyer proprement le tutoriel avant de passer au jeu principal
+            this.cleanupTutorial();
+
+            // Lancer le jeu principal
+            this.scene.start("Game");
+        });
+    }
+
+    /**
+     * Nettoie proprement le tutoriel avant de passer au jeu principal
+     */
+    private cleanupTutorial(): void {
+        // Arrêter tous les timers
+        this.timerManager?.stop();
+        this.orderDisplayManager?.stopAllTimers();
+
+        // Nettoyer les managers
+        if (this.ovenManager) {
+            this.ovenManager.cleanup();
+        }
+        if (this.casseroleManager) {
+            this.casseroleManager.cleanup();
+        }
+        if (this.counterManager) {
+            this.counterManager.cleanup();
+        }
+        if (this.trashManager) {
+            this.trashManager.cleanup();
+        }
+        if (this.livesManager) {
+            this.livesManager.cleanup();
+        }
+
+        // Vider les inventaires des joueurs
+        this.player1?.getInventory().clear();
+        this.player2?.getInventory().clear();
+
+        // Retirer tous les event listeners
+        if (this.spaceKeyHandler) {
+            this.input.keyboard?.off("keydown-SPACE", this.spaceKeyHandler);
+            this.spaceKeyHandler = undefined;
+        }
+
+        // Retirer l'event listener de succès
+        this.input.keyboard?.off("keydown-SPACE");
+    }
+
+    /**
      * Démarre réellement le jeu après le countdown
      */
     private startGame(): void {
         // Appliquer les upgrades au démarrage
         this.applyUpgrades();
 
-        // Pas besoin de régénérer la carte ici - elle a déjà été créée pour la vague 1 dans le constructeur de DynamicMapManager
-
-        // Démarrer la première vague
-        this.waveManager?.startWave(1);
-
-        // Démarrer le timer du jeu
-        this.timerManager?.start(GameConfig.TIMER.GAME_DURATION, () => {
+        // Démarrer le timer du tutoriel (plus long pour apprendre)
+        this.timerManager?.start(120000, () => {
+            // 2 minutes pour le tutoriel
             // Callback quand le temps est écoulé
             this.endGame("time");
         });
-    }
-
-    /**
-     * Repositionne les joueurs selon les points de spawn de la carte actuelle
-     */
-    repositionPlayers(): void {
-        const spawnPoints = this.mapManager?.getAllSpawnPoints();
-        if (!spawnPoints) return;
-
-        // Repositionner le joueur 1
-        if (this.player1) {
-            const player1Sprite = this.player1.getPlayer();
-            if (player1Sprite) {
-                const screenPos1 = IsometricUtils.gridToScreen(
-                    spawnPoints.player1.x,
-                    spawnPoints.player1.y
-                );
-                player1Sprite.setPosition(
-                    screenPos1.x +
-                        this.mapOffsetX +
-                        IsometricUtils.TILE_WIDTH / 2,
-                    screenPos1.y +
-                        this.mapOffsetY +
-                        IsometricUtils.TILE_HEIGHT / 2 -
-                        12
-                );
-                // Mettre à jour la position en grille du joueur
-                this.player1.setGridPosition(
-                    spawnPoints.player1.x,
-                    spawnPoints.player1.y
-                );
-            }
-        }
-
-        // Repositionner le joueur 2
-        if (this.player2) {
-            const player2Sprite = this.player2.getPlayer();
-            if (player2Sprite) {
-                const screenPos2 = IsometricUtils.gridToScreen(
-                    spawnPoints.player2.x,
-                    spawnPoints.player2.y
-                );
-                player2Sprite.setPosition(
-                    screenPos2.x +
-                        this.mapOffsetX +
-                        IsometricUtils.TILE_WIDTH / 2,
-                    screenPos2.y +
-                        this.mapOffsetY +
-                        IsometricUtils.TILE_HEIGHT / 2 -
-                        12
-                );
-                // Mettre à jour la position en grille du joueur
-                this.player2.setGridPosition(
-                    spawnPoints.player2.x,
-                    spawnPoints.player2.y
-                );
-            }
-        }
-    }
-
-    /**
-     * Réinitialise les collisions avec la nouvelle carte
-     */
-    private reinitializeCollisions(): void {
-        const isoMap = this.mapManager?.getIsoMap();
-        if (!isoMap || !this.playerList) return;
-
-        const solidTiles = isoMap.getSolidTiles();
-        if (solidTiles.length > 0) {
-            for (const player of this.playerList) {
-                const playerSprite = player.getPlayer();
-                if (playerSprite) {
-                    this.physics.add.collider(playerSprite, solidTiles);
-                }
-            }
-        }
-    }
-
-    /**
-     * Met à jour le niveau de vague et génère une nouvelle carte
-     */
-    updateWaveLevel(waveLevel: number): void {
-        if (this.mapManager) {
-            // Nettoyer tous les objets avant de régénérer la carte
-            this.ovenManager?.cleanup();
-            this.casseroleManager?.cleanup();
-            this.counterManager?.cleanup();
-            this.trashManager?.cleanup();
-
-            // Vider les inventaires des joueurs
-            this.player1?.getInventory().clear();
-            this.player2?.getInventory().clear();
-
-            this.mapManager.updateWaveLevel(waveLevel);
-
-            // Recréer la carte avec la nouvelle configuration
-            this.mapManager.createMap();
-
-            // Réinitialiser les collisions avec les nouveaux tiles
-            this.reinitializeCollisions();
-
-            // Réinitialiser les comptoirs de communication
-            this.communicationManager?.initializeCommunicationCounters();
-
-            // Repositionner les joueurs
-            this.repositionPlayers();
-        }
-    }
-
-    /**
-     * Met à jour le nombre d'actions disponibles
-     */
-    updateAvailableActions(actions: number): void {
-        if (this.mapManager) {
-            // Nettoyer tous les objets avant de régénérer la carte
-            this.ovenManager?.cleanup();
-            this.casseroleManager?.cleanup();
-            this.counterManager?.cleanup();
-            this.trashManager?.cleanup();
-
-            // Vider les inventaires des joueurs
-            this.player1?.getInventory().clear();
-            this.player2?.getInventory().clear();
-
-            this.mapManager.updateAvailableActions(actions);
-
-            // Recréer la carte avec la nouvelle configuration
-            this.mapManager.createMap();
-
-            // Reconnecter les managers de cuisine au MapManager après régénération
-            this.mapManager.setCookingManagers(
-                this.counterManager,
-                this.ovenManager,
-                this.casseroleManager,
-                this.recipeManager
-            );
-
-            // Reconnecter les joueurs au MapManager après régénération
-            this.player1.setMapManager(this.mapManager);
-            this.player2.setMapManager(this.mapManager);
-
-            // Réinitialiser les collisions avec les nouveaux tiles
-            this.reinitializeCollisions();
-
-            // Réinitialiser les comptoirs de communication
-            this.communicationManager?.initializeCommunicationCounters();
-
-            // Repositionner les joueurs
-            this.repositionPlayers();
-        }
-    }
-
-    /**
-     * Gère l'interaction avec les comptoirs de communication
-     */
-    handleCommunicationInteraction(player: PlayerManager): void {
-        if (!this.communicationManager) return;
-
-        const counters = this.communicationManager.getCommunicationCounters();
-
-        for (let i = 0; i < counters.length; i++) {
-            if (
-                this.communicationManager.isPlayerNearCommunicationCounter(
-                    player,
-                    i
-                )
-            ) {
-                const availableIngredients =
-                    this.communicationManager.getAvailableIngredients(i);
-
-                if (availableIngredients.length > 0) {
-                    // Prendre le premier ingrédient disponible
-                    const ingredient = availableIngredients[0];
-                    if (
-                        this.communicationManager.takeIngredient(
-                            player,
-                            ingredient,
-                            i
-                        )
-                    ) {
-                    }
-                } else {
-                    // Déposer un ingrédient si le comptoir est vide
-                    const inventory = player.getInventory();
-                    const ingredients = inventory.getAllIngredients();
-
-                    if (ingredients.length > 0) {
-                        const ingredient = ingredients[0];
-                        if (
-                            this.communicationManager.depositIngredient(
-                                player,
-                                ingredient,
-                                i
-                            )
-                        ) {
-                        }
-                    }
-                }
-                break;
-            }
-        }
     }
 
     update(time: number, delta: number) {
@@ -692,71 +589,6 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
-     * Ouvre le shop entre les vagues
-     */
-    private openShop(
-        waveNumber: number,
-        timeSpent: number,
-        recipeIds: string[]
-    ): void {
-        if (!this.currencyManager || !this.upgradeManager || !this.waveManager)
-            return;
-
-        // Calculer les gains de la vague
-        const waveConfig = this.waveManager.getCurrentWaveConfig();
-        if (!waveConfig) return;
-
-        const earnings = this.currencyManager.calculateWaveEarnings(
-            recipeIds.length,
-            timeSpent,
-            waveConfig.targetRecipes * waveConfig.orderDuration,
-            recipeIds,
-            waveConfig.difficulty
-        );
-
-        // Ajouter les coins gagnés
-        this.currencyManager.addCoins(earnings.total);
-
-        // Mettre le jeu en pause
-        this.scene.pause();
-
-        // Mettre en pause tous les timers
-        this.timerManager?.pause();
-        this.orderDisplayManager?.pauseAllTimers();
-        this.waveManager?.pauseOrderSpawnTimer();
-
-        // Ouvrir la scène Shop en overlay
-        this.scene.launch("Shop", {
-            currencyManager: this.currencyManager,
-            upgradeManager: this.upgradeManager,
-            coinsEarned: earnings.total,
-            waveNumber: waveNumber,
-            onClose: () => {
-                // Reprendre le jeu immédiatement
-                this.scene.resume();
-
-                // Reprendre uniquement le timer principal du jeu
-                this.timerManager?.resume();
-
-                // Appliquer les upgrades achetés
-                this.applyUpgrades();
-
-                // Attendre que la scène Shop soit fermée avant de démarrer la nouvelle vague
-                // Utiliser un delayedCall APRÈS avoir repris la scène pour que le timer fonctionne
-                this.time.delayedCall(200, () => {
-                    // Mettre à jour la carte pour la nouvelle vague
-                    const nextWaveNumber =
-                        this.waveManager?.getNextWaveNumber() || 1;
-                    this.updateWaveLevel(nextWaveNumber);
-
-                    // Démarrer la vague suivante (créera de nouvelles commandes et leurs timers)
-                    this.waveManager?.startNextWave();
-                });
-            },
-        });
-    }
-
-    /**
      * Termine la partie et passe à l'écran GameOver
      */
     endGame(reason: "time" | "expired" = "time") {
@@ -768,15 +600,45 @@ export default class Game extends Phaser.Scene {
         // Arrêter les timers des commandes
         this.orderDisplayManager?.stopAllTimers();
 
-        // Passer le score à la scène GameOver
-        const finalScore = this.scoreManager?.getScore() || 0;
-        const totalDeliveries = this.scoreManager?.getTotalDeliveries() || 0;
+        // Pour le tutoriel, on ne va pas à GameOver mais on affiche un message
+        if (reason === "time") {
+            // Afficher un message de temps écoulé
+            const timeUpText = this.add.text(
+                512,
+                300,
+                "Temps écoulé !\nAppuyez sur ESPACE pour continuer",
+                {
+                    fontFamily: "Arial Black",
+                    fontSize: "28px",
+                    color: "#FF6B6B",
+                    stroke: "#8B4513",
+                    strokeThickness: 4,
+                    align: "center",
+                }
+            );
+            timeUpText.setOrigin(0.5);
+            timeUpText.setDepth(10000);
+            timeUpText.setScrollFactor(0);
 
-        this.scene.start("GameOver", {
-            score: finalScore,
-            deliveries: totalDeliveries,
-            reason: reason,
-        });
+            // Animation de pulsation
+            this.tweens.add({
+                targets: timeUpText,
+                alpha: 0.7,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+            });
+
+            // Écouter la touche espace pour continuer
+            this.input.keyboard?.on("keydown-SPACE", () => {
+                this.cleanupTutorial();
+                this.scene.start("Game");
+            });
+        } else {
+            // Si c'est une autre raison, nettoyer et aller au menu
+            this.cleanupTutorial();
+            this.scene.start("MainMenu");
+        }
     }
 
     /**

@@ -2,9 +2,12 @@
  * Gestionnaire de cartes dynamiques qui génère des cartes aléatoires
  */
 
-import { MapManager } from "./MapManager";
-import { RandomMapGenerator, MapGenerationConfig } from "../generators/RandomMapGenerator";
 import { MapConfig } from "../config/MapConfig";
+import {
+    MapGenerationConfig,
+    RandomMapGenerator,
+} from "../generators/RandomMapGenerator";
+import { MapManager } from "./MapManager";
 
 export class DynamicMapManager extends MapManager {
     private currentWaveLevel: number = 1;
@@ -18,7 +21,7 @@ export class DynamicMapManager extends MapManager {
         mapHeight: number = 10
     ) {
         super(scene, mapOffsetX, mapOffsetY, mapWidth, mapHeight);
-        
+
         // Générer la première carte
         this.generateNewMap();
     }
@@ -48,17 +51,17 @@ export class DynamicMapManager extends MapManager {
             availableActions: this.availableActions,
             mapWidth: 12, // Utiliser les valeurs par défaut
             mapHeight: 10,
-            separationWall: true // Toujours séparer les joueurs
+            separationWall: true, // Toujours séparer les joueurs
         };
 
         const newMapConfig = RandomMapGenerator.generateMap(config);
-        
+
         // La zone de livraison est maintenant générée automatiquement par RandomMapGenerator
         // Elle change de position à chaque nouvelle vague
-        
+
         // Appliquer la nouvelle configuration
         this.setMapConfig(newMapConfig);
-        
+
         return newMapConfig;
     }
 
@@ -87,8 +90,8 @@ export class DynamicMapManager extends MapManager {
      * Génère une carte avec des paramètres spécifiques
      */
     generateCustomMap(
-        waveLevel: number, 
-        actions: number, 
+        waveLevel: number,
+        actions: number,
         useSeparation: boolean = false
     ): MapConfig {
         const config: MapGenerationConfig = {
@@ -96,12 +99,13 @@ export class DynamicMapManager extends MapManager {
             availableActions: actions,
             mapWidth: 12,
             mapHeight: 10,
-            separationWall: useSeparation
+            separationWall: useSeparation,
         };
 
         const newMapConfig = RandomMapGenerator.generateMap(config);
         this.setMapConfig(newMapConfig);
-        
+
         return newMapConfig;
     }
 }
+
