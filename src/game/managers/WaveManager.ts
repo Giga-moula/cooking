@@ -8,12 +8,14 @@ export interface WaveConfig {
     waveNumber: number;
     name: string;
     targetRecipes: number; // Nombre de recettes à compléter
-    orderCount: number; // Nombre de commandes simultanées
+    orderCount: number; // Nombre de commandes simultanées max
     orderDuration: number; // Durée de chaque commande (secondes)
     difficulty: "easy" | "medium" | "hard" | "extreme";
     unlockedRecipe?: string; // Nouvelle recette débloquée
     description: string; // Description de la vague
     specificRecipes: string[]; // Recettes spécifiques pour cette vague (obligatoire)
+    orderSpawnDelay?: number; // Délai entre l'apparition de nouvelles commandes (secondes)
+    ordersPerSpawn?: number; // Nombre de commandes qui apparaissent à chaque spawn
 }
 
 // État d'une vague
@@ -23,6 +25,9 @@ interface WaveState {
     isActive: boolean;
     startTime: number;
     completedWaves: number[];
+    pendingOrderIndex: number; // Index de la prochaine commande à faire apparaître
+    currentActiveOrders: number; // Nombre de commandes actuellement affichées
+    completedRecipeIds: string[]; // IDs des recettes complétées dans cette vague
 }
 
 /**
@@ -37,6 +42,7 @@ export class WaveManager {
     private waveState: WaveState;
     private waves: WaveConfig[];
     private currentWaveConfig: WaveConfig | null = null;
+    private orderSpawnTimer?: Phaser.Time.TimerEvent; // Timer pour l'apparition progressive des commandes
 
     // Pas d'interface séparée - on utilise les boîtes de recettes
 
@@ -57,6 +63,9 @@ export class WaveManager {
             isActive: false,
             startTime: 0,
             completedWaves: [],
+            pendingOrderIndex: 0,
+            currentActiveOrders: 0,
+            completedRecipeIds: [],
         };
 
         this.initializeWaves();
@@ -67,27 +76,146 @@ export class WaveManager {
      */
     private initializeWaves(): void {
         this.waves = [
+            // VAGUE 1 - Premier cookie chocolat
             {
                 waveNumber: 1,
-                name: "Premiers pas",
+                name: "Premier cookie",
                 targetRecipes: 1,
-                orderCount: 1,
-                orderDuration: 45,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 60,
                 difficulty: "easy",
-                unlockedRecipe: "dough",
-                description: "Apprenez les bases de la cuisine !",
-                specificRecipes: ["cookie"],
+                unlockedRecipe: "cookie-choco",
+                description: "Créez votre premier cookie chocolat !",
+                specificRecipes: ["cookie-choco", "cookie-choco", "cookie-choco"],
+                orderSpawnDelay: 15, // Une commande toutes les 15 secondes
+                ordersPerSpawn: 1, // 1 commande à la fois
             },
+
+            // VAGUE 2 - Cookie caramel
             {
                 waveNumber: 2,
-                name: "Service du midi",
-                targetRecipes: 2,
-                orderCount: 2,
-                orderDuration: 35,
+                name: "Cookie caramel",
+                targetRecipes: 4,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 50,
                 difficulty: "easy",
-                unlockedRecipe: "cookie",
-                description: "Le rush commence !",
-                specificRecipes: ["cookie", "cookie"],
+                unlockedRecipe: "cookie-cara",
+                description: "Créez des cookies caramel !",
+                specificRecipes: ["cookie-choco", "cookie-cara", "cookie-choco", "cookie-cara"],
+                orderSpawnDelay: 14, // 14 secondes
+                ordersPerSpawn: 1,
+            },
+
+            // VAGUE 3 - Mélange des saveurs
+            {
+                waveNumber: 3,
+                name: "Mélange des saveurs",
+                targetRecipes: 5,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 45,
+                difficulty: "medium",
+                unlockedRecipe: "cookie-choco-cara",
+                description: "Combinez chocolat et caramel !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                ],
+                orderSpawnDelay: 13, // 13 secondes
+                ordersPerSpawn: 1,
+            },
+
+            // VAGUE 4 - Accélération
+            {
+                waveNumber: 4,
+                name: "Accélération",
+                targetRecipes: 6,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 40,
+                difficulty: "medium",
+                description: "Le rythme s'accélère !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                ],
+                orderSpawnDelay: 12, // 12 secondes
+                ordersPerSpawn: 1,
+            },
+
+            // VAGUE 5 - Défi
+            {
+                waveNumber: 5,
+                name: "Défi",
+                targetRecipes: 7,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 35,
+                difficulty: "hard",
+                description: "Restez concentré !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                ],
+                orderSpawnDelay: 11, // 11 secondes
+                ordersPerSpawn: 1,
+            },
+
+            // VAGUE 6 - Chaos
+            {
+                waveNumber: 6,
+                name: "Chaos",
+                targetRecipes: 8,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 30,
+                difficulty: "hard",
+                description: "Les commandes arrivent par paires !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                ],
+                orderSpawnDelay: 10, // 10 secondes (minimum)
+                ordersPerSpawn: 2, // 2 commandes en même temps !
+            },
+
+            // VAGUE 7 - Extrême
+            {
+                waveNumber: 7,
+                name: "Extrême",
+                targetRecipes: 10,
+                orderCount: 4, // Maximum 4 commandes simultanées (fixe)
+                orderDuration: 25,
+                difficulty: "extreme",
+                description: "Défi ultime !",
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco-cara",
+                    "cookie-choco",
+                ],
+                orderSpawnDelay: 10, // 10 secondes (minimum)
+                ordersPerSpawn: 2,
             },
         ];
     }
@@ -97,9 +225,6 @@ export class WaveManager {
      */
     public initializeWaveDisplay(): void {
         // Plus besoin d'interface séparée - tout se passe dans les boîtes de recettes
-        console.log(
-            "🌊 Système de vagues initialisé - affichage intégré dans les boîtes de recettes"
-        );
     }
 
     /**
@@ -112,76 +237,146 @@ export class WaveManager {
             return;
         }
 
+        // Arrêter le timer existant s'il y en a un
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.destroy();
+            this.orderSpawnTimer = undefined;
+        }
+
         this.currentWaveConfig = waveConfig;
         this.waveState.currentWave = waveNumber;
         this.waveState.completedRecipes = 0;
         this.waveState.isActive = true;
         this.waveState.startTime = this.scene.time.now;
+        this.waveState.pendingOrderIndex = 0;
+        this.waveState.currentActiveOrders = 0;
+        this.waveState.completedRecipeIds = []; // Réinitialiser les recettes complétées
 
         // Configurer l'OrderDisplayManager selon la vague
         this.orderDisplayManager.setOrderDuration(waveConfig.orderDuration);
-        this.orderDisplayManager.setMaxOrders(waveConfig.targetRecipes); // Utiliser le nombre de recettes de la vague
+        this.orderDisplayManager.setMaxOrders(waveConfig.orderCount); // Nombre max de commandes simultanées
 
-        // Créer exactement le nombre de boîtes nécessaires pour cette vague
-        this.orderDisplayManager.createBoxesForWave(waveConfig.targetRecipes);
+        // Nettoyer les boîtes existantes
+        this.orderDisplayManager.clearAllBoxes();
 
-        // Générer les recettes de la vague (une par boîte)
-        this.generateWaveRecipes();
+        // Faire apparaître les premières commandes immédiatement
+        this.spawnNextOrders();
 
-        // Débloquer la nouvelle recette si applicable
-        if (waveConfig.unlockedRecipe) {
-            this.unlockRecipe(waveConfig.unlockedRecipe);
-        }
-
-        console.log(
-            `🌊 Vague ${waveNumber} démarrée: ${waveConfig.name} - ${waveConfig.targetRecipes} recettes à faire`
-        );
+        // Démarrer le timer pour l'apparition progressive
+        this.startOrderSpawnTimer();
     }
 
     /**
-     * Génère les recettes pour la vague actuelle (une par boîte)
+     * Démarre le timer pour l'apparition progressive des commandes
      */
-    private generateWaveRecipes(): void {
+    private startOrderSpawnTimer(): void {
         if (!this.currentWaveConfig) return;
 
-        // Vérifier que des recettes spécifiques sont définies
+        const spawnDelay = (this.currentWaveConfig.orderSpawnDelay || 15) * 1000;
+
+        this.orderSpawnTimer = this.scene.time.addEvent({
+            delay: spawnDelay,
+            callback: () => this.spawnNextOrders(),
+            callbackScope: this,
+            loop: true,
+        });
+    }
+
+    /**
+     * Fait apparaître la/les prochaine(s) commande(s)
+     */
+    private spawnNextOrders(): void {
+        if (!this.currentWaveConfig) return;
+
+        const ordersPerSpawn = this.currentWaveConfig.ordersPerSpawn || 1;
+        const maxSimultaneous = this.currentWaveConfig.orderCount;
+
+        // Faire apparaître plusieurs commandes si nécessaire
+        for (let i = 0; i < ordersPerSpawn; i++) {
+            // Vérifier qu'on n'a pas atteint la limite de commandes simultanées
+            if (this.waveState.currentActiveOrders >= maxSimultaneous) {
+                break;
+            }
+
+            // Vérifier qu'il reste des commandes à faire apparaître
+            if (this.waveState.pendingOrderIndex >= this.currentWaveConfig.targetRecipes) {
+                // Arrêter le timer
+                if (this.orderSpawnTimer) {
+                    this.orderSpawnTimer.destroy();
+                    this.orderSpawnTimer = undefined;
+                }
+                break;
+            }
+
+            // Créer la commande
+            this.spawnSingleOrder(this.waveState.pendingOrderIndex);
+            this.waveState.pendingOrderIndex++;
+            this.waveState.currentActiveOrders++;
+        }
+    }
+
+    /**
+     * Fait apparaître une seule commande
+     */
+    private spawnSingleOrder(orderIndex: number): void {
+        if (!this.currentWaveConfig) return;
+
+        const recipeId = this.currentWaveConfig.specificRecipes[orderIndex];
+        if (!recipeId) return;
+
+        // Trouver la recette qui produit le cookie-mix correspondant
+        const allRecipes = this.recipeManager.getAllRecipes();
+        let recipe = allRecipes.find((r) => r.result === recipeId);
+
+        // Si c'est un cookie cuit, trouver la recette du cookie-mix correspondant
         if (
-            !this.currentWaveConfig.specificRecipes ||
-            this.currentWaveConfig.specificRecipes.length === 0
+            !recipe &&
+            recipeId.includes("cookie-") &&
+            !recipeId.includes("cookie-mix-")
         ) {
-            console.error(
-                `Aucune recette spécifique définie pour la vague ${this.currentWaveConfig.waveNumber}`
-            );
-            return;
+            const cookieMixId = recipeId.replace("cookie-", "cookie-mix-");
+            recipe = allRecipes.find((r) => r.result === cookieMixId);
         }
 
-        // Utiliser les recettes spécifiques
-        for (let i = 0; i < this.currentWaveConfig.targetRecipes; i++) {
-            const recipeId = this.currentWaveConfig.specificRecipes[i];
-            if (recipeId) {
-                // Trouver le plat correspondant
-                const dishes = this.recipeManager.getDishes();
-                const dish = dishes.find((d) => d.id === recipeId);
-
-                if (dish) {
-                    this.orderDisplayManager.assignRecipeToBox(i, dish);
-                } else {
-                    console.warn(
-                        `Plat non trouvé pour la recette: ${recipeId}`
-                    );
-                }
-            }
+        if (recipe) {
+            // Créer un objet recette avec le cookie cuit comme résultat mais les ingrédients du cookie-mix
+            const displayRecipe = {
+                ...recipe,
+                result: recipeId, // Afficher le cookie cuit
+                displayIngredients: [
+                    recipe.ingredient1,
+                    recipe.ingredient2,
+                ], // Mais garder les ingrédients du cookie-mix
+            };
+            
+            // Ajouter la commande progressivement
+            this.orderDisplayManager.addNewOrder(displayRecipe);
+            
+        } else {
+            console.warn(`Recette non trouvée pour le plat: ${recipeId}`);
         }
     }
 
     /**
      * Marque une recette comme complétée
      */
-    public completeRecipe(): void {
+    public completeRecipe(recipeId?: string): void {
         if (!this.waveState.isActive || !this.currentWaveConfig) return;
 
         this.waveState.completedRecipes++;
-        // Plus besoin d'updateWaveDisplay
+        this.waveState.currentActiveOrders--;
+
+        // Enregistrer l'ID de la recette complétée pour le calcul des gains
+        if (recipeId) {
+            this.waveState.completedRecipeIds.push(recipeId);
+        } else {
+            console.warn(`⚠️ completeRecipe() appelé sans recipeId !`);
+        }
+
+        // Tenter de faire apparaître une nouvelle commande immédiatement
+        if (this.waveState.pendingOrderIndex < this.currentWaveConfig.targetRecipes) {
+            this.spawnNextOrders();
+        }
 
         // Vérifier si la vague est terminée
         if (
@@ -193,6 +388,51 @@ export class WaveManager {
     }
 
     /**
+     * Marque une commande comme expirée (timer à 0)
+     * GAME OVER - Une commande expirée = défaite immédiate !
+     */
+    public expireOrder(): void {
+        if (!this.waveState.isActive || !this.currentWaveConfig) return;
+
+        // Arrêter le timer de spawn
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.destroy();
+            this.orderSpawnTimer = undefined;
+        }
+
+        this.waveState.isActive = false;
+
+        // Déclencher le callback de défaite si défini
+        if (this.onGameOverByExpiration) {
+            this.onGameOverByExpiration();
+        }
+    }
+
+    /**
+     * Callback appelé quand une commande expire (Game Over)
+     */
+    private onGameOverByExpiration?: () => void;
+
+    /**
+     * Callback appelé quand une vague est terminée (pour ouvrir le shop)
+     */
+    private onWaveCompleted?: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void;
+
+    /**
+     * Définit le callback de Game Over par expiration
+     */
+    public setGameOverCallback(callback: () => void): void {
+        this.onGameOverByExpiration = callback;
+    }
+
+    /**
+     * Définit le callback de complétion de vague (pour le shop)
+     */
+    public setWaveCompletedCallback(callback: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void): void {
+        this.onWaveCompleted = callback;
+    }
+
+    /**
      * Termine la vague actuelle
      */
     private completeWave(): void {
@@ -201,21 +441,46 @@ export class WaveManager {
         this.waveState.isActive = false;
         this.waveState.completedWaves.push(this.currentWaveConfig.waveNumber);
 
+        // Arrêter le timer de spawn
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.destroy();
+            this.orderSpawnTimer = undefined;
+        }
+
         // Calculer le score de la vague
         const waveScore = this.calculateWaveScore();
         this.scoreManager.addScore(waveScore);
 
-        // Passer à la vague suivante après un délai
-        this.scene.time.delayedCall(3000, () => {
-            this.startNextWave();
-        });
+        // Calculer le temps passé sur la vague
+        const timeSpent = (this.scene.time.now - this.waveState.startTime) / 1000;
+
+        // Appeler le callback pour ouvrir le shop
+        if (this.onWaveCompleted) {
+            this.onWaveCompleted(
+                this.currentWaveConfig.waveNumber,
+                timeSpent,
+                this.waveState.completedRecipeIds
+            );
+        }
+
+        // Passer à la vague suivante sera déclenché par le shop au lieu d'ici
+        // this.scene.time.delayedCall(3000, () => {
+        //     this.startNextWave();
+        // });
+    }
+
+    /**
+     * Obtient le numéro de la prochaine vague
+     */
+    public getNextWaveNumber(): number {
+        return this.waveState.currentWave + 1;
     }
 
     /**
      * Démarre la vague suivante
      */
-    private startNextWave(): void {
-        const nextWaveNumber = this.waveState.currentWave + 1;
+    public startNextWave(): void {
+        const nextWaveNumber = this.getNextWaveNumber();
         const nextWave = this.waves.find(
             (w) => w.waveNumber === nextWaveNumber
         );
@@ -273,15 +538,6 @@ export class WaveManager {
     }
 
     /**
-     * Débloque une nouvelle recette
-     */
-    private unlockRecipe(recipeId: string): void {
-        // Ici vous pouvez ajouter la logique pour débloquer la recette
-        // Par exemple, l'ajouter au RecipeManager ou afficher une notification
-        console.log(`🔓 Nouvelle recette débloquée: ${recipeId}`);
-    }
-
-    /**
      * Affiche la fin du jeu
      */
     private showGameComplete(): void {
@@ -308,12 +564,21 @@ export class WaveManager {
      * Redémarre le système de vagues
      */
     public restart(): void {
+        // Arrêter le timer de spawn
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.destroy();
+            this.orderSpawnTimer = undefined;
+        }
+
         this.waveState = {
             currentWave: 1,
             completedRecipes: 0,
             isActive: false,
             startTime: 0,
             completedWaves: [],
+            pendingOrderIndex: 0,
+            currentActiveOrders: 0,
+            completedRecipeIds: [],
         };
         this.currentWaveConfig = null;
     }

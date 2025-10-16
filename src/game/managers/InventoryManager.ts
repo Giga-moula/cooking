@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { GameConfig } from "../config/GameConfig";
 
 /**
  * Gestionnaire de l'inventaire et des objets portés
@@ -12,6 +13,29 @@ export class InventoryManager {
         this.scene = scene;
     }
 
+
+    /**
+     * Calcule les offsets pour l'objet porté en fonction de la direction
+     * @private
+     */
+    private calculateCarriedItemOffset(lastDirection: { x: number; y: number }): { offsetX: number; offsetY: number } {
+        const offsetDistance = GameConfig.INVENTORY.CARRIED_OFFSET_DISTANCE;
+        let offsetX = lastDirection.x * offsetDistance;
+        let offsetY = lastDirection.y * offsetDistance;
+
+        // Ajustements selon la direction
+        if (lastDirection.x !== 0) {
+            offsetY += GameConfig.INVENTORY.OFFSET_HORIZONTAL_Y;
+        }
+        if (lastDirection.y === -1) {
+            offsetY += GameConfig.INVENTORY.OFFSET_UP_Y;
+        }
+        if (lastDirection.y === 1) {
+            offsetY += GameConfig.INVENTORY.OFFSET_DOWN_Y;
+        }
+
+        return { offsetX, offsetY };
+    }
 
     /**
      * Crée un objet porté visible au-dessus du joueur
@@ -28,21 +52,8 @@ export class InventoryManager {
             this.carriedItem.destroy();
         }
 
-        // Calculer la position initiale en fonction de la direction actuelle
-        const offsetDistance = 20;
-        let offsetX = lastDirection.x * offsetDistance;
-        let offsetY = lastDirection.y * offsetDistance;
-
-        // Ajustements selon la direction
-        if (lastDirection.x !== 0) {
-            offsetY += 8;
-        }
-        if (lastDirection.y === -1) {
-            offsetY += 15;
-        }
-        if (lastDirection.y === 1) {
-            offsetY -= 5;
-        }
+        // Calculer la position en utilisant la méthode factorisée
+        const { offsetX, offsetY } = this.calculateCarriedItemOffset(lastDirection);
 
         // Créer le nouvel objet porté
         this.carriedItem = this.scene.add.image(
@@ -51,7 +62,7 @@ export class InventoryManager {
             itemType
         );
         this.carriedItem.setOrigin(0.5, 0.5);
-        this.carriedItem.setScale(0.8);
+        this.carriedItem.setScale(GameConfig.INVENTORY.CARRIED_SCALE);
 
         // Profondeur selon la direction
         if (lastDirection.y === -1) {
@@ -73,21 +84,8 @@ export class InventoryManager {
     ): void {
         if (!this.carriedItem) return;
 
-        const offsetDistance = 20;
-        let offsetX = lastDirection.x * offsetDistance;
-        let offsetY = lastDirection.y * offsetDistance;
-
-        // Ajustements selon la direction
-        if (lastDirection.x !== 0) {
-            offsetY += 8;
-        }
-        if (lastDirection.y === -1) {
-            offsetY += 15;
-        }
-        if (lastDirection.y === 1) {
-            offsetY -= 5;
-        }
-
+        // Utiliser la méthode factorisée
+        const { offsetX, offsetY } = this.calculateCarriedItemOffset(lastDirection);
         this.carriedItem.setPosition(playerX + offsetX, playerY + offsetY);
     }
 
@@ -105,7 +103,7 @@ export class InventoryManager {
      * Ajoute un objet à l'inventaire
      */
     addItem(itemType: string): boolean {
-        if (this.inventory.length >= 1) return false; // Inventaire plein
+        if (this.inventory.length >= GameConfig.INVENTORY.MAX_ITEMS) return false; // Inventaire plein
 
         this.inventory.push(itemType);
         return true;
@@ -139,7 +137,7 @@ export class InventoryManager {
      * Vérifie si l'inventaire est plein
      */
     isFull(): boolean {
-        return this.inventory.length >= 1;
+        return this.inventory.length >= GameConfig.INVENTORY.MAX_ITEMS;
     }
 
     /**
@@ -170,6 +168,13 @@ export class InventoryManager {
     // Getters
     getCarriedItem(): Phaser.GameObjects.Image | undefined {
         return this.carriedItem;
+    }
+
+    /**
+     * Récupère tous les ingrédients de l'inventaire
+     */
+    getAllIngredients(): string[] {
+        return [...this.inventory];
     }
 }
 

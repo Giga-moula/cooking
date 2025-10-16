@@ -21,6 +21,7 @@ export class RecipeBox {
     private scene: Phaser.Scene;
     private data: RecipeBoxData;
     private timerEvent?: Phaser.Time.TimerEvent;
+    private isDestroyed: boolean = false;
 
     constructor(
         scene: Phaser.Scene,
@@ -78,7 +79,7 @@ export class RecipeBox {
         boxContainer.add(ingredientArea);
 
         // Icône du plat fini
-        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie");
+        const dishIcon = this.scene.add.image(boxWidth / 2, 45, "cookie-choco");
         dishIcon.setScale(1.5);
         boxContainer.add(dishIcon);
 
@@ -136,7 +137,10 @@ export class RecipeBox {
         this.data.dishIcon.setVisible(true);
 
         // Icônes des ingrédients
-        const ingredients = [recipe.ingredient1, recipe.ingredient2];
+        const ingredients = recipe.displayIngredients || [
+            recipe.ingredient1,
+            recipe.ingredient2,
+        ];
         this.data.ingredientIcons.forEach((icon, index) => {
             if (index < ingredients.length) {
                 icon.setTexture(ingredients[index]);
@@ -157,12 +161,22 @@ export class RecipeBox {
      */
     private getRecipeColor(result: string): number {
         switch (result) {
-            case "cookie":
-                return 0xff9800;
-            case "dough":
-                return 0x8bc34a;
+            case "cookie-mix-choco":
+                return 0x8d6e63; // Marron pour chocolat
+            case "cookie-mix-cara":
+                return 0xff9800; // Orange pour caramel
+            case "cookie-mix-choco-cara":
+                return 0xff5722; // Rouge-orange pour combo
+            case "cookie-choco":
+                return 0x8d6e63; // Marron pour chocolat (cuit)
+            case "cookie-cara":
+                return 0xff9800; // Orange pour caramel (cuit)
+            case "cookie-choco-cara":
+                return 0xff5722; // Rouge-orange pour combo (cuit)
+            case "cookie-dead":
+                return 0x424242; // Gris pour brûlé
             default:
-                return 0x4caf50;
+                return 0x4caf50; // Vert par défaut
         }
     }
 
@@ -353,7 +367,12 @@ export class RecipeBox {
      * Détruit la boîte
      */
     destroy(): void {
+        this.isDestroyed = true;
         this.stopTimer();
+        
+        // Tuer tous les tweens actifs sur ce container
+        this.scene.tweens.killTweensOf(this.data.container);
+        
         this.data.container.destroy();
     }
 
@@ -385,7 +404,12 @@ export class RecipeBox {
             scaleY: 0.8,
             duration: 300,
             ease: "Cubic.easeOut",
-            onComplete,
+            onComplete: () => {
+                // Ne pas exécuter le callback si la boîte a été détruite
+                if (!this.isDestroyed) {
+                    onComplete();
+                }
+            },
         });
     }
 

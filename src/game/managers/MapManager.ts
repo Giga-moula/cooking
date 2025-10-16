@@ -1,7 +1,8 @@
 import Phaser from "phaser";
+import { GameConfig } from "../config/GameConfig";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
 import { TableTileManager } from "./tableManager";
-import { GameConfig } from "../config/GameConfig";
+import { MapConfig, DEFAULT_MAP_CONFIG } from "../config/MapConfig";
 
 /**
  * Gestionnaire de la carte : tiles, murs, limites
@@ -16,20 +17,30 @@ export class MapManager {
     private mapHeight: number;
     private ingredientTiles: Map<string, string> = new Map();
     private tableTileManager?: TableTileManager;
-    private craftPlanOverlays: Map<string, Phaser.GameObjects.Image> = new Map(); // Track des craft_plans
+    private craftPlanOverlays: Map<string, Phaser.GameObjects.Image> =
+        new Map(); // Track des craft_plans
+    private currentMapConfig: MapConfig;
+
+    // Références vers les managers de cuisine
+    private counterManager?: any;
+    private ovenManager?: any;
+    private casseroleManager?: any;
+    private recipeManager?: any;
 
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
         mapOffsetY: number,
-        mapWidth: number = 10,
-        mapHeight: number = 10
+        mapWidth: number = 12,
+        mapHeight: number = 12,
+        mapConfig: MapConfig = DEFAULT_MAP_CONFIG
     ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
+        this.currentMapConfig = mapConfig;
     }
 
     /**
@@ -37,7 +48,7 @@ export class MapManager {
      * Les images des caisses d'ingrédients sont chargées directement depuis les assets
      */
     createIsometricTiles(): void {
-        const tileSize = 64;  // Doit correspondre à TILE_WIDTH/TILE_HEIGHT
+        const tileSize = 64; // Doit correspondre à TILE_WIDTH/TILE_HEIGHT
         const tiles = [
             { key: "iso-wall", color: 0x666666, darkColor: 0x444444 },
             { key: "iso-delivery-zone", color: 0xff6b6b, darkColor: 0xe53e3e },
@@ -70,101 +81,156 @@ export class MapManager {
     }
 
     /**
-     * Crée la carte avec les données fournies
+     * Nettoie la carte existante (détruit tous les sprites et collisions)
+     */
+    private cleanupMap(): void {
+        // Détruire tous les craft plans
+        this.craftPlanOverlays.forEach((overlay) => {
+            overlay.destroy();
+        });
+        this.craftPlanOverlays.clear();
+
+        // Détruire l'ancienne carte isométrique si elle existe
+        if (this.isoMap) {
+            this.isoMap.destroy();
+        }
+
+        // Nettoyer les ingrédients
+        this.ingredientTiles.clear();
+    }
+
+    /**
+     * Crée la carte avec la configuration fournie
      */
     createMap(): IsometricMap {
+        // Nettoyer l'ancienne carte avant d'en créer une nouvelle
+        this.cleanupMap();
+
         this.isoMap = new IsometricMap(this.scene);
 
-        const mapData = [
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-            [4, 6, 1, 1, 1, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 5, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4],
-            [4, 1, 1, 1, 1, 5, 10, 1, 1, 4], // 10 = Table de transformation (pour actions spécifiques)
-            [4, 1, 1, 1, 1, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 10, 1, 1, 1, 1, 4],
-            [4, 1, 1, 1, 5, 5, 5, 1, 1, 4],
-            [4, 7, 8, 1, 1, 11, 1, 1, 9, 4], // 11 = Four (pour cuisson)
-            [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-        ];
+        const mapData = this.currentMapConfig.mapData;
 
         // Générer les configurations de tables AVANT de créer la carte
         this.tableTileManager = new TableTileManager(mapData);
-        const tableConfigurations = this.tableTileManager.generateTableConfigurations();
+        const tableConfigurations =
+            this.tableTileManager.generateTableConfigurations();
 
-        // Créer un mapping des textures avec les bonnes textures de table
-        const tileTextures = this.createTileTexturesWithTables(tableConfigurations);
+        // Créer un mapping des textures basé sur la configuration
+        const tileTextures =
+            this.createTileTexturesFromConfig(tableConfigurations);
 
         this.isoMap.createMap(
             mapData,
             tileTextures,
             this.mapOffsetX,
-            this.mapOffsetY
+            this.mapOffsetY,
+            this.currentMapConfig.tileTypes
         );
 
         // Appliquer les vraies textures de table après la création
         this.applyTableTextures(tableConfigurations);
 
+        // Initialiser automatiquement les tiles d'ingrédients et autres propriétés
+        this.initializeMapProperties();
+
         return this.isoMap;
     }
 
     /**
-     * Crée le mapping des textures de base
+     * Crée le mapping des textures basé sur la configuration
      */
-    private createTileTexturesWithTables(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): { [key: number]: string } {
-        return {
-            1: "planks",
-            4: "iso-wall",
-            5: "table-mono",           // Texture temporaire qui sera remplacée par la bonne texture de table
-            6: "choco_box",            // Caisse de chocolat
-            7: "butter_box",           // Caisse de beurre
-            8: "flour_box",            // Caisse de farine
-            9: "iso-delivery-zone",
-            10: "table-mono",          // Table de transformation - utilise maintenant les vraies tables
-            11: "oven",            // Four (pour cuisson) - utilise l'image oven.png directement
-        };
+    private createTileTexturesFromConfig(
+        tableConfigurations: Array<{
+            gridX: number;
+            gridY: number;
+            texture: string;
+            isTransformationTable?: boolean;
+        }>
+    ): { [key: number]: string } {
+        const tileTextures: { [key: number]: string } = {};
+
+        // Utiliser la configuration pour créer le mapping des textures
+        for (const [tileType, config] of Object.entries(
+            this.currentMapConfig.tileTypes
+        )) {
+            tileTextures[parseInt(tileType)] = config.texture;
+        }
+
+        return tileTextures;
+    }
+
+    /**
+     * Initialise automatiquement les propriétés de la carte basées sur la configuration
+     */
+    private initializeMapProperties(): void {
+        this.ingredientTiles.clear();
+
+        const mapData = this.currentMapConfig.mapData;
+
+        for (let y = 0; y < mapData.length; y++) {
+            for (let x = 0; x < mapData[y].length; x++) {
+                const tileType = mapData[y][x];
+                const config = this.currentMapConfig.tileTypes[tileType];
+
+                if (config?.isIngredient) {
+                    this.ingredientTiles.set(`${x},${y}`, config.isIngredient);
+                }
+            }
+        }
     }
 
     /**
      * Applique les textures de comptoir/table correctes selon les adjacences
      */
-    private applyTableTextures(tableConfigurations: Array<{gridX: number, gridY: number, texture: string, isTransformationTable?: boolean}>): void {
+    private applyTableTextures(
+        tableConfigurations: Array<{
+            gridX: number;
+            gridY: number;
+            texture: string;
+            isTransformationTable?: boolean;
+        }>
+    ): void {
         if (!this.isoMap) return;
 
         let replacedCount = 0;
-        
-        tableConfigurations.forEach(config => {
+
+        tableConfigurations.forEach((config) => {
             const key = `${config.gridX},${config.gridY}`;
-            
+
             // Les tables sont des tiles solides, on doit les récupérer depuis solidTiles
-            const existingSolidTile = this.isoMap!.getSolidTile(config.gridX, config.gridY);
+            const existingSolidTile = this.isoMap!.getSolidTile(
+                config.gridX,
+                config.gridY
+            );
             if (existingSolidTile) {
                 // Vérifier si c'est bien une table temporaire (table-mono ou toute texture de table)
-                if (existingSolidTile.texture.key === 'table-mono' || existingSolidTile.texture.key.startsWith('table-')) {
+                if (
+                    existingSolidTile.texture.key === "table-mono" ||
+                    existingSolidTile.texture.key.startsWith("table-")
+                ) {
                     // Supprimer l'ancien tile solide
                     this.isoMap!.removeSolidTile(config.gridX, config.gridY);
-                    
+
                     // Créer le nouveau tile avec la bonne texture de table
                     this.isoMap!.createTile(
-                        config.gridX, 
-                        config.gridY, 
-                        config.texture, 
-                        this.mapOffsetX, 
-                        this.mapOffsetY, 
+                        config.gridX,
+                        config.gridY,
+                        config.texture,
+                        this.mapOffsetX,
+                        this.mapOffsetY,
                         true, // isSolid = true pour les comptoirs
-                        true  // isCounter = true pour les tables/comptoirs
+                        true // isCounter = true pour les tables/comptoirs
                     );
-                    
+
                     // Si c'est une table de transformation, ajouter le craft_plan en overlay
                     if (config.isTransformationTable) {
                         this.addCraftPlanOverlay(config.gridX, config.gridY);
                     }
-                    
+
                     replacedCount++;
-                } 
+                }
             }
         });
-        
     }
 
     /**
@@ -174,20 +240,21 @@ export class MapManager {
         const key = `${gridX},${gridY}`;
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY + GameConfig.CRAFT_PLAN_OFFSET_Y; // Utiliser la configuration
+        const y =
+            screenPos.y + this.mapOffsetY + GameConfig.CRAFT_PLAN_OFFSET_Y; // Utiliser la configuration
 
         // Créer l'overlay craft_plan
         const craftPlan = this.scene.add.image(x, y, "craft_plan");
         craftPlan.setOrigin(0.5, 0.5);
         craftPlan.setScale(GameConfig.CRAFT_PLAN_SCALE); // Utiliser la configuration
         craftPlan.setDepth(y + 50); // Légèrement au-dessus de la table
-        
+
         // Optionnel : ajouter un effet de transparence pour que ce soit plus subtil
         craftPlan.setAlpha(GameConfig.CRAFT_PLAN_ALPHA);
-        
+
         // Ajuster la rotation selon la texture de la table
         this.adjustCraftPlanRotation(craftPlan, gridX, gridY);
-        
+
         // Tracker l'overlay
         this.craftPlanOverlays.set(key, craftPlan);
     }
@@ -195,20 +262,24 @@ export class MapManager {
     /**
      * Ajuste la rotation du craft_plan selon la texture de la table
      */
-    private adjustCraftPlanRotation(craftPlan: Phaser.GameObjects.Image, gridX: number, gridY: number): void {
+    private adjustCraftPlanRotation(
+        craftPlan: Phaser.GameObjects.Image,
+        gridX: number,
+        gridY: number
+    ): void {
         if (!this.isoMap) return;
-        
+
         const tile = this.isoMap.getSolidTile(gridX, gridY);
         const textureKey = tile?.texture.key;
-        
-        if (!textureKey || !textureKey.startsWith('table-')) return;
-        
+
+        if (!textureKey || !textureKey.startsWith("table-")) return;
+
         // Analyser la texture pour déterminer les ouvertures
-        const hasBottom = textureKey.includes('bottom');
-        const hasLeft = textureKey.includes('left');
-        const hasRight = textureKey.includes('right');
-        const hasTop = textureKey.includes('top');
-        
+        const hasBottom = textureKey.includes("bottom");
+        const hasLeft = textureKey.includes("left");
+        const hasRight = textureKey.includes("right");
+        const hasTop = textureKey.includes("top");
+
         // Logique de rotation selon les ouvertures
         if (hasBottom) {
             if (!hasLeft && !hasRight) {
@@ -231,8 +302,6 @@ export class MapManager {
             // Table pas ouverte en bas -> rotation normale (0°)
             craftPlan.setRotation(GameConfig.CRAFT_PLAN_ROTATIONS.NORMAL);
         }
-        
-        console.log(`🔄 Craft plan rotation pour ${textureKey}: ${craftPlan.rotation} rad (${(craftPlan.rotation * 180 / Math.PI).toFixed(0)}°)`);
     }
 
     /**
@@ -309,12 +378,38 @@ export class MapManager {
     }
 
     /**
-     * Initialise les tiles d'ingrédients
+     * Change la configuration de carte
      */
-    initializeIngredientTiles(): void {
-        this.ingredientTiles.set("1,1", "chocolate");
-        this.ingredientTiles.set("1,8", "butter");
-        this.ingredientTiles.set("2,8", "flour");
+    setMapConfig(mapConfig: MapConfig): void {
+        this.currentMapConfig = mapConfig;
+    }
+
+    /**
+     * Récupère la configuration actuelle de la carte
+     */
+    getCurrentMapConfig(): MapConfig {
+        return this.currentMapConfig;
+    }
+
+    /**
+     * Récupère le point de spawn d'un joueur
+     */
+    getPlayerSpawnPoint(playerNumber: 1 | 2): { x: number; y: number } {
+        if (playerNumber === 1) {
+            return this.currentMapConfig.spawnPoints.player1;
+        } else {
+            return this.currentMapConfig.spawnPoints.player2;
+        }
+    }
+
+    /**
+     * Récupère tous les points de spawn de la carte
+     */
+    getAllSpawnPoints(): {
+        player1: { x: number; y: number };
+        player2: { x: number; y: number };
+    } {
+        return this.currentMapConfig.spawnPoints;
     }
 
     /**
@@ -340,19 +435,21 @@ export class MapManager {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
         const isCounter = this.isoMap.isCounter(gridX, gridY);
-        
+
         // Vérifier si c'est une table (texture commence par 'table-') ET si elle a un craft_plan
-        const isTable = tile?.texture.key?.startsWith('table-') || false;
+        const isTable = tile?.texture.key?.startsWith("table-") || false;
         const hasCraftPlan = this.hasCraftPlanOverlay(gridX, gridY);
-        
-        console.log(`isTransformationTable(${gridX}, ${gridY}): texture=${tile?.texture.key}, isTable=${isTable}, hasCraftPlan=${hasCraftPlan}, isCounter=${isCounter}`);
+
         return isTable && hasCraftPlan;
     }
 
     /**
      * Récupère la table de transformation à une position donnée
      */
-    getTransformationTable(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+    getTransformationTable(
+        gridX: number,
+        gridY: number
+    ): Phaser.Physics.Arcade.Sprite | undefined {
         if (!this.isTransformationTable(gridX, gridY)) return undefined;
         return this.isoMap?.getSolidTile(gridX, gridY);
     }
@@ -363,15 +460,40 @@ export class MapManager {
     isOven(gridX: number, gridY: number): boolean {
         if (!this.isoMap) return false;
         const tile = this.isoMap.getSolidTile(gridX, gridY);
-        const isOven = tile?.texture.key === 'oven';
-        console.log(`isOven(${gridX}, ${gridY}): texture=${tile?.texture.key}, isOven=${isOven}`);
+        const isOven = tile?.texture.key === "oven";
         return isOven;
+    }
+
+    /**
+     * Vérifie si une position est une casserole (type 13 - pour cuisson)
+     */
+    isCasserole(gridX: number, gridY: number): boolean {
+        if (!this.isoMap) return false;
+        const tile = this.isoMap.getSolidTile(gridX, gridY);
+        const isCasserole = tile?.texture.key === "casserole_cuisson";
+        return isCasserole;
+    }
+
+    /**
+     * Vérifie si une position est une zone de livraison
+     */
+    isDeliveryZone(gridX: number, gridY: number): boolean {
+        const mapData = this.currentMapConfig.mapData;
+        if (gridY < 0 || gridY >= mapData.length) return false;
+        if (gridX < 0 || gridX >= mapData[gridY].length) return false;
+
+        const tileType = mapData[gridY][gridX];
+        const config = this.currentMapConfig.tileTypes[tileType];
+        return config?.isDeliveryZone || false;
     }
 
     /**
      * Récupère le four à une position donnée
      */
-    getOven(gridX: number, gridY: number): Phaser.Physics.Arcade.Sprite | undefined {
+    getOven(
+        gridX: number,
+        gridY: number
+    ): Phaser.Physics.Arcade.Sprite | undefined {
         if (!this.isOven(gridX, gridY)) return undefined;
         return this.isoMap?.getSolidTile(gridX, gridY);
     }
@@ -396,5 +518,65 @@ export class MapManager {
     getTableTileManager(): TableTileManager | undefined {
         return this.tableTileManager;
     }
-}
 
+    /**
+     * Récupère l'ID du type de tile à une position donnée
+     */
+    getTileTypeId(gridX: number, gridY: number): number | null {
+        const mapData = this.currentMapConfig.mapData;
+
+        if (
+            gridY >= 0 &&
+            gridY < mapData.length &&
+            gridX >= 0 &&
+            gridX < mapData[gridY].length
+        ) {
+            return mapData[gridY][gridX];
+        }
+
+        return null;
+    }
+
+    /**
+     * Définit les références vers les managers de cuisine
+     */
+    setCookingManagers(
+        counterManager: any,
+        ovenManager: any,
+        casseroleManager: any,
+        recipeManager: any
+    ): void {
+        this.counterManager = counterManager;
+        this.ovenManager = ovenManager;
+        this.casseroleManager = casseroleManager;
+        this.recipeManager = recipeManager;
+    }
+
+    /**
+     * Récupère le manager de comptoirs
+     */
+    getCounterManager(): any {
+        return this.counterManager;
+    }
+
+    /**
+     * Récupère le manager de four
+     */
+    getOvenManager(): any {
+        return this.ovenManager;
+    }
+
+    /**
+     * Récupère le manager de casseroles
+     */
+    getCasseroleManager(): any {
+        return this.casseroleManager;
+    }
+
+    /**
+     * Récupère le manager de recettes
+     */
+    getRecipeManager(): any {
+        return this.recipeManager;
+    }
+}

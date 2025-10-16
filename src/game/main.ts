@@ -5,6 +5,7 @@ import GameOver from "./scenes/GameOver";
 import Leaderboard from "./scenes/Leaderboard";
 import MainMenu from "./scenes/MainMenu";
 import Preloader from "./scenes/Preloader";
+import Shop from "./scenes/Shop";
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -21,7 +22,7 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: false, // Affiche les hitboxes avec des bordures
         },
     },
-    scene: [Boot, Preloader, MainMenu, MainGame, GameOver, Leaderboard],
+    scene: [Boot, Preloader, MainMenu, MainGame, Shop, GameOver, Leaderboard],
 };
 
 const StartGame = (parent: string) => {

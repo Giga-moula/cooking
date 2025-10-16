@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
+import { VisualEffectsManager } from "./VisualEffectsManager";
 
 /**
  * Gestionnaire des interactions avec les comptoirs et des objets posés
@@ -12,11 +13,13 @@ export class CounterInteractionManager {
     private mapOffsetY: number;
     private inventoryManager?: any; // Référence vers l'inventory manager
     private recipeManager?: RecipeManager; // Référence vers le RecipeManager partagé
+    private visualEffects: VisualEffectsManager;
 
     constructor(scene: Phaser.Scene, mapOffsetX: number, mapOffsetY: number) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
+        this.visualEffects = new VisualEffectsManager(scene, mapOffsetX, mapOffsetY);
     }
 
     /**
@@ -101,49 +104,14 @@ export class CounterInteractionManager {
      * Affiche un effet de fusion (particules)
      */
     playFusionEffect(gridX: number, gridY: number): void {
-        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY;
-            const particles = this.scene.add.particles(x, y, "star", {
-                speed: { min: -100, max: 100 },
-                angle: { min: 0, max: 360 },
-                scale: { start: 0.5, end: 0 },
-                lifespan: 600,
-                quantity: 15,
-                blendMode: "ADD",
-            });
-
-            this.scene.time.delayedCall(600, () => {
-                particles.destroy();
-            });
+        this.visualEffects.showFusionEffect(gridX, gridY);
     }
 
     /**
      * Affiche un message de combinaison
      */
     showCombinationMessage(text: string, gridX: number, gridY: number): void {
-        const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
-        const x = screenPos.x + this.mapOffsetX;
-        const y = screenPos.y + this.mapOffsetY - 50;
-
-        const message = this.scene.add.text(x, y, text, {
-            fontFamily: "Arial",
-            fontSize: "24px",
-            color: "#ffffff",
-            stroke: "#000000",
-            strokeThickness: 4,
-        });
-        message.setOrigin(0.5);
-
-        // Animation de montée et disparition
-        this.scene.tweens.add({
-            targets: message,
-            y: y - 30,
-            alpha: 0,
-            duration: 1000,
-            ease: "Cubic.easeOut",
-            onComplete: () => message.destroy(),
-        });
+        this.visualEffects.showCombinationMessage(text, gridX, gridY);
     }
 
     /**
@@ -160,7 +128,6 @@ export class CounterInteractionManager {
         if (!item) return false;
 
         const currentType = item.texture.key;
-        console.log(`🔍 Transformation sur table: ${currentType}, inventaire:`, playerInventory ? 'présent' : 'absent');
         
         // Vérifier d'abord les transformations spéciales (1 ingrédient → 1 autre)
         if (this.recipeManager) {
@@ -185,18 +152,13 @@ export class CounterInteractionManager {
                             : recipe.ingredient1;
                         
                         // Vérifier si le joueur a l'ingrédient nécessaire
-                        console.log(`🔍 Vérification recette: ${currentType} + ${neededIngredient} = ${recipe.result}`);
                         if (playerInventory.hasItem && playerInventory.hasItem(neededIngredient)) {
-                            console.log(`✅ Ingrédient ${neededIngredient} trouvé dans l'inventaire`);
                             if (playerInventory.removeSpecificItem && playerInventory.removeSpecificItem(neededIngredient)) {
                                 const ingredient = this.recipeManager.getIngredient(recipe.result);
                                 const message = ingredient ? `✨ ${ingredient.name}` : `✨ ${recipe.name}`;
-                                console.log(`🎉 Recette réussie: ${message}`);
                                 this.transformItem(gridX, gridY, recipe.result, message);
                                 return true;
                             }
-                        } else {
-                            console.log(`❌ Ingrédient ${neededIngredient} manquant dans l'inventaire`);
                         }
                     }
                 }

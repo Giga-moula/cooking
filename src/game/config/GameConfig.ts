@@ -12,27 +12,46 @@ export class GameConfig {
     static readonly PLAYER_SPEED = 150;
     static readonly PLAYER_START_POSITIONS = {
         PLAYER_1: { x: 2, y: 2 },
-        PLAYER_2: { x: 4, y: 4 }
+        PLAYER_2: { x: 6, y: 4 },
     };
 
     // Configuration des objets
     static readonly OBJECT_SCALE = 1.2;
     static readonly OBJECT_DEPTH_OFFSET = 100;
+    static readonly CARRIED_ITEM_SCALE = 0.8;
+    static readonly CARRIED_ITEM_OFFSET_DISTANCE = 20;
+
+    // Configuration de l'inventaire
+    static readonly INVENTORY = {
+        MAX_ITEMS: 1, // Capacité maximale de l'inventaire
+        CARRIED_OFFSET_DISTANCE: 20,
+        CARRIED_SCALE: 0.8,
+        // Ajustements de position selon la direction
+        OFFSET_HORIZONTAL_Y: 8,
+        OFFSET_UP_Y: 15,
+        OFFSET_DOWN_Y: -5,
+    } as const;
 
     // Configuration des effets
     static readonly PARTICLE_LIFESPAN = 800;
     static readonly MESSAGE_DURATION = 2000;
     static readonly MESSAGE_OFFSET_Y = -50;
+    
+    // Configuration des boîtes de recettes
+    static readonly RECIPE_BOX = {
+        WIDTH: 120,
+        SPACING: 10,
+    } as const;
     static readonly CRAFT_PLAN_SCALE = 1.5; // Échelle du craft_plan
     static readonly CRAFT_PLAN_ALPHA = 1; // Transparence du craft_plan
     static readonly CRAFT_PLAN_OFFSET_Y = -5; // Décalage vertical du craft_plan
-    
+
     // Configuration des rotations du craft_plan
     static readonly CRAFT_PLAN_ROTATIONS = {
-        NORMAL: 0,                    // 0°
-        LEFT: -Math.PI / 2,          // -90°
-        RIGHT: Math.PI / 2,          // 90°
-        UPSIDE_DOWN: Math.PI,        // 180°
+        NORMAL: 0, // 0°
+        LEFT: -Math.PI / 2, // -90°
+        RIGHT: Math.PI / 2, // 90°
+        UPSIDE_DOWN: Math.PI, // 180°
     } as const;
 
     // Configuration des textures
@@ -45,70 +64,30 @@ export class GameConfig {
         BUTTER: "butter",
         FLOUR: "flour",
         CHOCOLATE: "chocolate",
+        SUGAR: "sugar",
+        SUGAR_BOX: "sugar-box",
+        CASSEROLE: "casserole_cuisson",
         MOLTEN_BUTTER: "molten_butter",
         DOUGH: "dough",
-        COOKIE_MIX: "cookie-mix",
-        COOKIE: "cookie",
+        COOKIE_MIX_CHOCO: "cookie-mix-choco",
+        COOKIE_CHOCO: "cookie-choco",
         CHOCOLATE_CHUNKS: "chocolate-chunks",
         STAR: "star",
-        FAVICON: "favicon"
+        FAVICON: "favicon",
     } as const;
 
-    // Configuration des recettes
-    static readonly RECIPES = {
-        MOLTEN_BUTTER_FLOUR_DOUGH: {
-            id: "molten_butter_flour_dough",
-            ingredient1: "molten_butter",
-            ingredient2: "flour",
-            result: "dough",
-            name: "Pâte avec beurre fondu"
-        },
-        DOUGH_CHOCOLATE_CHUNKS_COOKIE_MIX: {
-            id: "dough_chocolate_chunks_cookie_mix",
-            ingredient1: "dough",
-            ingredient2: "chocolate-chunks",
-            result: "cookie-mix",
-            name: "Cookie Mix avec chunks"
-        }
-    } as const;
+    // Configuration des recettes - Maintenant gérée dans src/game/data/recipes.ts
 
-    // Configuration des transformations spéciales
-    static readonly SPECIAL_TRANSFORMATIONS = {
-        CHOCOLATE_TO_CHUNKS: {
-            from: "chocolate",
-            to: "chocolate-chunks"
-        }
-    } as const;
-
-    // Configuration des cuissons au four
-    static readonly OVEN_COOKING = {
-        BUTTER_TO_MOLTEN: {
-            from: "butter",
-            to: "molten_butter",
-            message: "🧈 Beurre fondu !"
-        },
-        COOKIE_MIX_TO_COOKIE: {
-            from: "cookie-mix",
-            to: "cookie",
-            message: "🍪 Cookie cuit !"
-        }
-    } as const;
-
-    // Configuration des messages
-    static readonly MESSAGES = {
-        INVENTORY_FULL: "❌ Inventaire plein",
-        TABLE_OCCUPIED: "❌ Table occupée. Utilisez la table bleue (R/P) pour combiner !",
-        USE_TRANSFORM_KEY: "💡 Utilisez R/P pour combiner sur la table bleue !",
-        RECIPE_SUCCESS: "✨ Recette réussie !",
-        TRANSFORMATION_SUCCESS: "✨ Transformation réussie !"
-    } as const;
+    // Configuration des transformations spéciales - Maintenant gérée dans src/game/data/ingredients.ts
+    // Configuration des cuissons au four - Gérée directement dans OvenManager.ts
+    // Configuration des messages - Messages hardcodés dans les managers
 
     // Configuration des couleurs
     static readonly COLORS = {
         PLAYER_1: "blue",
         PLAYER_2: "red",
         BACKGROUND: 0x87ceeb,
-        PARTICLE_TINT: 0xff4500
+        PARTICLE_TINT: 0xff4500,
     } as const;
 
     // Configuration du timer
@@ -116,7 +95,7 @@ export class GameConfig {
         GAME_DURATION: 300, // 5 minutes en secondes
         DELIVERY_BONUS: 15, // Bonus de temps par livraison (en secondes)
         DISPLAY_X: 512,
-        DISPLAY_Y: 20
+        DISPLAY_Y: 20,
     } as const;
 
     // Configuration Phaser
@@ -126,6 +105,7 @@ export class GameConfig {
         BACKGROUND_COLOR: "#028af8",
         PARENT: "game-container",
         PHYSICS_GRAVITY: { x: 0, y: 0 },
-        PHYSICS_DEBUG: false
+        PHYSICS_DEBUG: false,
     } as const;
 }
+
