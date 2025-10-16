@@ -4,6 +4,7 @@ import {
     isValidCraftSequence,
     getRandomCraftSequence,
 } from "../config/craftingItems";
+import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 
 // Ré-exporter le type CraftDirection
 export type { CraftDirection };
@@ -148,12 +149,66 @@ export class CraftActions {
             return null;
         }
 
+        // Pour la table de transformation (10), vérifier si c'est un craft instantané
+        if (tileTypeId === 10 && this.isInstantCraftRecipe(target.x, target.y)) {
+            return null;
+        }
+
         // Vérifier qu'il y a un ingrédient craftable sur le bloc
         if (!this.hasValidIngredientOnTile(target.x, target.y, tileTypeId)) {
             return null;
         }
 
         return tileTypeId;
+    }
+
+    /**
+     * Vérifie si la recette qui va être créée est un craft instantané
+     */
+    private isInstantCraftRecipe(gridX: number, gridY: number): boolean {
+        const counterManager = this.mapManager.getCounterManager();
+        const recipeManager = this.mapManager.getRecipeManager();
+        
+        if (!counterManager || !recipeManager) {
+            return false;
+        }
+
+        // Vérifier s'il y a un item sur la table
+        if (!counterManager.hasItemOnCounter(gridX, gridY)) {
+            return false;
+        }
+
+        const itemOnCounter = counterManager.getItemTypeOnCounter(gridX, gridY);
+        if (!itemOnCounter) {
+            return false;
+        }
+
+        // Vérifier s'il y a un item dans la main du joueur
+        const playerInventory = this.playerManager.getInventory();
+        if (!playerInventory || playerInventory.isEmpty()) {
+            return false;
+        }
+
+        const itemInHand = playerInventory.peekItem();
+        if (!itemInHand) {
+            return false;
+        }
+
+        // Essayer de trouver une recette avec ces deux ingrédients
+        const allRecipes = recipeManager.getAllRecipes();
+        for (const recipe of allRecipes) {
+            if (
+                (itemOnCounter === recipe.ingredient1 && itemInHand === recipe.ingredient2) ||
+                (itemOnCounter === recipe.ingredient2 && itemInHand === recipe.ingredient1)
+            ) {
+                // Vérifier si c'est une recette instantanée
+                if (INSTANT_CRAFT_RECIPES.includes(recipe.id)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
