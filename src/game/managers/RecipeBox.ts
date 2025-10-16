@@ -22,6 +22,8 @@ export class RecipeBox {
     private data: RecipeBoxData;
     private timerEvent?: Phaser.Time.TimerEvent;
     private isDestroyed: boolean = false;
+    private isPaused: boolean = false;
+    private pausedTimeRemaining: number = 0;
 
     constructor(
         scene: Phaser.Scene,
@@ -208,7 +210,7 @@ export class RecipeBox {
      * Met à jour le timer
      */
     private updateTimer(): void {
-        if (!this.data.orderId) return;
+        if (!this.data.orderId || this.isPaused) return;
 
         // Calculer le temps écoulé
         const elapsedTime = (this.scene.time.now - this.data.startTime) / 1000;
@@ -221,6 +223,25 @@ export class RecipeBox {
         if (this.data.timeRemaining <= 0) {
             this.expire();
         }
+    }
+
+    /**
+     * Met le timer en pause
+     */
+    public pause(): void {
+        this.isPaused = true;
+        this.pausedTimeRemaining = this.data.timeRemaining;
+    }
+
+    /**
+     * Reprend le timer
+     */
+    public resume(): void {
+        if (!this.isPaused) return;
+        
+        this.isPaused = false;
+        // Recalculer le startTime pour que le temps restant soit correct
+        this.data.startTime = this.scene.time.now - (this.data.maxTime - this.pausedTimeRemaining) * 1000;
     }
 
     /**

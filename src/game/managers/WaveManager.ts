@@ -82,9 +82,9 @@ export class WaveManager {
             {
                 waveNumber: 1,
                 name: "Premier cookie",
-                targetRecipes: 1,
+                targetRecipes: 3,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 60,
+                orderDuration: 90,
                 difficulty: "easy",
                 unlockedRecipe: "cookie-choco",
                 description: "Créez votre premier cookie chocolat !",
@@ -103,7 +103,7 @@ export class WaveManager {
                 name: "Cookie caramel",
                 targetRecipes: 4,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 50,
+                orderDuration: 90,
                 difficulty: "easy",
                 unlockedRecipe: "cookie-cara",
                 description: "Créez des cookies caramel !",
@@ -123,7 +123,7 @@ export class WaveManager {
                 name: "Mélange des saveurs",
                 targetRecipes: 5,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 45,
+                orderDuration: 90,
                 difficulty: "medium",
                 unlockedRecipe: "cookie-choco-cara",
                 description: "Combinez chocolat et caramel !",
@@ -144,7 +144,7 @@ export class WaveManager {
                 name: "Accélération",
                 targetRecipes: 6,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 40,
+                orderDuration: 90,
                 difficulty: "medium",
                 description: "Le rythme s'accélère !",
                 specificRecipes: [
@@ -165,7 +165,7 @@ export class WaveManager {
                 name: "Défi",
                 targetRecipes: 7,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 35,
+                orderDuration: 90,
                 difficulty: "hard",
                 description: "Restez concentré !",
                 specificRecipes: [
@@ -187,7 +187,7 @@ export class WaveManager {
                 name: "Chaos",
                 targetRecipes: 8,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 30,
+                orderDuration: 90,
                 difficulty: "hard",
                 description: "Les commandes arrivent par paires !",
                 specificRecipes: [
@@ -210,7 +210,7 @@ export class WaveManager {
                 name: "Extrême",
                 targetRecipes: 10,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
-                orderDuration: 25,
+                orderDuration: 90,
                 difficulty: "extreme",
                 description: "Défi ultime !",
                 specificRecipes: [
@@ -362,11 +362,32 @@ export class WaveManager {
                 displayIngredients: [recipe.ingredient1, recipe.ingredient2], // Mais garder les ingrédients du cookie-mix
             };
 
-            // Ajouter la commande progressivement
-            this.orderDisplayManager.addNewOrder(displayRecipe);
+            // Déterminer la durée selon le type de cookie
+            const duration = this.getOrderDuration(recipeId);
+
+            // Ajouter la commande progressivement avec la durée spécifique
+            this.orderDisplayManager.addNewOrder(displayRecipe, duration);
         } else {
             console.warn(`Recette non trouvée pour le plat: ${recipeId}`);
         }
+    }
+
+    /**
+     * Retourne la durée de la commande selon le type de cookie
+     */
+    private getOrderDuration(recipeId: string): number {
+        // Cookie chocolat-caramel : 2 minutes (120 secondes)
+        if (recipeId === "cookie-choco-cara") {
+            return 120;
+        }
+        
+        // Cookie chocolat ou caramel : 1 minute 30 (90 secondes)
+        if (recipeId === "cookie-choco" || recipeId === "cookie-cara") {
+            return 90;
+        }
+
+        // Durée par défaut (si nouvelle recette)
+        return this.currentWaveConfig?.orderDuration || 90;
     }
 
     /**
@@ -625,6 +646,24 @@ export class WaveManager {
             completedRecipeIds: [],
         };
         this.currentWaveConfig = null;
+    }
+
+    /**
+     * Met en pause le timer d'apparition des commandes
+     */
+    public pauseOrderSpawnTimer(): void {
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.paused = true;
+        }
+    }
+
+    /**
+     * Reprend le timer d'apparition des commandes
+     */
+    public resumeOrderSpawnTimer(): void {
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.paused = false;
+        }
     }
 }
 

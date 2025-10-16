@@ -64,11 +64,8 @@ export class RandomMapGenerator {
         // Ajouter les comptoirs de communication
         this.addCommunicationCounters(mapData, playerZones);
         
-        // Ajouter la zone de livraison UNIQUEMENT lors de la première vague
-        // La zone de livraison reste fixe tout au long du jeu
-        if (waveLevel === 1) {
-            this.addDeliveryZone(mapData, playerZones);
-        }
+        // Ajouter la zone de livraison à chaque vague (elle se régénère avec la map)
+        this.addDeliveryZone(mapData, playerZones);
         
         // Valider que tous les éléments sont accessibles
         const isValid = this.validateAccessibility(mapData, playerZones);
@@ -856,7 +853,7 @@ export class RandomMapGenerator {
         mapData[4][mapWidth - 3] = 13; // Casserole
         mapData[5][mapWidth - 3] = 14; // Poubelle
         
-        // Zone de livraison (aléatoire)
+        // Zone de livraison (aléatoire) - se régénère à chaque vague
         const deliveryX = Math.random() < 0.5 ? 3 : mapWidth - 4;
         mapData[mapHeight - 3][deliveryX] = 9; // Zone de livraison
         
