@@ -2,6 +2,8 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
 import { BaseCookingManager } from "./BaseCookingManager";
+import { PARTICLE_CONSTANTS, TIME_CONSTANTS, COOKING_CONSTANTS } from "../config/Constants";
+import { Logger } from "../utils/Logger";
 
 /**
  * Gestionnaire des interactions avec le four
@@ -10,7 +12,8 @@ import { BaseCookingManager } from "./BaseCookingManager";
 export class OvenManager extends BaseCookingManager {
     // Suivi des échecs de cuisson pour chaque four
     private cookingFailures: Map<string, number> = new Map();
-    private readonly MAX_FAILURES_BEFORE_BURN = 3;
+    private readonly MAX_FAILURES_BEFORE_BURN = COOKING_CONSTANTS.MAX_FAILURES_BEFORE_BURN;
+    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
 
     constructor(
         scene: Phaser.Scene,
@@ -78,7 +81,7 @@ export class OvenManager extends BaseCookingManager {
         const newFailures = currentFailures + 1;
         this.cookingFailures.set(key, newFailures);
 
-        console.log(
+        Logger.log(
             `Four ${key}: Échec ${newFailures}/${this.MAX_FAILURES_BEFORE_BURN}`
         );
 
@@ -87,7 +90,7 @@ export class OvenManager extends BaseCookingManager {
             item.setTexture("cookie-dead");
             this.cookingFailures.delete(key); // Reset le compteur
             this.playCookingEffect(gridX, gridY);
-            console.log(`Four ${key}: Cookie brûlé !`);
+            Logger.log(`Four ${key}: Cookie brûlé !`);
             return true;
         }
 
@@ -141,17 +144,26 @@ export class OvenManager extends BaseCookingManager {
 
         // Effet de particules orange/rouge pour simuler le feu
         const particles = this.scene.add.particles(x, y, "star", {
-            speed: { min: -50, max: 50 },
-            angle: { min: 270, max: 90 }, // Particules qui montent
-            scale: { start: 0.3, end: 0 },
-            lifespan: 800,
-            quantity: 10,
-            tint: 0xff4500, // Couleur orange-rouge
-            blendMode: "ADD",
+            speed: PARTICLE_CONSTANTS.FIRE.SPEED,
+            angle: PARTICLE_CONSTANTS.FIRE.ANGLE,
+            scale: PARTICLE_CONSTANTS.FIRE.SCALE,
+            lifespan: TIME_CONSTANTS.PARTICLE_LIFESPAN_FIRE,
+            quantity: PARTICLE_CONSTANTS.FIRE.QUANTITY,
+            tint: PARTICLE_CONSTANTS.FIRE.TINT,
+            blendMode: PARTICLE_CONSTANTS.FIRE.BLEND_MODE,
         });
 
-        this.scene.time.delayedCall(800, () => {
-            particles.destroy();
+        // Tracker les particules actives
+        this.activeParticles.push(particles);
+
+        this.scene.time.delayedCall(TIME_CONSTANTS.PARTICLE_LIFESPAN_FIRE, () => {
+            const index = this.activeParticles.indexOf(particles);
+            if (index > -1) {
+                this.activeParticles.splice(index, 1);
+            }
+            if (particles && particles.scene) {
+                particles.destroy();
+            }
         });
     }
 
@@ -160,5 +172,24 @@ export class OvenManager extends BaseCookingManager {
      */
     protected getDeviceName(): string {
         return "Four";
+    }
+
+    /**
+     * Nettoie toutes les ressources (override de la méthode parent)
+     */
+    cleanup(): void {
+        // Nettoyer les particules actives
+        this.activeParticles.forEach(particles => {
+            if (particles && particles.scene) {
+                particles.destroy();
+            }
+        });
+        this.activeParticles = [];
+        
+        // Nettoyer les échecs de cuisson
+        this.cookingFailures.clear();
+        
+        // Appeler le cleanup parent
+        super.cleanup();
     }
 }

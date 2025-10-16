@@ -107,6 +107,7 @@ export default class Preloader extends Phaser.Scene {
 
         // === MOBILIER ===
         this.load.image("craft_plan", "assets/craft_plan.png");
+        this.load.image("thrash", "assets/thrash.png");
 
         // Charger les assets de craft
         this.load.image("controlsBox", "assets/craftActions/controlsBox.png");

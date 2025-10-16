@@ -367,7 +367,7 @@ export default class Shop extends Phaser.Scene {
      * Ferme le shop et continue le jeu
      */
     private closeShop(): void {
-        // Appeler le callback
+        // Appeler le callback pour reprendre le jeu
         if (this.onClose) {
             this.onClose();
         }

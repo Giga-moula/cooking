@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
 import { VisualEffectsManager } from "./VisualEffectsManager";
+import { SCALE_CONSTANTS, DEPTH_CONSTANTS } from "../config/Constants";
 
 /**
  * Gestionnaire des interactions avec les comptoirs et des objets posés
@@ -59,8 +60,8 @@ export class CounterInteractionManager {
         // Créer une image simple
         const item = this.scene.add.image(x, y, itemType);
         item.setOrigin(0.5, 0.5);
-        item.setScale(1.2);
-        item.setDepth(y + 100);
+        item.setScale(SCALE_CONSTANTS.ITEM_ON_COUNTER);
+        item.setDepth(y + DEPTH_CONSTANTS.ITEM_ON_COUNTER_OFFSET);
         this.itemsOnCounters.set(key, item);
         return true;
     }
@@ -180,24 +181,6 @@ export class CounterInteractionManager {
             item.setTexture(newType);
             this.playFusionEffect(gridX, gridY);
         }
-    }
-
-    /**
-     * Vérifie si un ingrédient est disponible (dans l'inventaire du joueur)
-     * @deprecated Utiliser playerInventory.hasItem() directement
-     */
-    private hasIngredientAvailable(ingredientType: string): boolean {
-        if (!this.inventoryManager) return false;
-        return this.inventoryManager.hasItem(ingredientType);
-    }
-
-    /**
-     * Consomme un ingrédient de l'inventaire du joueur
-     * @deprecated Utiliser playerInventory.removeSpecificItem() directement
-     */
-    private consumeIngredient(ingredientType: string): boolean {
-        if (!this.inventoryManager) return false;
-        return this.inventoryManager.removeSpecificItem(ingredientType);
     }
 
     /**
