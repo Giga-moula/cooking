@@ -67,14 +67,6 @@ export const RECIPES: Recipe[] = [
         result: "cookie-mix-choco-cara",
         name: "Cookie Mix avec caramel et chocolat",
     },
-    // Cookie Mix Cara + Chocolat = Cookie Mix Choco Cara
-    {
-        id: "cookie_mix_cara_chocolate_choco_cara",
-        ingredient1: "cookie-mix-cara",
-        ingredient2: "chocolate",
-        result: "cookie-mix-choco-cara",
-        name: "Cookie Mix avec caramel et chocolat",
-    },
 ];
 
 /**
@@ -129,3 +121,4 @@ export const CASSEROLE_COOKING: CasseroleCooking[] = [
         name: "Beurre fondu",
     },
 ];
+

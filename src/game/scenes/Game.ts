@@ -4,6 +4,7 @@ import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { GameConfig } from "../config/GameConfig";
 import { EventBus } from "../EventBus";
+import { AllRecipesDisplayManager } from "../managers/AllRecipesDisplayManager";
 import { CasseroleManager } from "../managers/CasseroleManager";
 import { CommunicationManager } from "../managers/CommunicationManager";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
@@ -55,6 +56,7 @@ export default class Game extends Phaser.Scene {
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
     private livesManager?: LivesManager;
+    private allRecipesDisplayManager?: AllRecipesDisplayManager;
 
     // Handler pour l'event listener (pour pouvoir le retirer)
     private spaceKeyHandler?: () => void;
@@ -232,7 +234,14 @@ export default class Game extends Phaser.Scene {
 
         // Initialiser le système de vies
         this.livesManager = new LivesManager(this);
-        this.livesManager.initializeLivesDisplay(30, 200);
+        this.livesManager.initializeLivesDisplay(45, 200);
+
+        // Initialiser l'affichage de toutes les recettes disponibles
+        this.allRecipesDisplayManager = new AllRecipesDisplayManager(
+            this,
+            this.recipeManager
+        );
+        this.allRecipesDisplayManager.initializeAllRecipesDisplay(20, 300);
 
         // Initialiser le système de vagues
         this.waveManager = new WaveManager(
