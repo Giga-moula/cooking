@@ -350,7 +350,7 @@ export class OrderDisplayManager {
     /**
      * Ajoute une nouvelle commande progressivement (pour le système d'apparition progressive)
      */
-    public addNewOrder(recipe: any): void {
+    public addNewOrder(recipe: any, customDuration?: number): void {
         if (!this.recipeContainer) return;
 
         // Créer une nouvelle boîte à la fin
@@ -396,8 +396,9 @@ export class OrderDisplayManager {
             }
         };
 
-        // Démarrer le timer
-        box.startTimer(this.orderDuration);
+        // Démarrer le timer avec la durée personnalisée ou la durée par défaut
+        const duration = customDuration !== undefined ? customDuration : this.orderDuration;
+        box.startTimer(duration);
 
         // Animation d'apparition
         box.container.setAlpha(0);
