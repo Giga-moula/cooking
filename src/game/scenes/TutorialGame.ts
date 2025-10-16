@@ -495,6 +495,11 @@ export default class TutorialGame extends Phaser.Scene {
         this.player1.update();
         this.player2.update();
 
+        // Mise à jour des timers de cuisson du four
+        if (this.ovenManager) {
+            this.ovenManager.update();
+        }
+
         // Gestion des interactions pour chaque joueur (optimisé)
         if (this.interactionSystem) {
             // Vérifier les inputs une seule fois
