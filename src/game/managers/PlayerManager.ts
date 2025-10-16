@@ -33,6 +33,7 @@ export class PlayerManager {
     private mapOffsetX: number;
     private mapOffsetY: number;
     private movementEnabled: boolean = true; // Contrôle si le joueur peut bouger
+    private hasSkates: boolean = false; // Indique si le joueur utilise les skates
 
     private controls: PlayerControls;
 
@@ -291,11 +292,45 @@ export class PlayerManager {
     ): void {
         if (!this.player) return;
 
-        // Changer la texture du sprite
-        this.player.setTexture(textureKey);
+        // Utiliser l'état hasSkates pour déterminer le sprite à utiliser
+        let currentTextureKey = textureKey;
 
-        // Appliquer le retournement horizontal si nécessaire
-        this.player.setFlipX(flipX);
+        if (this.hasSkates) {
+            // Si le joueur a les skates, utiliser les sprites avec skate
+            const direction = textureKey.split("-").pop(); // Extraire 'front', 'back', ou 'side'
+
+            switch (direction) {
+                case "back":
+                    currentTextureKey = `skating-grandma-${this.playerColor}-back`;
+                    break;
+                case "side":
+                    currentTextureKey = `skating-grandma-${this.playerColor}-side`;
+                    break;
+                case "front":
+                default:
+                    currentTextureKey = `skating-grandma-${this.playerColor}-front`;
+                    break;
+            }
+        } else {
+            // Utiliser la texture normale passée en paramètre
+            currentTextureKey = textureKey;
+        }
+
+        // Changer la texture du sprite
+        this.player.setTexture(currentTextureKey);
+
+        // Appliquer le retournement horizontal
+        if (this.hasSkates) {
+            // Pour les sprites avec skate, appliquer le flip seulement pour les côtés
+            if (currentTextureKey.includes("-side")) {
+                this.player.setFlipX(flipX);
+            } else {
+                this.player.setFlipX(false); // Pas de flip pour front/back avec skate
+            }
+        } else {
+            // Pour les sprites normaux, appliquer le flip normalement
+            this.player.setFlipX(flipX);
+        }
 
         // Ajuster la hitbox selon la nouvelle texture
         const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -342,6 +377,83 @@ export class PlayerManager {
     applySpeedMultiplier(multiplier: number): void {
         this.speedMultiplier = multiplier;
         this.playerSpeed = this.baseSpeed * this.speedMultiplier;
+    }
+
+    /**
+     * Change le skin du joueur en fonction des upgrades
+     */
+    changeSkin(skinType: string | null): void {
+        if (!this.player) return;
+
+        const previousHasSkates = this.hasSkates;
+
+        // Mettre à jour l'état des skates
+        this.hasSkates = skinType === "speed_boost";
+
+        // Si l'état a changé, forcer la mise à jour du sprite
+        if (previousHasSkates !== this.hasSkates) {
+            let newTextureKey = "";
+
+            if (this.hasSkates) {
+                // Utiliser les sprites avec skate selon la couleur du joueur
+                const currentTexture = this.player.texture.key;
+
+                // Déterminer la direction actuelle
+                if (currentTexture.includes("back")) {
+                    newTextureKey = `skating-grandma-${this.playerColor}-back`;
+                } else if (currentTexture.includes("side")) {
+                    newTextureKey = `skating-grandma-${this.playerColor}-side`;
+                } else {
+                    newTextureKey = `skating-grandma-${this.playerColor}-front`;
+                }
+            } else {
+                // Retour aux sprites normaux
+                const normalColor =
+                    this.playerNumber === 1
+                        ? GameConfig.COLORS.PLAYER_1
+                        : GameConfig.COLORS.PLAYER_2;
+                this.playerColor = normalColor;
+
+                // Construire la texture normale selon la direction actuelle
+                const currentTexture = this.player.texture.key;
+                if (
+                    currentTexture.includes("back") ||
+                    currentTexture.includes("skating")
+                ) {
+                    newTextureKey = `${this.playerColor}-grandma-back`;
+                } else if (
+                    currentTexture.includes("side") ||
+                    currentTexture.includes("skating")
+                ) {
+                    newTextureKey = `${this.playerColor}-grandma-side`;
+                } else {
+                    newTextureKey = `${this.playerColor}-grandma-front`;
+                }
+            }
+
+            // Appliquer le nouveau sprite
+            if (newTextureKey) {
+                const wasFlipped = this.player.flipX;
+                this.player.setTexture(newTextureKey);
+
+                // Gestion du flip selon le type de sprite
+                if (this.hasSkates) {
+                    // Pour les sprites avec skate, conserver le flip seulement pour les côtés
+                    if (newTextureKey.includes("-side")) {
+                        this.player.setFlipX(wasFlipped);
+                    } else {
+                        this.player.setFlipX(false);
+                    }
+                } else {
+                    // Pour les sprites normaux, conserver l'état de flip
+                    this.player.setFlipX(wasFlipped);
+                }
+
+                console.log(
+                    `Skin changed to: ${newTextureKey}, hasSkates: ${this.hasSkates}`
+                );
+            }
+        }
     }
 
     getPlayerNumber(): number {
