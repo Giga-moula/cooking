@@ -252,6 +252,21 @@ export default class Preloader extends Phaser.Scene {
 
         // === AUDIO ===
         this.load.audio("grandma-song", "assets/musics/grandma_song.mp3");
+
+        // === IMAGES DE TUTORIEL ===
+        this.load.image("craft-table", "assets/tuto/craft-table.png");
+        this.load.image("pan", "assets/tuto/pan.png");
+        this.load.image("crafting-butter", "assets/tuto/crafting-butter.png");
+        this.load.image("crafting-dough", "assets/tuto/crafting-dough.png");
+        this.load.image("crafting-choco", "assets/tuto/crafting-choco.png");
+        this.load.image("full-game", "assets/tuto/full-game.png");
+        this.load.image(
+            "global-time-score",
+            "assets/tuto/global-time-score.png"
+        );
+        this.load.image("recipe-heart", "assets/tuto/recipe-heart.png");
+        this.load.image("crafting-sugar", "assets/tuto/crafting-sugar.png");
+        this.load.image("crafting-mix", "assets/tuto/crafting-mix.png");
     }
 
     create() {
@@ -267,3 +282,4 @@ export default class Preloader extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
+

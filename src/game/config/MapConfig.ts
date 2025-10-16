@@ -29,6 +29,9 @@ export interface MapConfig {
         player1: SpawnPoint;
         player2: SpawnPoint;
     };
+    deliveryZone?: SpawnPoint; // Zone de livraison (optionnelle)
+    mapWidth?: number; // Largeur de la map (optionnelle)
+    mapHeight?: number; // Hauteur de la map (optionnelle)
 }
 
 /**
@@ -39,13 +42,53 @@ export const DEFAULT_TILE_TYPES: { [key: number]: TileTypeConfig } = {
     1: { texture: "planks", isSolid: false, isCounter: false }, // Sol
     4: { texture: "iso-wall", isSolid: true, isCounter: false }, // Mur
     5: { texture: "table-mono", isSolid: true, isCounter: true }, // Table normale (sera remplacée par la bonne texture)
-    6: { texture: "choco_box", isSolid: true, isCounter: false, isIngredient: "chocolate", rotation: Math.PI }, // Boîte chocolat
-    7: { texture: "butter_box", isSolid: true, isCounter: false, isIngredient: "butter", rotation: Math.PI }, // Boîte beurre
-    8: { texture: "flour_box", isSolid: true, isCounter: false, isIngredient: "flour", rotation: Math.PI }, // Boîte farine
-    9: { texture: "iso-delivery-zone", isSolid: true, isCounter: false, isDeliveryZone: true }, // Zone de livraison (solide)
-    10: { texture: "table-mono", isSolid: true, isCounter: true, isTransformationTable: true }, // Table de transformation
+    6: {
+        texture: "choco_box",
+        isSolid: true,
+        isCounter: false,
+        isIngredient: "chocolate",
+        rotation: Math.PI,
+    }, // Boîte chocolat
+    7: {
+        texture: "butter_box",
+        isSolid: true,
+        isCounter: false,
+        isIngredient: "butter",
+        rotation: Math.PI,
+    }, // Boîte beurre
+    8: {
+        texture: "flour_box",
+        isSolid: true,
+        isCounter: false,
+        isIngredient: "flour",
+        rotation: Math.PI,
+    }, // Boîte farine
+    9: {
+        texture: "iso-delivery-zone",
+        isSolid: true,
+        isCounter: false,
+        isDeliveryZone: true,
+    }, // Zone de livraison (solide)
+    10: {
+        texture: "table-mono",
+        isSolid: true,
+        isCounter: true,
+        isTransformationTable: true,
+    }, // Table de transformation
     11: { texture: "oven", isSolid: true, isCounter: false, isOven: true }, // Four
-    12: { texture: "sugar-box", isSolid: true, isCounter: false, isIngredient: "sugar", rotation: Math.PI }, // Boîte sucre
-    13: { texture: "casserole_cuisson", isSolid: true, isCounter: false, isCasserole: true }, // Casserole de cuisson
+    12: {
+        texture: "sugar-box",
+        isSolid: true,
+        isCounter: false,
+        isIngredient: "sugar",
+        rotation: Math.PI,
+    }, // Boîte sucre
+    13: {
+        texture: "casserole_cuisson",
+        isSolid: true,
+        isCounter: false,
+        isCasserole: true,
+    }, // Casserole de cuisson
     14: { texture: "thrash", isSolid: true, isCounter: false, isTrash: true }, // Poubelle
 };
+

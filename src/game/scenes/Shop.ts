@@ -444,3 +444,4 @@ export default class Shop extends Phaser.Scene {
         this.scene.stop("Shop");
     }
 }
+

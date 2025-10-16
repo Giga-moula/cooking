@@ -67,14 +67,6 @@ export const RECIPES: Recipe[] = [
         result: "cookie-mix-choco-cara",
         name: "Cookie Mix avec caramel et chocolat",
     },
-    // Cookie Mix Cara + Chocolat = Cookie Mix Choco Cara
-    {
-        id: "cookie_mix_cara_chocolate_choco_cara",
-        ingredient1: "cookie-mix-cara",
-        ingredient2: "chocolate",
-        result: "cookie-mix-choco-cara",
-        name: "Cookie Mix avec caramel et chocolat",
-    },
 ];
 
 /**
@@ -141,3 +133,4 @@ export const INSTANT_CRAFT_RECIPES = [
     "cookie_mix_choco_caramel_choco_cara", // Cookie Mix Choco Cara
     "cookie_mix_cara_chocolate_choco_cara", // Cookie Mix Choco Cara
 ];
+
