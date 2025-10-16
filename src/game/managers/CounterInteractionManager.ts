@@ -199,5 +199,18 @@ export class CounterInteractionManager {
         if (!this.inventoryManager) return false;
         return this.inventoryManager.removeSpecificItem(ingredientType);
     }
+
+    /**
+     * Nettoie tous les objets posés sur les comptoirs
+     * Appelé lors du changement de carte entre les vagues
+     */
+    cleanup(): void {
+        this.itemsOnCounters.forEach((item) => {
+            if (item && item.scene) {
+                item.destroy();
+            }
+        });
+        this.itemsOnCounters.clear();
+    }
 }
 
