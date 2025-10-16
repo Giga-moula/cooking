@@ -207,8 +207,6 @@ export default class Game extends Phaser.Scene {
             this.recipeManager
         );
         this.orderDisplayManager.initializeRecipeDisplay();
-
-        this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades

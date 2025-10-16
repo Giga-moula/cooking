@@ -203,31 +203,23 @@ export class InteractionSystem {
 
     /**
      * Gère l'interaction avec la zone de livraison
+     * Maintenant que la zone est solide, on vérifie si le joueur regarde vers elle
      */
     private handleDeliveryInteraction(
         targetX: number,
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const playerGridX = player.getPlayerGridX();
-        const playerGridY = player.getPlayerGridY();
-        const lastDirection = player.getLastDirection();
-
-        const isInZone = this.deliveryManager.isInDeliveryZone(
-            playerGridX,
-            playerGridY
-        );
-        const isLookingAtZone = this.deliveryManager.isLookingAtDeliveryZone(
-            playerGridX,
-            playerGridY,
-            lastDirection
-        );
-
-        if (!isInZone && !isLookingAtZone) {
+        // Vérifier si la cible est la zone de livraison (utilise le MapManager pour la vraie position)
+        const isTargetDeliveryZone = this.mapManager.isDeliveryZone(targetX, targetY);
+        
+        if (!isTargetDeliveryZone) {
             return false;
         }
 
         const inventory = player.getInventory();
+        
+        // Si l'inventaire est vide, on montre juste qu'on a détecté la zone
         if (!inventory || inventory.isEmpty()) {
             return true;
         }
@@ -253,11 +245,7 @@ export class InteractionSystem {
                 }
 
                 this.deliveryManager.showDeliverySuccessEffect();
-            } else {
-                this.deliveryManager.showDeliveryErrorEffect();
             }
-        } else {
-            this.deliveryManager.showDeliveryErrorEffect();
         }
 
         return true;
@@ -341,11 +329,6 @@ export class InteractionSystem {
                 return true;
             }
 
-            this.counterManager.showCombinationMessage(
-                "❌ Pas de recette",
-                targetX,
-                targetY
-            );
             return true;
         }
 
@@ -358,24 +341,8 @@ export class InteractionSystem {
             );
             if (success) {
                 player.updateCarriedItem();
-                return true;
-            } else {
-                this.counterManager.showCombinationMessage(
-                    "❌ Pas de transformation",
-                    targetX,
-                    targetY
-                );
-                return true;
             }
-        }
-
-        // Cas 3: Table vide
-        if (!hasItemOnTable) {
-            this.counterManager.showCombinationMessage(
-                "❌ Table vide",
-                targetX,
-                targetY
-            );
+            return true;
         }
 
         return true;
@@ -418,24 +385,6 @@ export class InteractionSystem {
         // Cas 2: Poser un objet sur la table
         if (!hasItemOnCounter && !inventoryEmpty) {
             return this.placeOnCounter(targetX, targetY, player);
-        }
-
-        // Cas 3: Table occupée et inventaire plein = Combiner (uniquement sur table bleue avec R/P)
-        if (hasItemOnCounter && !inventoryEmpty) {
-            if (isTransformTable) {
-                this.counterManager.showCombinationMessage(
-                    "💡 Appuyez sur R/P",
-                    targetX,
-                    targetY
-                );
-            } else {
-                this.counterManager.showCombinationMessage(
-                    "❌ Table occupée",
-                    targetX,
-                    targetY
-                );
-            }
-            return true;
         }
 
         return true;
@@ -518,16 +467,6 @@ export class InteractionSystem {
             return this.placeInOven(targetX, targetY, player);
         }
 
-        // Cas 3: Four occupé et inventaire plein
-        if (hasItemInOven && !inventoryEmpty) {
-            this.ovenManager.showCookingMessage(
-                "💡 Appuyez sur R/P",
-                targetX,
-                targetY
-            );
-            return true;
-        }
-
         return true;
     }
 
@@ -565,16 +504,6 @@ export class InteractionSystem {
             return this.placeInCasserole(targetX, targetY, player);
         }
 
-        // Cas 3: Casserole occupée et inventaire plein
-        if (hasItemInCasserole && !inventoryEmpty) {
-            this.casseroleManager.showCookingMessage(
-                "💡 Appuyez sur R/P",
-                targetX,
-                targetY
-            );
-            return true;
-        }
-
         return true;
     }
 
@@ -594,11 +523,7 @@ export class InteractionSystem {
             const inventory = player.getInventory();
             if (inventory) {
                 inventory.addItem(itemType);
-                this.casseroleManager.showCookingMessage(
-                    `✅ Récupéré !`,
-                    targetX,
-                    targetY
-                );
+                player.updateCarriedItem();
                 return true;
             }
         }
@@ -624,11 +549,7 @@ export class InteractionSystem {
                 itemType
             );
             if (success) {
-                this.casseroleManager.showCookingMessage(
-                    `✅ Placé !`,
-                    targetX,
-                    targetY
-                );
+                player.removeCarriedItem();
                 return true;
             } else {
                 // Remettre l'objet dans l'inventaire si ça a échoué
@@ -696,23 +617,7 @@ export class InteractionSystem {
         const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
 
         if (hasItemInOven) {
-            const success = this.ovenManager.performCooking(targetX, targetY);
-            if (success) {
-                return true;
-            } else {
-                this.ovenManager.showCookingMessage(
-                    "❌ Pas de cuisson",
-                    targetX,
-                    targetY
-                );
-                return true;
-            }
-        } else {
-            this.ovenManager.showCookingMessage(
-                "❌ Four vide",
-                targetX,
-                targetY
-            );
+            this.ovenManager.performCooking(targetX, targetY);
         }
 
         return true;

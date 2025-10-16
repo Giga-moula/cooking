@@ -55,84 +55,43 @@ export default class Preloader extends Phaser.Scene {
     }
 
     preload() {
-        // Use the 'pack' file to load in any assets you need for this scene
+        // Asset pack principal
         this.load.pack("preload", "assets/preload-asset-pack.json");
 
-        // Charger les ingrédients
+        // === INGRÉDIENTS DE BASE ===
         this.load.image("butter", "assets/ingredients/butter.png");
         this.load.image("chocolate", "assets/ingredients/chocolate.png");
         this.load.image("flour", "assets/ingredients/flour.png");
         this.load.image("sugar", "assets/ingredients/sugar.png");
 
-        //Charger les objets mélangers
+        // === INGRÉDIENTS TRANSFORMÉS ===
         this.load.image("caramel", "assets/crafted/caramel.png");
-        this.load.image(
-            "chocolate-chunks",
-            "assets/crafted/chocolate-chunks.png"
-        );
-        this.load.image(
-            "cookie-mix-cara",
-            "assets/crafted/cookie-mix-cara.png"
-        );
-        this.load.image(
-            "cookie-mix-choco-cara",
-            "assets/crafted/cookie-mix-choco-cara.png"
-        );
-        this.load.image(
-            "cookie-mix-choco",
-            "assets/crafted/cookie-mix-choco.png"
-        );
+        this.load.image("chocolate-chunks", "assets/crafted/chocolate-chunks.png");
+        this.load.image("cookie-mix-cara", "assets/crafted/cookie-mix-cara.png");
+        this.load.image("cookie-mix-choco", "assets/crafted/cookie-mix-choco.png");
+        this.load.image("cookie-mix-choco-cara", "assets/crafted/cookie-mix-choco-cara.png");
         this.load.image("dough", "assets/crafted/dough.png");
         this.load.image("molten_butter", "assets/crafted/molten_butter.png");
 
-        //Charger les cookies
+        // === COOKIES (PLATS FINIS) ===
         this.load.image("cookie", "assets/meal/cookie.png");
         this.load.image("cookie-cara", "assets/meal/cookie-cara.png");
         this.load.image("cookie-choco", "assets/meal/cookie-choco.png");
-        this.load.image(
-            "cookie-choco-cara",
-            "assets/meal/cookie-choco-cara.png"
-        );
+        this.load.image("cookie-choco-cara", "assets/meal/cookie-choco-cara.png");
         this.load.image("cookie-dead", "assets/meal/cookie-dead.png");
 
-        // Charger les objets du jeu
-        this.load.image("oven", "assets/oven.png");
-        this.load.image("craft_plan", "assets/craft_plan.png");
-
-        // Charger les caisses d'ingrédients pour la récupération
+        // === CAISSES D'INGRÉDIENTS ===
         this.load.image("butter_box", "assets/boxes/butter_box.png");
-        this.load.image("flour_box", "assets/boxes/flour_box.png");
         this.load.image("choco_box", "assets/boxes/choco_box.png");
+        this.load.image("flour_box", "assets/boxes/flour_box.png");
         this.load.image("sugar-box", "assets/boxes/sugar-box.png");
 
-        // Charger la casserole
+        // === APPAREILS DE CUISSON ===
         this.load.image("casserole_cuisson", "assets/casserole_cuisson.png");
+        this.load.image("oven", "assets/oven.png");
 
-        // Charger les sprites de grand-mère
-        this.load.image(
-            "blue-grandma-front",
-            "assets/grandma/blue/grandma_blue_front.png"
-        );
-        this.load.image(
-            "blue-grandma-back",
-            "assets/grandma/blue/grandma_blue_back.png"
-        );
-        this.load.image(
-            "blue-grandma-side",
-            "assets/grandma/blue/grandma_blue_side.png"
-        );
-        this.load.image(
-            "red-grandma-front",
-            "assets/grandma/red/grandma_red_front.png"
-        );
-        this.load.image(
-            "red-grandma-back",
-            "assets/grandma/red/grandma_red_back.png"
-        );
-        this.load.image(
-            "red-grandma-side",
-            "assets/grandma/red/grandma_red_side.png"
-        );
+        // === MOBILIER ===
+        this.load.image("craft_plan", "assets/craft_plan.png");
 
         // Charger les assets de craft
         this.load.image("controlsBox", "assets/craftActions/controlsBox.png");
@@ -154,68 +113,47 @@ export default class Preloader extends Phaser.Scene {
         );
 
         // Charger les tuiles de table
-        this.load.image("table-mono", "assets/table/table-mono.png");
-        this.load.image("table-open-left", "assets/table/table-open-left.png");
-        this.load.image(
-            "table-open-right",
-            "assets/table/table-open-right.png"
-        );
-        this.load.image(
-            "table-open-left-top",
-            "assets/table/table-open-left-top.png"
-        );
-        this.load.image(
-            "table-open-right-left",
-            "assets/table/table-open-right-left.png"
-        );
-        this.load.image(
-            "table-open-right-left-top",
-            "assets/table/table-open-right-left-top.png"
-        );
-        this.load.image(
-            "table-open-right-top",
-            "assets/table/table-open-right-top.png"
-        );
-        this.load.image(
-            "table-open-top",
-            "assets/table/table-open-top.png"
-        );
-        this.load.image(
-            "table-open-right-left-top",
-            "assets/table/table-open-right-left-top.png"
-        )
-        this.load.image(
-            "table-open-bottom",
-            "assets/table/table-open-bottom.png"
-        );
-        this.load.image(
-            "table-open-left-bottom",
-            "assets/table/table-open-left-bottom.png"
-        );
-        this.load.image(
-            "table-open-right-bottom",
-            "assets/table/table-open-right-bottom.png"
-        );
-        this.load.image(
-            "table-open-left-top-bottom",
-            "assets/table/table-open-left-top-bottom.png"
-        );
-        this.load.image(
-            "table-open-right-top-bottom",
-            "assets/table/table-open-right-top-bottom.png"
-        );
-        this.load.image(
-            "table-open-right-left-top-bottom",
-            "assets/table/table-open-right-left-top-bottom.png"
-        );
-        this.load.image(
-            "table-open-top-bottom",
-            "assets/table/table-open-top-bottom.png"
-        );
+        // === SPRITES DES JOUEURS (GRAND-MÈRES) ===
+        // Grand-mère bleue
+        this.load.image("blue-grandma-back", "assets/grandma/blue/grandma_blue_back.png");
+        this.load.image("blue-grandma-front", "assets/grandma/blue/grandma_blue_front.png");
+        this.load.image("blue-grandma-side", "assets/grandma/blue/grandma_blue_side.png");
+        
+        // Grand-mère rouge
+        this.load.image("red-grandma-back", "assets/grandma/red/grandma_red_back.png");
+        this.load.image("red-grandma-front", "assets/grandma/red/grandma_red_front.png");
+        this.load.image("red-grandma-side", "assets/grandma/red/grandma_red_side.png");
 
-        // Charger les textures de sol
+        // === TUILES DE TABLE (par ordre de complexité) ===
+        this.load.image("table-mono", "assets/table/table-mono.png");
+        
+        // 1 ouverture
+        this.load.image("table-open-bottom", "assets/table/table-open-bottom.png");
+        this.load.image("table-open-left", "assets/table/table-open-left.png");
+        this.load.image("table-open-right", "assets/table/table-open-right.png");
+        this.load.image("table-open-top", "assets/table/table-open-top.png");
+        
+        // 2 ouvertures
+        this.load.image("table-open-left-bottom", "assets/table/table-open-left-bottom.png");
+        this.load.image("table-open-left-top", "assets/table/table-open-left-top.png");
+        this.load.image("table-open-right-bottom", "assets/table/table-open-right-bottom.png");
+        this.load.image("table-open-right-left", "assets/table/table-open-right-left.png");
+        this.load.image("table-open-right-top", "assets/table/table-open-right-top.png");
+        this.load.image("table-open-top-bottom", "assets/table/table-open-top-bottom.png");
+        
+        // 3 ouvertures
+        this.load.image("table-open-left-top-bottom", "assets/table/table-open-left-top-bottom.png");
+        this.load.image("table-open-right-left-top", "assets/table/table-open-right-left-top.png");
+        this.load.image("table-open-right-top-bottom", "assets/table/table-open-right-top-bottom.png");
+        this.load.image("table-open-right-left-bottom", "assets/table/table-open-right-left-bottom.png");
+        
+        // 4 ouvertures
+        this.load.image("table-open-right-left-top-bottom", "assets/table/table-open-right-left-top-bottom.png");
+
+        // === TEXTURES DE SOL ===
         this.load.image("planks", "assets/planks.png");
-        // 🎵 Charger la musique de grand-mère
+
+        // === AUDIO ===
         this.load.audio("grandma-song", "assets/musics/grandma_song.mp3");
     }
 

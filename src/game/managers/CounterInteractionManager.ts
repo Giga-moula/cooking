@@ -178,9 +178,6 @@ export class CounterInteractionManager {
         if (item) {
             // Changer la texture
             item.setTexture(newType);
-            // Afficher le message de transformation
-            this.showCombinationMessage(message, gridX, gridY);
-            // Effet visuel
             this.playFusionEffect(gridX, gridY);
         }
     }

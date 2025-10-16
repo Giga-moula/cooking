@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { GameConfig } from "../config/GameConfig";
 import { IsometricMap, IsometricUtils } from "../utils/IsometricUtils";
 import { TableTileManager } from "./tableManager";
-import { MapConfig, DEFAULT_MAP_CONFIG } from "../config/MapConfig";
+import { MapConfig, DEFAULT_TILE_TYPES } from "../config/MapConfig";
 
 /**
  * Gestionnaire de la carte : tiles, murs, limites
@@ -33,14 +33,48 @@ export class MapManager {
         mapOffsetY: number,
         mapWidth: number = 12,
         mapHeight: number = 12,
-        mapConfig: MapConfig = DEFAULT_MAP_CONFIG
+        mapConfig?: MapConfig
     ) {
         this.scene = scene;
         this.mapOffsetX = mapOffsetX;
         this.mapOffsetY = mapOffsetY;
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
-        this.currentMapConfig = mapConfig;
+        
+        // Si aucune config n'est fournie, créer une config minimale vide
+        // (utilisée uniquement temporairement avant que DynamicMapManager génère une vraie carte)
+        this.currentMapConfig = mapConfig || this.createEmptyMapConfig(mapWidth, mapHeight);
+    }
+
+    /**
+     * Crée une configuration de carte vide (utilisée temporairement)
+     */
+    private createEmptyMapConfig(width: number, height: number): MapConfig {
+        // Créer une carte vide remplie de sol (tile 1)
+        const mapData: number[][] = [];
+        for (let y = 0; y < height; y++) {
+            const row: number[] = [];
+            for (let x = 0; x < width; x++) {
+                // Murs sur les bords, sol à l'intérieur
+                if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+                    row.push(4); // Mur
+                } else {
+                    row.push(1); // Sol
+                }
+            }
+            mapData.push(row);
+        }
+        
+        return {
+            name: "Carte temporaire",
+            description: "Carte vide temporaire - sera remplacée par DynamicMapManager",
+            mapData,
+            tileTypes: DEFAULT_TILE_TYPES,
+            spawnPoints: {
+                player1: { x: 2, y: 2 },
+                player2: { x: width - 3, y: height - 3 }
+            }
+        };
     }
 
     /**
