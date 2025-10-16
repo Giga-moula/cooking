@@ -124,6 +124,10 @@ export default class Preloader extends Phaser.Scene {
             "reverse-spinning-arrow",
             "assets/craftActions/reverse-spinning-arrow.png"
         );
+        this.load.image(
+            "prepare-smoke",
+            "assets/craftActions/prepare-smoke.png"
+        );
 
         // Charger les tuiles de table
         this.load.image("table-mono", "assets/table/table-mono.png");

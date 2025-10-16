@@ -14,6 +14,7 @@ export class CraftActions {
     // Éléments visuels
     private controlsBox?: Phaser.GameObjects.Sprite;
     private arrowSprites: Phaser.GameObjects.Sprite[] = [];
+    private prepareSmoke?: Phaser.GameObjects.Sprite;
     private currentArrowIndex: number = 0;
 
     // Séquence de craft
@@ -30,6 +31,7 @@ export class CraftActions {
     private readonly ZOOM_SCALE = 1.5;
     private readonly ZOOM_DURATION = 200;
     private readonly SHAKE_DURATION = 1000;
+    private readonly SMOKE_OFFSET = 32; // Distance de la fumée par rapport au joueur
 
     private isProcessingInput = false;
     private isPlayingErrorAnimation = false;
@@ -60,7 +62,7 @@ export class CraftActions {
         if (this.isPlayingErrorAnimation) {
             return;
         }
-        
+
         this.craftSequence.isActive = false;
         this.hideCraftUI();
     }
@@ -95,6 +97,9 @@ export class CraftActions {
         this.controlsBox = this.scene.add.sprite(boxX, boxY, "controlsBox");
         this.controlsBox.setDepth(1000); // Au-dessus de tout
 
+        // Créer la fumée dans la direction du joueur
+        this.createPrepareSmoke();
+
         // Créer la première flèche
         this.createArrowSprites(boxX, boxY);
     }
@@ -104,15 +109,16 @@ export class CraftActions {
      */
     private createArrowSprites(centerX: number, centerY: number): void {
         this.arrowSprites = [];
-        
+
         // Créer seulement la flèche actuelle
-        const currentDirection = this.craftSequence.directions[this.craftSequence.currentIndex];
+        const currentDirection =
+            this.craftSequence.directions[this.craftSequence.currentIndex];
         if (currentDirection) {
             const textureKey = `arrow-${currentDirection}`;
             const arrow = this.scene.add.sprite(centerX, centerY, textureKey);
             arrow.setDepth(1001);
             arrow.setAlpha(1.0); // Complètement visible
-            
+
             this.arrowSprites.push(arrow);
         }
     }
@@ -122,21 +128,82 @@ export class CraftActions {
      */
     private showNextArrow(): void {
         // Supprimer l'ancienne flèche
-        this.arrowSprites.forEach(arrow => arrow.destroy());
+        this.arrowSprites.forEach((arrow) => arrow.destroy());
         this.arrowSprites = [];
-        
+
         // Créer la nouvelle flèche si la séquence n'est pas terminée
-        if (this.craftSequence.currentIndex < this.craftSequence.directions.length && this.controlsBox) {
-            const currentDirection = this.craftSequence.directions[this.craftSequence.currentIndex];
+        if (
+            this.craftSequence.currentIndex <
+                this.craftSequence.directions.length &&
+            this.controlsBox
+        ) {
+            const currentDirection =
+                this.craftSequence.directions[this.craftSequence.currentIndex];
             if (currentDirection) {
                 const textureKey = `arrow-${currentDirection}`;
-                const arrow = this.scene.add.sprite(this.controlsBox.x, this.controlsBox.y, textureKey);
+                const arrow = this.scene.add.sprite(
+                    this.controlsBox.x,
+                    this.controlsBox.y,
+                    textureKey
+                );
                 arrow.setDepth(1001);
                 arrow.setAlpha(1.0);
-                
+
                 this.arrowSprites.push(arrow);
             }
         }
+    }
+
+    /**
+     * Crée la fumée de préparation dans la direction du joueur
+     */
+    private createPrepareSmoke(): void {
+        const player = this.playerManager.getPlayer();
+        if (!player) return;
+
+        // Récupérer la direction du joueur
+        const direction = this.playerManager.getLastDirection();
+
+        // Calculer la position de la fumée selon la direction
+        const smokeX = player.x + direction.x * this.SMOKE_OFFSET;
+        const smokeY = player.y + direction.y * this.SMOKE_OFFSET;
+
+        // Créer le sprite de fumée
+        this.prepareSmoke = this.scene.add.sprite(
+            smokeX,
+            smokeY,
+            "prepare-smoke"
+        );
+
+        // Gestion de la profondeur selon la direction
+        if (direction.y === -1) {
+            // Joueur regarde vers le haut : fumée au second plan
+            this.prepareSmoke.setDepth(player.depth - 1);
+        } else {
+            // Autres directions : fumée devant le joueur
+            this.prepareSmoke.setDepth(player.depth + 1);
+        }
+
+        // Ajouter une légère animation d'oscillation à la fumée
+        this.scene.tweens.add({
+            targets: this.prepareSmoke,
+            alpha: { from: 0.8, to: 1.0 },
+            scaleX: { from: 0.9, to: 1.1 },
+            scaleY: { from: 0.9, to: 1.1 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+        });
+
+        // Ajouter un effet de rotation continue à la fumée
+        this.scene.tweens.add({
+            targets: this.prepareSmoke,
+            rotation: Math.PI * 2, // Rotation complète (360 degrés)
+            duration: 1000, // 3 secondes pour une rotation complète
+            repeat: -1,
+            ease: "Linear",
+        });
     }
 
     /**
@@ -146,6 +213,11 @@ export class CraftActions {
         if (this.controlsBox) {
             this.controlsBox.destroy();
             this.controlsBox = undefined;
+        }
+
+        if (this.prepareSmoke) {
+            this.prepareSmoke.destroy();
+            this.prepareSmoke = undefined;
         }
 
         this.arrowSprites.forEach((arrow) => arrow.destroy());
@@ -167,6 +239,21 @@ export class CraftActions {
 
         // Mettre à jour la position de la boîte
         this.controlsBox.setPosition(boxX, boxY);
+
+        // Mettre à jour la position de la fumée
+        if (this.prepareSmoke) {
+            const direction = this.playerManager.getLastDirection();
+            const smokeX = player.x + direction.x * this.SMOKE_OFFSET;
+            const smokeY = player.y + direction.y * this.SMOKE_OFFSET;
+            this.prepareSmoke.setPosition(smokeX, smokeY);
+
+            // Mettre à jour la profondeur de la fumée selon la direction
+            if (direction.y === -1) {
+                this.prepareSmoke.setDepth(player.depth - 1);
+            } else {
+                this.prepareSmoke.setDepth(player.depth + 1);
+            }
+        }
 
         // Mettre à jour la position de la flèche actuelle
         this.arrowSprites.forEach((arrow) => {
