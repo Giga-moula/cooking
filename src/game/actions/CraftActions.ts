@@ -32,6 +32,7 @@ export class CraftActions {
     private readonly SHAKE_DURATION = 1000;
 
     private isProcessingInput = false;
+    private isPlayingErrorAnimation = false;
 
     constructor(scene: Phaser.Scene, playerManager: any, playerNumber: number) {
         this.scene = scene;
@@ -55,6 +56,11 @@ export class CraftActions {
      * Désactive le système de craft et nettoie l'interface
      */
     public stopCrafting(): void {
+        // Ne pas arrêter le craft si une animation d'erreur est en cours
+        if (this.isPlayingErrorAnimation) {
+            return;
+        }
+        
         this.craftSequence.isActive = false;
         this.hideCraftUI();
     }
@@ -89,54 +95,48 @@ export class CraftActions {
         this.controlsBox = this.scene.add.sprite(boxX, boxY, "controlsBox");
         this.controlsBox.setDepth(1000); // Au-dessus de tout
 
-        // Créer les flèches
+        // Créer la première flèche
         this.createArrowSprites(boxX, boxY);
-
-        // Mettre en évidence la première flèche
-        this.highlightCurrentArrow();
     }
 
     /**
-     * Crée les sprites des flèches dans la boîte
+     * Crée le sprite de la flèche actuelle dans la boîte
      */
     private createArrowSprites(centerX: number, centerY: number): void {
         this.arrowSprites = [];
-
-        const totalWidth =
-            (this.craftSequence.directions.length - 1) * this.ARROW_SPACING;
-        const startX = centerX - totalWidth / 2;
-
-        this.craftSequence.directions.forEach((direction, index) => {
-            const arrowX = startX + index * this.ARROW_SPACING;
-            const arrowY = centerY;
-
-            const textureKey = `arrow-${direction}`;
-            const arrow = this.scene.add.sprite(arrowX, arrowY, textureKey);
+        
+        // Créer seulement la flèche actuelle
+        const currentDirection = this.craftSequence.directions[this.craftSequence.currentIndex];
+        if (currentDirection) {
+            const textureKey = `arrow-${currentDirection}`;
+            const arrow = this.scene.add.sprite(centerX, centerY, textureKey);
             arrow.setDepth(1001);
-            arrow.setAlpha(0.6); // Légèrement transparent par défaut
-
+            arrow.setAlpha(1.0); // Complètement visible
+            
             this.arrowSprites.push(arrow);
-        });
+        }
     }
 
     /**
-     * Met en évidence la flèche actuelle
+     * Crée la nouvelle flèche après validation de la précédente
      */
-    private highlightCurrentArrow(): void {
-        // Réinitialiser toutes les flèches
-        this.arrowSprites.forEach((arrow, index) => {
-            if (index < this.craftSequence.currentIndex) {
-                // Flèches déjà validées - plus transparentes
-                arrow.setAlpha(0.3);
-            } else if (index === this.craftSequence.currentIndex) {
-                // Flèche actuelle - bien visible
+    private showNextArrow(): void {
+        // Supprimer l'ancienne flèche
+        this.arrowSprites.forEach(arrow => arrow.destroy());
+        this.arrowSprites = [];
+        
+        // Créer la nouvelle flèche si la séquence n'est pas terminée
+        if (this.craftSequence.currentIndex < this.craftSequence.directions.length && this.controlsBox) {
+            const currentDirection = this.craftSequence.directions[this.craftSequence.currentIndex];
+            if (currentDirection) {
+                const textureKey = `arrow-${currentDirection}`;
+                const arrow = this.scene.add.sprite(this.controlsBox.x, this.controlsBox.y, textureKey);
+                arrow.setDepth(1001);
                 arrow.setAlpha(1.0);
-                arrow.setScale(1.0);
-            } else {
-                // Flèches futures - semi-transparentes
-                arrow.setAlpha(0.6);
+                
+                this.arrowSprites.push(arrow);
             }
-        });
+        }
     }
 
     /**
@@ -168,14 +168,9 @@ export class CraftActions {
         // Mettre à jour la position de la boîte
         this.controlsBox.setPosition(boxX, boxY);
 
-        // Mettre à jour la position des flèches
-        const totalWidth =
-            (this.craftSequence.directions.length - 1) * this.ARROW_SPACING;
-        const startX = boxX - totalWidth / 2;
-
-        this.arrowSprites.forEach((arrow, index) => {
-            const arrowX = startX + index * this.ARROW_SPACING;
-            arrow.setPosition(arrowX, boxY);
+        // Mettre à jour la position de la flèche actuelle
+        this.arrowSprites.forEach((arrow) => {
+            arrow.setPosition(boxX, boxY);
         });
     }
 
@@ -202,8 +197,8 @@ export class CraftActions {
                     // Séquence terminée avec succès
                     this.onSequenceComplete();
                 } else {
-                    // Passer à la flèche suivante
-                    this.highlightCurrentArrow();
+                    // Afficher la flèche suivante
+                    this.showNextArrow();
                 }
 
                 this.isProcessingInput = false;
@@ -220,7 +215,7 @@ export class CraftActions {
      * Animation de succès (zoom + fade)
      */
     private playSuccessAnimation(onComplete: () => void): void {
-        const currentArrow = this.arrowSprites[this.craftSequence.currentIndex];
+        const currentArrow = this.arrowSprites[0]; // Il n'y a qu'une seule flèche dans le tableau
         if (!currentArrow) return;
 
         this.scene.tweens.add({
@@ -238,8 +233,10 @@ export class CraftActions {
      * Animation d'erreur (rotation oscillante)
      */
     private playErrorAnimation(onComplete: () => void): void {
-        const currentArrow = this.arrowSprites[this.craftSequence.currentIndex];
+        const currentArrow = this.arrowSprites[0]; // Il n'y a qu'une seule flèche dans le tableau
         if (!currentArrow) return;
+
+        this.isPlayingErrorAnimation = true; // Marquer le début de l'animation d'erreur
 
         this.scene.tweens.add({
             targets: currentArrow,
@@ -250,6 +247,7 @@ export class CraftActions {
             ease: "Sine.easeInOut",
             onComplete: () => {
                 currentArrow.setRotation(0); // Remettre à 0
+                this.isPlayingErrorAnimation = false; // Marquer la fin de l'animation d'erreur
                 onComplete();
             },
         });
@@ -283,5 +281,12 @@ export class CraftActions {
      */
     public getCurrentSequence(): CraftSequence {
         return { ...this.craftSequence };
+    }
+
+    /**
+     * Vérifie si on peut arrêter le craft (pas d'animation d'erreur en cours)
+     */
+    public canStop(): boolean {
+        return !this.isPlayingErrorAnimation;
     }
 }
