@@ -626,5 +626,23 @@ export class WaveManager {
         };
         this.currentWaveConfig = null;
     }
+
+    /**
+     * Met en pause le timer d'apparition des commandes
+     */
+    public pauseOrderSpawnTimer(): void {
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.paused = true;
+        }
+    }
+
+    /**
+     * Reprend le timer d'apparition des commandes
+     */
+    public resumeOrderSpawnTimer(): void {
+        if (this.orderSpawnTimer) {
+            this.orderSpawnTimer.paused = false;
+        }
+    }
 }
 
