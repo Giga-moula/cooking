@@ -36,7 +36,7 @@ export class GameConfig {
     static readonly PARTICLE_LIFESPAN = 800;
     static readonly MESSAGE_DURATION = 2000;
     static readonly MESSAGE_OFFSET_Y = -50;
-    
+
     // Configuration des boîtes de recettes
     static readonly RECIPE_BOX = {
         WIDTH: 120,
@@ -92,7 +92,7 @@ export class GameConfig {
 
     // Configuration du timer
     static readonly TIMER = {
-        GAME_DURATION: 300, // 5 minutes en secondes
+        GAME_DURATION: 200, // 5 minutes en secondes
         DELIVERY_BONUS: 15, // Bonus de temps par livraison (en secondes)
         DISPLAY_X: 512,
         DISPLAY_Y: 20,

@@ -10,6 +10,21 @@
                 "url": "assets/background/kitchen.png",
                 "type": "image",
                 "key": "kitchen"
+            },
+            {
+                "url": "assets/background/game-over-kitchen.png",
+                "type": "image",
+                "key": "game-over-kitchen"
+            },
+            {
+                "url": "assets/background/beautiful-kitchen.png",
+                "type": "image",
+                "key": "beautiful-kitchen"
+            },
+            {
+                "url": "assets/lives/heart.png",
+                "type": "image",
+                "key": "heart"
             }
         ]
     },
@@ -21,3 +36,4 @@
         "showAllFilesInBlocks": false
     }
 }
+
