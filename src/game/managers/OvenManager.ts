@@ -70,14 +70,12 @@ export class OvenManager extends BaseCookingManager {
         const cookingRecipe = this.recipeManager.getOvenCooking(currentItem);
 
         if (!cookingRecipe) {
-            this.showCookingMessage("❌ Ne peut pas cuire ça au four !", gridX, gridY);
             return false;
         }
 
         // Remplacer l'objet par le résultat de la cuisson
         item.setTexture(cookingRecipe.to);
 
-        this.showCookingMessage(`✅ ${cookingRecipe.name} !`, gridX, gridY);
         this.playCookingEffect(gridX, gridY);
 
         return true;

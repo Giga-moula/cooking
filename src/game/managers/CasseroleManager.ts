@@ -70,14 +70,12 @@ export class CasseroleManager extends BaseCookingManager {
         const cookingRecipe = this.recipeManager.getCasseroleCooking(currentItem);
 
         if (!cookingRecipe) {
-            this.showCookingMessage("❌ Ne peut pas cuire ça à la casserole !", gridX, gridY);
             return false;
         }
 
         // Remplacer l'objet par le résultat de la cuisson
         item.setTexture(cookingRecipe.to);
 
-        this.showCookingMessage(`✅ ${cookingRecipe.name} !`, gridX, gridY);
         this.playCookingEffect(gridX, gridY);
 
         return true;

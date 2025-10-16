@@ -105,42 +105,9 @@ export class DeliveryManager {
     showDeliverySuccessEffect(): void {
         const position = this.getRealDeliveryZonePosition();
         
-        // Effet de particules
         this.visualEffects.showSuccessEffect(position.x, position.y);
 
-        // Message de succès
-        this.visualEffects.showTemporaryMessage({
-            text: "✓ Livré !",
-            gridX: position.x,
-            gridY: position.y,
-            fontSize: "20px",
-            color: "#4CAF50",
-            stroke: "#ffffff",
-            strokeThickness: 3,
-            duration: 2000,
-            offsetY: -50,
-        });
-    }
-
-    /**
-     * Affiche un effet d'erreur pour la livraison
-     */
-    showDeliveryErrorEffect(): void {
-        const position = this.getRealDeliveryZonePosition();
-        
-        // Message d'erreur
-        this.visualEffects.showTemporaryMessage({
-            text: "❌ Pas de commande",
-            gridX: position.x,
-            gridY: position.y,
-            fontSize: "16px",
-            color: "#FF6B6B",
-            stroke: "#ffffff",
-            strokeThickness: 2,
-            duration: 1500,
-            offsetY: -50,
-        });
-    }
+        }
 
     // Getters
     getDeliveryZone(): { x: number; y: number } {

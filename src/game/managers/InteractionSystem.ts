@@ -227,13 +227,7 @@ export class InteractionSystem {
                 }
 
                 this.deliveryManager.showDeliverySuccessEffect();
-            } else {
-                // Ce n'est pas une recette commandée
-                this.deliveryManager.showDeliveryErrorEffect();
             }
-        } else {
-            // Ce n'est pas un plat fini (ingrédient intermédiaire)
-            this.deliveryManager.showDeliveryErrorEffect();
         }
 
         return true;
@@ -284,15 +278,6 @@ export class InteractionSystem {
 
                     // Effets visuels
                     this.counterManager.playFusionEffect(targetX, targetY);
-                    const ingredient = this.recipeManager.getIngredient(resultId);
-                    if (ingredient) {
-                        this.counterManager.showCombinationMessage(
-                            `✨ ${ingredient.name} créé !`,
-                            targetX,
-                            targetY
-                        );
-                    }
-
                     return true;
                 }
             }
@@ -304,11 +289,6 @@ export class InteractionSystem {
                 return true;
             }
 
-            this.counterManager.showCombinationMessage(
-                "❌ Pas de recette",
-                targetX,
-                targetY
-            );
             return true;
         }
 
@@ -317,24 +297,8 @@ export class InteractionSystem {
             const success = this.counterManager.performSpecialTransformation(targetX, targetY, inventory);
             if (success) {
                 player.updateCarriedItem();
-                return true;
-            } else {
-                this.counterManager.showCombinationMessage(
-                    "❌ Pas de transformation",
-                    targetX,
-                    targetY
-                );
-                return true;
             }
-        }
-
-        // Cas 3: Table vide
-        if (!hasItemOnTable) {
-            this.counterManager.showCombinationMessage(
-                "❌ Table vide",
-                targetX,
-                targetY
-            );
+            return true;
         }
 
         return true;
@@ -374,24 +338,6 @@ export class InteractionSystem {
         // Cas 2: Poser un objet sur la table
         if (!hasItemOnCounter && !inventoryEmpty) {
             return this.placeOnCounter(targetX, targetY, player);
-        }
-
-        // Cas 3: Table occupée et inventaire plein = Combiner (uniquement sur table bleue avec R/P)
-        if (hasItemOnCounter && !inventoryEmpty) {
-            if (isTransformTable) {
-                this.counterManager.showCombinationMessage(
-                    "💡 Appuyez sur R/P",
-                    targetX,
-                    targetY
-                );
-            } else {
-                this.counterManager.showCombinationMessage(
-                    "❌ Table occupée",
-                    targetX,
-                    targetY
-                );
-            }
-            return true;
         }
 
         return true;
@@ -474,16 +420,6 @@ export class InteractionSystem {
             return this.placeInOven(targetX, targetY, player);
         }
 
-        // Cas 3: Four occupé et inventaire plein
-        if (hasItemInOven && !inventoryEmpty) {
-            this.ovenManager.showCookingMessage(
-                "💡 Appuyez sur R/P",
-                targetX,
-                targetY
-            );
-            return true;
-        }
-
         return true;
     }
 
@@ -518,16 +454,6 @@ export class InteractionSystem {
             return this.placeInCasserole(targetX, targetY, player);
         }
 
-        // Cas 3: Casserole occupée et inventaire plein
-        if (hasItemInCasserole && !inventoryEmpty) {
-            this.casseroleManager.showCookingMessage(
-                "💡 Appuyez sur R/P",
-                targetX,
-                targetY
-            );
-            return true;
-        }
-
         return true;
     }
 
@@ -544,11 +470,6 @@ export class InteractionSystem {
             const inventory = player.getInventory();
             if (inventory) {
                 inventory.addItem(itemType);
-                this.casseroleManager.showCookingMessage(
-                    `✅ Récupéré !`,
-                    targetX,
-                    targetY
-                );
                 return true;
             }
         }
@@ -570,11 +491,6 @@ export class InteractionSystem {
         if (itemType) {
             const success = this.casseroleManager.placeItemInCasserole(targetX, targetY, itemType);
             if (success) {
-                this.casseroleManager.showCookingMessage(
-                    `✅ Placé !`,
-                    targetX,
-                    targetY
-                );
                 return true;
             } else {
                 // Remettre l'objet dans l'inventaire si ça a échoué
@@ -643,23 +559,7 @@ export class InteractionSystem {
         const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
 
         if (hasItemInOven) {
-            const success = this.ovenManager.performCooking(targetX, targetY);
-            if (success) {
-                return true;
-            } else {
-                this.ovenManager.showCookingMessage(
-                    "❌ Pas de cuisson",
-                    targetX,
-                    targetY
-                );
-                return true;
-            }
-        } else {
-            this.ovenManager.showCookingMessage(
-                "❌ Four vide",
-                targetX,
-                targetY
-            );
+            this.ovenManager.performCooking(targetX, targetY);
         }
 
         return true;
@@ -681,16 +581,10 @@ export class InteractionSystem {
         const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(targetX, targetY);
 
         if (hasItemInCasserole) {
-            const success = this.casseroleManager.cookInCasserole(targetX, targetY);
-            if (success) {
-                return true;
-            } else {
-                return true;
-            }
-        } else {
-            this.casseroleManager.showCookingMessage("❌ Vide !", targetX, targetY);
-            return true;
+            this.casseroleManager.cookInCasserole(targetX, targetY);
         }
+
+        return true;
     }
 }
 
