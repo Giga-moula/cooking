@@ -31,38 +31,48 @@ export class DeliveryManager {
 
     /**
      * Initialise la zone de livraison
+     * Maintenant que la zone est une tile de la carte, on n'affiche qu'un texte indicateur
      */
     initializeDeliveryZone(): void {
+        // Détruire l'ancien graphique s'il existe
+        if (this.deliveryZoneGraphics) {
+            this.deliveryZoneGraphics.destroy();
+        }
+        
+        // Récupérer la vraie position de la zone de livraison
+        const position = this.getRealDeliveryZonePosition();
+        
         const screenPos = IsometricUtils.gridToScreen(
-            this.deliveryZone.x,
-            this.deliveryZone.y
+            position.x,
+            position.y
         );
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
 
-        this.deliveryZoneGraphics = this.scene.add.graphics();
-        this.deliveryZoneGraphics.fillStyle(0xff6b6b, 0.3);
-        this.deliveryZoneGraphics.fillRoundedRect(x - 24, y - 24, 48, 48, 8);
-        this.deliveryZoneGraphics.lineStyle(3, 0xff6b6b, 0.8);
-        this.deliveryZoneGraphics.strokeRoundedRect(x - 24, y - 24, 48, 48, 8);
-        this.deliveryZoneGraphics.setDepth(100);
-
-        // Texte "LIVRAISON"
-        const deliveryText = this.scene.add.text(x, y - 30, "LIVRAISON", {
-            fontFamily: "Arial",
-            fontSize: "12px",
-            color: "#FF6B6B",
-            stroke: "#ffffff",
-            strokeThickness: 2,
+        // Ne plus afficher de graphique, la zone est déjà visible sur la carte
+        // On affiche juste un texte indicateur au-dessus
+        const deliveryText = this.scene.add.text(x, y - 40, "📦 LIVRAISON", {
+            fontFamily: "Arial Black",
+            fontSize: "14px",
+            color: "#FFFFFF",
+            stroke: "#FF6B6B",
+            strokeThickness: 4,
         });
         deliveryText.setOrigin(0.5);
-        deliveryText.setDepth(101);
+        deliveryText.setDepth(10001);
     }
 
     /**
      * Vérifie si une position est une zone de livraison
+     * Utilise le MapManager pour vérifier la vraie position de la zone
      */
     isDeliveryZone(gridX: number, gridY: number): boolean {
+        // Utiliser le MapManager si disponible pour vérifier la vraie position
+        if (this.mapManager) {
+            return this.mapManager.isDeliveryZone(gridX, gridY);
+        }
+        
+        // Fallback sur la position hardcodée (pour compatibilité)
         const isDelivery =
             gridX === this.deliveryZone.x && gridY === this.deliveryZone.y;
 
@@ -100,17 +110,41 @@ export class DeliveryManager {
     }
 
     /**
+     * Récupère la vraie position de la zone de livraison
+     */
+    private getRealDeliveryZonePosition(): { x: number; y: number } {
+        // Chercher la vraie position dans la carte générée
+        if (this.mapManager) {
+            const mapConfig = this.mapManager.getCurrentMapConfig();
+            if (mapConfig && mapConfig.mapData) {
+                for (let y = 0; y < mapConfig.mapData.length; y++) {
+                    for (let x = 0; x < mapConfig.mapData[y].length; x++) {
+                        if (mapConfig.mapData[y][x] === 9) { // Tile type 9 = zone de livraison
+                            return { x, y };
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback sur la position hardcodée
+        return this.deliveryZone;
+    }
+
+    /**
      * Affiche un effet de succès pour la livraison
      */
     showDeliverySuccessEffect(): void {
+        const position = this.getRealDeliveryZonePosition();
+        
         // Effet de particules
-        this.visualEffects.showSuccessEffect(this.deliveryZone.x, this.deliveryZone.y);
+        this.visualEffects.showSuccessEffect(position.x, position.y);
 
         // Message de succès
         this.visualEffects.showTemporaryMessage({
             text: "✓ Livré !",
-            gridX: this.deliveryZone.x,
-            gridY: this.deliveryZone.y,
+            gridX: position.x,
+            gridY: position.y,
             fontSize: "20px",
             color: "#4CAF50",
             stroke: "#ffffff",
@@ -124,11 +158,13 @@ export class DeliveryManager {
      * Affiche un effet d'erreur pour la livraison
      */
     showDeliveryErrorEffect(): void {
+        const position = this.getRealDeliveryZonePosition();
+        
         // Message d'erreur
         this.visualEffects.showTemporaryMessage({
             text: "❌ Pas de commande",
-            gridX: this.deliveryZone.x,
-            gridY: this.deliveryZone.y,
+            gridX: position.x,
+            gridY: position.y,
             fontSize: "16px",
             color: "#FF6B6B",
             stroke: "#ffffff",

@@ -185,31 +185,23 @@ export class InteractionSystem {
 
     /**
      * Gère l'interaction avec la zone de livraison
+     * Maintenant que la zone est solide, on vérifie si le joueur regarde vers elle
      */
     private handleDeliveryInteraction(
         targetX: number,
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const playerGridX = player.getPlayerGridX();
-        const playerGridY = player.getPlayerGridY();
-        const lastDirection = player.getLastDirection();
-
-        const isInZone = this.deliveryManager.isInDeliveryZone(
-            playerGridX,
-            playerGridY
-        );
-        const isLookingAtZone = this.deliveryManager.isLookingAtDeliveryZone(
-            playerGridX,
-            playerGridY,
-            lastDirection
-        );
-
-        if (!isInZone && !isLookingAtZone) {
+        // Vérifier si la cible est la zone de livraison (utilise le MapManager pour la vraie position)
+        const isTargetDeliveryZone = this.mapManager.isDeliveryZone(targetX, targetY);
+        
+        if (!isTargetDeliveryZone) {
             return false;
         }
 
         const inventory = player.getInventory();
+        
+        // Si l'inventaire est vide, on montre juste qu'on a détecté la zone
         if (!inventory || inventory.isEmpty()) {
             return true;
         }
@@ -236,9 +228,11 @@ export class InteractionSystem {
 
                 this.deliveryManager.showDeliverySuccessEffect();
             } else {
+                // Ce n'est pas une recette commandée
                 this.deliveryManager.showDeliveryErrorEffect();
             }
         } else {
+            // Ce n'est pas un plat fini (ingrédient intermédiaire)
             this.deliveryManager.showDeliveryErrorEffect();
         }
 

@@ -529,7 +529,7 @@ export class RandomMapGenerator {
             for (const tile of spawnTiles) {
                 if (tile.y >= 0 && tile.y < mapData.length && tile.x >= 0 && tile.x < mapData[0].length) {
                     const tileValue = mapData[tile.y][tile.x];
-                    if (tileValue !== 1 && tileValue !== 9) { // Doit être sol libre (1) ou zone de livraison (9)
+                    if (tileValue !== 1) { // Doit être sol libre uniquement
                         console.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
                         return false;
                     }
@@ -574,8 +574,9 @@ export class RandomMapGenerator {
             }
             
             // 5. Vérifier la zone de livraison si elle est dans cette zone
+            // La zone de livraison est solide, on vérifie qu'elle est accessible (cases adjacentes)
             const deliveryZone = this.findDeliveryZone(mapData, zone);
-            if (deliveryZone && !accessiblePositions.has(`${deliveryZone.x},${deliveryZone.y}`)) {
+            if (deliveryZone && !this.isPositionAccessible(deliveryZone, accessiblePositions)) {
                 console.warn(`❌ Zone ${i + 1}: Zone de livraison à (${deliveryZone.x}, ${deliveryZone.y}) inaccessible`);
                 return false;
             }
@@ -707,7 +708,7 @@ export class RandomMapGenerator {
     }
 
     /**
-     * Compte le nombre total de cases de sol libre et zones de livraison dans une zone
+     * Compte le nombre total de cases de sol libre dans une zone
      */
     private static countFloorTiles(mapData: number[][], zone: PlayerZone): number {
         let count = 0;
@@ -715,8 +716,8 @@ export class RandomMapGenerator {
         for (let y = zone.startY; y <= zone.endY; y++) {
             for (let x = zone.startX; x <= zone.endX; x++) {
                 const tile = mapData[y][x];
-                // Compter les cases marchables (sol libre + zone de livraison)
-                if (tile === 1 || tile === 9) {
+                // Compter uniquement les cases marchables (sol libre)
+                if (tile === 1) {
                     count++;
                 }
             }
@@ -752,10 +753,9 @@ export class RandomMapGenerator {
             // Vérifier si la position est valide
             const tile = mapData[current.y][current.x];
             
-            // Les joueurs peuvent marcher sur :
-            // - Sol libre (1)
-            // - Zones de livraison (9)
-            const isWalkable = tile === 1 || tile === 9;
+            // Les joueurs peuvent marcher uniquement sur le sol libre (1)
+            // La zone de livraison (9) est maintenant solide
+            const isWalkable = tile === 1;
             
             if (!isWalkable) continue;
             
