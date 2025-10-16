@@ -138,6 +138,11 @@ export default class GameOver extends Phaser.Scene {
      * Affiche le formulaire de saisie du nom du joueur
      */
     showNameInputForm() {
+        // Désactiver le clavier Phaser pour permettre la saisie dans l'input HTML
+        if (this.input.keyboard) {
+            this.input.keyboard.enabled = false;
+        }
+
         // Créer un conteneur HTML pour l'input
         const formContainer = document.createElement("div");
         formContainer.id = "name-input-container";
@@ -169,6 +174,18 @@ export default class GameOver extends Phaser.Scene {
         input.style.borderRadius = "5px";
         input.style.marginRight = "10px";
         input.style.width = "200px";
+        
+        // Empêcher Phaser de capturer les événements du clavier sur cet input
+        input.addEventListener("keydown", (e) => {
+            e.stopPropagation();
+        });
+        input.addEventListener("keyup", (e) => {
+            e.stopPropagation();
+        });
+        input.addEventListener("keypress", (e) => {
+            e.stopPropagation();
+        });
+        
         formContainer.appendChild(input);
 
         // Bouton Sauvegarder
@@ -284,6 +301,11 @@ export default class GameOver extends Phaser.Scene {
         const formContainer = document.getElementById("name-input-container");
         if (formContainer) {
             formContainer.remove();
+        }
+        
+        // Réactiver le clavier Phaser après la fermeture du formulaire
+        if (this.input.keyboard) {
+            this.input.keyboard.enabled = true;
         }
     }
 
