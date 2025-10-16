@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { VisualEffectsManager } from "./VisualEffectsManager";
+import { IPlayer } from "../types/interfaces";
 
 /**
  * Gestionnaire des interactions avec les poubelles
@@ -32,7 +33,7 @@ export class TrashManager {
      * Gère l'interaction avec la poubelle (jeter un objet)
      */
     handleTrashInteraction(
-        player: any, // PlayerManager
+        player: IPlayer,
         targetX: number,
         targetY: number,
         mapData: number[][]
@@ -61,7 +62,7 @@ export class TrashManager {
         }
 
         // Supprimer l'objet visuel porté
-        inventory.removeCarriedItem();
+        player.removeCarriedItem();
 
         // Afficher un effet visuel de suppression
         this.showTrashEffect(targetX, targetY);

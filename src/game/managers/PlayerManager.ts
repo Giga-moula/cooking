@@ -4,6 +4,8 @@ import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
 import { GameConfig } from "../config/GameConfig";
 import { CraftActions, type CraftDirection } from "../actions/CraftActions";
+import { PHYSICS_CONSTANTS, PLAYER_OFFSET, DEPTH_CONSTANTS } from "../config/Constants";
+import { IMapManager } from "../types/interfaces";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -17,7 +19,7 @@ export class PlayerManager {
     private baseSpeed: number = GameConfig.PLAYER_SPEED;
     private playerSpeed: number = GameConfig.PLAYER_SPEED;
     private speedMultiplier: number = 1.0;
-    private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
+    private readonly DIAGONAL_FACTOR = PHYSICS_CONSTANTS.DIAGONAL_MOVEMENT_FACTOR;
     private lastPlayerY: number = 0;
     private playerGridX: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
     private playerGridY: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.y;
@@ -29,7 +31,7 @@ export class PlayerManager {
     private controls: PlayerControls;
 
     private inventory: InventoryManager;
-    private craftActions: CraftActions;
+    private craftActions: CraftActions | null = null;
 
     constructor(
         scene: Phaser.Scene,
@@ -44,7 +46,6 @@ export class PlayerManager {
         this.controls = this.initializeControls(playerNumber);
         this.inventory = new InventoryManager(scene);
         // CraftActions sera initialisé plus tard via setMapManager
-        this.craftActions = null as any;
 
         if (playerNumber === 1) {
             this.playerColor = GameConfig.COLORS.PLAYER_1;
@@ -105,8 +106,8 @@ export class PlayerManager {
         const startY =
             this.mapOffsetY +
             startGridY * IsometricUtils.TILE_HEIGHT +
-            IsometricUtils.TILE_HEIGHT / 2 -
-            12; // -12 pour compenser le changement d'origine
+            IsometricUtils.TILE_HEIGHT / 2 +
+            PLAYER_OFFSET.Y_ADJUSTMENT; // Compensation pour le changement d'origine
 
         // Créer un sprite avec physique (grand-mère de face par défaut)
         this.player = this.scene.physics.add.sprite(
@@ -121,14 +122,14 @@ export class PlayerManager {
 
         // Hitbox rectangulaire adaptée aux sprites de grand-mère
         const hitboxWidth = this.player.width;
-        const hitboxHeight = this.player.height * 0.3; // 30% de la hauteur
+        const hitboxHeight = this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
 
         // Positionner la hitbox au niveau des pieds
         body.setSize(hitboxWidth, hitboxHeight);
 
         // Offset pour positionner la hitbox au bas du sprite, centrée horizontalement
         const offsetX = (this.player.width - hitboxWidth) / 2;
-        const offsetY = this.player.height * 0.7; // 70% de la hauteur vers le bas
+        const offsetY = this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
         body.setOffset(offsetX, offsetY);
 
         this.lastPlayerY = startY;
@@ -204,16 +205,16 @@ export class PlayerManager {
         if (!this.player) return;
 
         // Utiliser directement la position Y du joueur
-        this.player.setDepth(this.player.y * 10 + 5);
+        this.player.setDepth(this.player.y * DEPTH_CONSTANTS.PLAYER_DEPTH_MULTIPLIER + DEPTH_CONSTANTS.PLAYER_DEPTH_OFFSET);
         this.lastPlayerY = this.player.y;
 
         // Mettre à jour la profondeur de l'objet porté
         const carriedItem = this.inventory.getCarriedItem();
         if (carriedItem) {
             if (this.lastDirection.y === -1) {
-                carriedItem.setDepth(this.player.depth - 1); // Derrière (vers le haut)
+                carriedItem.setDepth(this.player.depth + DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_BEHIND); // Derrière (vers le haut)
             } else {
-                carriedItem.setDepth(this.player.depth + 1); // Devant (autres directions)
+                carriedItem.setDepth(this.player.depth + DEPTH_CONSTANTS.CARRIED_ITEM_OFFSET_FRONT); // Devant (autres directions)
             }
         }
     }
@@ -278,12 +279,12 @@ export class PlayerManager {
         // Ajuster la hitbox selon la nouvelle texture
         const body = this.player.body as Phaser.Physics.Arcade.Body;
         const hitboxWidth = this.player.width;
-        const hitboxHeight = this.player.height * 0.3;
+        const hitboxHeight = this.player.height * PHYSICS_CONSTANTS.HITBOX_HEIGHT_RATIO;
 
         body.setSize(hitboxWidth, hitboxHeight);
 
         const offsetX = (this.player.width - hitboxWidth) / 2;
-        const offsetY = this.player.height * 0.7;
+        const offsetY = this.player.height * PHYSICS_CONSTANTS.HITBOX_OFFSET_RATIO;
         body.setOffset(offsetX, offsetY);
     }
 
@@ -401,7 +402,7 @@ export class PlayerManager {
     /**
      * Définit la référence vers le MapManager
      */
-    setMapManager(mapManager: any): void {
+    setMapManager(mapManager: IMapManager): void {
         // Recréer l'instance de CraftActions avec le MapManager
         this.craftActions = new CraftActions(
             this.scene,

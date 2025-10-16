@@ -10,6 +10,7 @@ import { TimerManager } from "./TimerManager";
 import { OvenManager } from "./OvenManager";
 import { CasseroleManager } from "./CasseroleManager";
 import { TrashManager } from "./TrashManager";
+import { Logger } from "../utils/Logger";
 
 /**
  * Système d'interaction orienté objet
@@ -72,7 +73,7 @@ export class InteractionSystem {
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
         if (this.isCraftingTile(tileTypeId)) {
             // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
-            console.log(
+            Logger.log(
                 `Bloc de craft détecté - utilisez le système de craft à la place`
             );
             return;
@@ -172,7 +173,7 @@ export class InteractionSystem {
     private isInteractiveTile(
         gridX: number,
         gridY: number,
-        isoMap: any
+        isoMap: { isCounter: (x: number, y: number) => boolean }
     ): boolean {
         return (
             isoMap.isCounter(gridX, gridY) ||
@@ -366,7 +367,7 @@ export class InteractionSystem {
         targetX: number,
         targetY: number,
         player: PlayerManager,
-        isoMap: any
+        isoMap: { isCounter: (x: number, y: number) => boolean }
     ): boolean {
         if (!isoMap.isCounter(targetX, targetY)) {
             return false;

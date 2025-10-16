@@ -3,6 +3,7 @@
  */
 
 import { MapConfig, SpawnPoint, DEFAULT_TILE_TYPES } from "../config/MapConfig";
+import { Logger } from "../utils/Logger";
 
 export interface MapGenerationConfig {
     waveLevel: number;
@@ -38,9 +39,10 @@ export class RandomMapGenerator {
     static generateMap(config: MapGenerationConfig, attempt: number = 0): MapConfig {
         // Protection contre les boucles infinies
         if (attempt >= this.MAX_GENERATION_ATTEMPTS) {
-            console.error("❌ Impossible de générer une carte valide après 10 tentatives");
+            Logger.error("❌ Impossible de générer une carte valide après 10 tentatives");
+            Logger.warn("⚠️ Utilisation d'une carte par défaut");
             // Retourner une carte par défaut en cas d'échec
-            throw new Error("Failed to generate valid map after maximum attempts");
+            return this.generateFallbackMap(config);
         }
         const { waveLevel, availableActions, mapWidth, mapHeight } = config;
         
@@ -72,7 +74,7 @@ export class RandomMapGenerator {
         const isValid = this.validateAccessibility(mapData, playerZones);
         
         if (!isValid) {
-            console.warn(`⚠️ Carte générée avec des éléments inaccessibles - Tentative ${attempt + 1}/${this.MAX_GENERATION_ATTEMPTS}`);
+            Logger.warn(`⚠️ Carte générée avec des éléments inaccessibles - Tentative ${attempt + 1}/${this.MAX_GENERATION_ATTEMPTS}`);
             // Régénérer une nouvelle carte si l'accessibilité n'est pas validée
             return this.generateMap(config, attempt + 1);
         }
@@ -352,7 +354,7 @@ export class RandomMapGenerator {
         }
 
         if (placed < count) {
-            console.warn(`⚠️ Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables placées (${rejectedCount} positions rejetées pour blocage)`);
+            Logger.warn(`⚠️ Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables placées (${rejectedCount} positions rejetées pour blocage)`);
         }
     }
 
@@ -516,7 +518,7 @@ export class RandomMapGenerator {
                 if (tile.y >= 0 && tile.y < mapData.length && tile.x >= 0 && tile.x < mapData[0].length) {
                     const tileValue = mapData[tile.y][tile.x];
                     if (tileValue !== 1) { // Doit être sol libre uniquement
-                        console.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
+                        Logger.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
                         return false;
                     }
                 }
@@ -530,7 +532,7 @@ export class RandomMapGenerator {
             // 1. Vérifier les boîtes d'ingrédients
             for (const pos of zone.ingredientBoxes) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Boîte d'ingrédient à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Boîte d'ingrédient à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -538,7 +540,7 @@ export class RandomMapGenerator {
             // 2. Vérifier les tables normales
             for (const pos of zone.tables) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Table normale à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Table normale à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -546,7 +548,7 @@ export class RandomMapGenerator {
             // 3. Vérifier les tables de transformation
             for (const pos of zone.transformationTables) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Table de transformation à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Table de transformation à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -554,7 +556,7 @@ export class RandomMapGenerator {
             // 4. Vérifier les fours
             for (const pos of zone.ovens) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Four à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Four à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -562,7 +564,7 @@ export class RandomMapGenerator {
             // 5. Vérifier les casseroles
             for (const pos of zone.casseroles) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Casserole à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Casserole à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -570,7 +572,7 @@ export class RandomMapGenerator {
             // 6. Vérifier les poubelles
             for (const pos of zone.trash) {
                 if (!this.isPositionAccessible(pos, accessiblePositions)) {
-                    console.warn(`❌ Zone ${i + 1}: Poubelle à (${pos.x}, ${pos.y}) inaccessible`);
+                    Logger.warn(`❌ Zone ${i + 1}: Poubelle à (${pos.x}, ${pos.y}) inaccessible`);
                     return false;
                 }
             }
@@ -579,7 +581,7 @@ export class RandomMapGenerator {
             // La zone de livraison est solide, on vérifie qu'elle est accessible (cases adjacentes)
             const deliveryZone = this.findDeliveryZone(mapData, zone);
             if (deliveryZone && !this.isPositionAccessible(deliveryZone, accessiblePositions)) {
-                console.warn(`❌ Zone ${i + 1}: Zone de livraison à (${deliveryZone.x}, ${deliveryZone.y}) inaccessible`);
+                Logger.warn(`❌ Zone ${i + 1}: Zone de livraison à (${deliveryZone.x}, ${deliveryZone.y}) inaccessible`);
                 return false;
             }
             
@@ -588,7 +590,7 @@ export class RandomMapGenerator {
             const accessibleFloorTiles = accessiblePositions.size;
             
             if (accessibleFloorTiles < totalFloorTiles) {
-                console.warn(`❌ Zone ${i + 1}: ${totalFloorTiles - accessibleFloorTiles} cases de sol inaccessibles (${accessibleFloorTiles}/${totalFloorTiles})`);
+                Logger.warn(`❌ Zone ${i + 1}: ${totalFloorTiles - accessibleFloorTiles} cases de sol inaccessibles (${accessibleFloorTiles}/${totalFloorTiles})`);
                 return false;
             }
         }
@@ -667,7 +669,7 @@ export class RandomMapGenerator {
             }
         }
         
-        console.warn(`⚠️ Aucune position sûre trouvée après ${attempts} tentatives (${rejectedCount} rejets pour blocage)`);
+        Logger.warn(`⚠️ Aucune position sûre trouvée après ${attempts} tentatives (${rejectedCount} rejets pour blocage)`);
         // Si aucune position sûre n'est trouvée, retourner null pour forcer la régénération
         return null;
     }
@@ -806,5 +808,67 @@ export class RandomMapGenerator {
         }
         
         return false;
+    }
+
+    /**
+     * Génère une carte par défaut simple et fonctionnelle en cas d'échec de génération
+     */
+    private static generateFallbackMap(config: MapGenerationConfig): MapConfig {
+        const { waveLevel, mapWidth, mapHeight } = config;
+        
+        Logger.info("🏗️ Génération d'une carte par défaut simple");
+        
+        // Créer une carte simple avec deux zones séparées
+        const mapData: number[][] = [];
+        const midX = Math.floor(mapWidth / 2);
+        
+        for (let y = 0; y < mapHeight; y++) {
+            const row: number[] = [];
+            for (let x = 0; x < mapWidth; x++) {
+                // Murs extérieurs
+                if (x === 0 || x === mapWidth - 1 || y === 0 || y === mapHeight - 1) {
+                    row.push(4); // Mur
+                }
+                // Mur de séparation
+                else if (x === midX) {
+                    row.push(5); // Table de séparation
+                }
+                // Sol
+                else {
+                    row.push(1); // Sol
+                }
+            }
+            mapData.push(row);
+        }
+        
+        // Placer quelques éléments essentiels dans chaque zone
+        // Zone gauche (joueur 1)
+        mapData[2][2] = 6; // Chocolat
+        mapData[3][2] = 7; // Beurre
+        mapData[4][2] = 10; // Table de transformation
+        mapData[5][2] = 11; // Four
+        
+        // Zone droite (joueur 2)
+        mapData[2][mapWidth - 3] = 8; // Farine
+        if (waveLevel >= 2) {
+            mapData[3][mapWidth - 3] = 12; // Sucre (à partir de la vague 2)
+        }
+        mapData[4][mapWidth - 3] = 13; // Casserole
+        mapData[5][mapWidth - 3] = 14; // Poubelle
+        
+        // Zone de livraison (aléatoire)
+        const deliveryX = Math.random() < 0.5 ? 3 : mapWidth - 4;
+        mapData[mapHeight - 3][deliveryX] = 9; // Zone de livraison
+        
+        return {
+            name: `Carte Par Défaut Niveau ${waveLevel}`,
+            description: `Carte de secours générée pour la vague ${waveLevel}`,
+            mapData,
+            tileTypes: DEFAULT_TILE_TYPES,
+            spawnPoints: {
+                player1: { x: 2, y: 2 },
+                player2: { x: mapWidth - 3, y: mapHeight - 3 }
+            }
+        };
     }
 }

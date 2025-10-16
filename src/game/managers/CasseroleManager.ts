@@ -2,12 +2,15 @@ import Phaser from "phaser";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
 import { BaseCookingManager } from "./BaseCookingManager";
+import { PARTICLE_CONSTANTS, TIME_CONSTANTS } from "../config/Constants";
 
 /**
  * Gestionnaire des interactions avec la casserole
  * Permet de faire fondre le beurre et transformer le sucre en caramel
  */
 export class CasseroleManager extends BaseCookingManager {
+    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
@@ -91,17 +94,26 @@ export class CasseroleManager extends BaseCookingManager {
 
         // Effet de particules bleues/blanches pour simuler la vapeur
         const particles = this.scene.add.particles(x, y, "star", {
-            speed: { min: -30, max: 30 },
-            angle: { min: 270, max: 270 }, // Particules qui montent
-            scale: { start: 0.2, end: 0 },
-            lifespan: 1000,
-            quantity: 8,
-            tint: 0x87ceeb, // Couleur bleu ciel
-            blendMode: "ADD",
+            speed: PARTICLE_CONSTANTS.STEAM.SPEED,
+            angle: PARTICLE_CONSTANTS.STEAM.ANGLE,
+            scale: PARTICLE_CONSTANTS.STEAM.SCALE,
+            lifespan: TIME_CONSTANTS.PARTICLE_LIFESPAN_STEAM,
+            quantity: PARTICLE_CONSTANTS.STEAM.QUANTITY,
+            tint: PARTICLE_CONSTANTS.STEAM.TINT,
+            blendMode: PARTICLE_CONSTANTS.STEAM.BLEND_MODE,
         });
 
-        this.scene.time.delayedCall(1000, () => {
-            particles.destroy();
+        // Tracker les particules actives
+        this.activeParticles.push(particles);
+
+        this.scene.time.delayedCall(TIME_CONSTANTS.PARTICLE_LIFESPAN_STEAM, () => {
+            const index = this.activeParticles.indexOf(particles);
+            if (index > -1) {
+                this.activeParticles.splice(index, 1);
+            }
+            if (particles && particles.scene) {
+                particles.destroy();
+            }
         });
     }
 
@@ -110,5 +122,21 @@ export class CasseroleManager extends BaseCookingManager {
      */
     protected getDeviceName(): string {
         return "Casserole";
+    }
+
+    /**
+     * Nettoie toutes les ressources (override de la méthode parent)
+     */
+    cleanup(): void {
+        // Nettoyer les particules actives
+        this.activeParticles.forEach(particles => {
+            if (particles && particles.scene) {
+                particles.destroy();
+            }
+        });
+        this.activeParticles = [];
+        
+        // Appeler le cleanup parent
+        super.cleanup();
     }
 }
