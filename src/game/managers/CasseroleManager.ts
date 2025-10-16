@@ -49,17 +49,9 @@ export class CasseroleManager extends BaseCookingManager {
     }
 
     /**
-     * Cuire/transformer un objet dans la casserole
+     * Cuire/transformer un objet dans la casserole (cuisson instantanée)
      */
     cookInCasserole(gridX: number, gridY: number): boolean {
-        return this.cook(gridX, gridY);
-    }
-
-    /**
-     * Cuire un objet dans la casserole
-     * Casserole : Sucre + Beurre uniquement
-     */
-    cook(gridX: number, gridY: number): boolean {
         const key = `${gridX},${gridY}`;
         const item = this.itemsInDevice.get(key);
 
@@ -76,12 +68,19 @@ export class CasseroleManager extends BaseCookingManager {
             return false;
         }
 
-        // Remplacer l'objet par le résultat de la cuisson
+        // Cuisson instantanée : remplacer l'objet par le résultat
         item.setTexture(cookingRecipe.to);
-
         this.playCookingEffect(gridX, gridY);
 
         return true;
+    }
+
+    /**
+     * Cuire un objet dans la casserole
+     * Casserole : Sucre + Beurre uniquement
+     */
+    cook(gridX: number, gridY: number): boolean {
+        return this.cookInCasserole(gridX, gridY);
     }
 
     /**
