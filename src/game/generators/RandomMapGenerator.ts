@@ -23,6 +23,7 @@ export interface PlayerZone {
     transformationTables: SpawnPoint[];
     ovens: SpawnPoint[];
     casseroles: SpawnPoint[];
+    trash: SpawnPoint[];
 }
 
 export class RandomMapGenerator {
@@ -153,7 +154,8 @@ export class RandomMapGenerator {
                 tables: [],
                 transformationTables: [],
                 ovens: [],
-                casseroles: []
+                casseroles: [],
+                trash: []
             });
             
             // Zone joueur 2 (droite)
@@ -167,7 +169,8 @@ export class RandomMapGenerator {
                 tables: [],
                 transformationTables: [],
                 ovens: [],
-                casseroles: []
+                casseroles: [],
+                trash: []
             });
         } else {
             // Zones côte à côte sans séparation
@@ -184,7 +187,8 @@ export class RandomMapGenerator {
                 tables: [],
                 transformationTables: [],
                 ovens: [],
-                casseroles: []
+                casseroles: [],
+                trash: []
             });
             
             // Zone joueur 2 (droite)
@@ -198,7 +202,8 @@ export class RandomMapGenerator {
                 tables: [],
                 transformationTables: [],
                 ovens: [],
-                casseroles: []
+                casseroles: [],
+                trash: []
             });
         }
         
@@ -292,6 +297,10 @@ export class RandomMapGenerator {
         this.placeOvens(mapData, zoneWith1Box, 1); // 1 four
         this.placeCasseroles(mapData, zoneWith1Box, 1); // 1 casserole
         
+        // Placer 1 poubelle dans chaque zone
+        this.placeTrash(mapData, zone1, 1); // 1 poubelle zone 1
+        this.placeTrash(mapData, zone2, 1); // 1 poubelle zone 2
+        
         // Zone de livraison : aléatoire (50/50)
         const deliveryInZone1 = Math.random() < 0.5;
         if (waveLevel === 1) {
@@ -384,6 +393,19 @@ export class RandomMapGenerator {
             if (position) {
                 mapData[position.y][position.x] = 13; // Casserole
                 zone.casseroles.push(position);
+            }
+        }
+    }
+
+    /**
+     * Place les poubelles dans une zone
+     */
+    private static placeTrash(mapData: number[][], zone: PlayerZone, count: number): void {
+        for (let i = 0; i < count; i++) {
+            const position = this.findSafeEmptyPosition(mapData, zone);
+            if (position) {
+                mapData[position.y][position.x] = 14; // Poubelle
+                zone.trash.push(position);
             }
         }
     }
@@ -545,7 +567,15 @@ export class RandomMapGenerator {
                 }
             }
             
-            // 6. Vérifier la zone de livraison si elle est dans cette zone
+            // 6. Vérifier les poubelles
+            for (const pos of zone.trash) {
+                if (!this.isPositionAccessible(pos, accessiblePositions)) {
+                    console.warn(`❌ Zone ${i + 1}: Poubelle à (${pos.x}, ${pos.y}) inaccessible`);
+                    return false;
+                }
+            }
+            
+            // 7. Vérifier la zone de livraison si elle est dans cette zone
             // La zone de livraison est solide, on vérifie qu'elle est accessible (cases adjacentes)
             const deliveryZone = this.findDeliveryZone(mapData, zone);
             if (deliveryZone && !this.isPositionAccessible(deliveryZone, accessiblePositions)) {
@@ -553,7 +583,7 @@ export class RandomMapGenerator {
                 return false;
             }
             
-            // 7. Vérifier que TOUTES les cases de sol libre de la zone sont accessibles
+            // 8. Vérifier que TOUTES les cases de sol libre de la zone sont accessibles
             const totalFloorTiles = this.countFloorTiles(mapData, zone);
             const accessibleFloorTiles = accessiblePositions.size;
             

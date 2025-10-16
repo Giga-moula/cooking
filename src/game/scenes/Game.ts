@@ -18,6 +18,7 @@ import { PlayerManager } from "../managers/PlayerManager";
 import { RecipeManager } from "../managers/RecipeManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
+import { TrashManager } from "../managers/TrashManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
 import { WaveManager } from "../managers/WaveManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
@@ -48,6 +49,8 @@ export default class Game extends Phaser.Scene {
 
     private ovenManager?: OvenManager;
     private casseroleManager?: CasseroleManager;
+    private trashManager?: TrashManager;
+
     private waveManager?: WaveManager;
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
@@ -143,6 +146,12 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY,
             this.recipeManager
+        );
+
+        this.trashManager = new TrashManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY
         );
 
         // Passer le RecipeManager partagé au CounterInteractionManager
@@ -277,7 +286,8 @@ export default class Game extends Phaser.Scene {
             this.scoreManager,
             this.timerManager,
             this.ovenManager,
-            this.casseroleManager
+            this.casseroleManager,
+            this.trashManager
         );
 
         // Touche espace pour retourner au menu
@@ -453,6 +463,7 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
+            this.trashManager?.cleanup();
 
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
@@ -483,6 +494,7 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
+            this.trashManager?.cleanup();
 
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
