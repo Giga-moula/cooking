@@ -5,9 +5,11 @@
 import { INGREDIENTS, type Ingredient } from "../data/ingredients";
 import {
     OVEN_COOKING,
+    CASSEROLE_COOKING,
     RECIPES,
     SPECIAL_TRANSFORMATIONS,
     type OvenCooking,
+    type CasseroleCooking,
     type Recipe,
     type SpecialTransformation,
 } from "../data/recipes";
@@ -156,6 +158,27 @@ export class RecipeManager {
      */
     public canCookInOven(ingredientId: string): boolean {
         return this.getOvenCooking(ingredientId) !== undefined;
+    }
+
+    /**
+     * Récupère toutes les cuissons à la casserole disponibles
+     */
+    public getAllCasseroleCooking(): CasseroleCooking[] {
+        return CASSEROLE_COOKING;
+    }
+
+    /**
+     * Trouve une cuisson à la casserole pour un ingrédient donné
+     */
+    public getCasseroleCooking(ingredientId: string): CasseroleCooking | undefined {
+        return CASSEROLE_COOKING.find((cooking) => cooking.from === ingredientId);
+    }
+
+    /**
+     * Vérifie si un ingrédient peut être cuit à la casserole
+     */
+    public canCookInCasserole(ingredientId: string): boolean {
+        return this.getCasseroleCooking(ingredientId) !== undefined;
     }
 }
 

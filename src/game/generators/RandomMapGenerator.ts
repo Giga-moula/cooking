@@ -202,7 +202,9 @@ export class RandomMapGenerator {
 
     /**
      * Peuple les zones des joueurs avec les éléments
-     * Distribution exclusive : pas de duplication d'éléments spéciaux entre les zones
+     * Distribution spécifique :
+     * - Zone A : 2 caisses de base + table de transformation (+ sucre vague 2+)
+     * - Zone B : 1 caisse de base + four + casserole
      */
     private static populatePlayerZones(
         mapData: number[][], 
@@ -213,52 +215,83 @@ export class RandomMapGenerator {
     ): void {
         if (zones.length < 2) return;
         
-        // Distribuer les éléments de manière exclusive entre les zones
         const zone1 = zones[0];
         const zone2 = zones[1];
         
-        // Décider aléatoirement quelle zone a le four (l'autre aura la table de transformation)
-        const zone1HasOven = Math.random() < 0.5;
-        // La table de transformation est TOUJOURS dans la zone opposée au four
-        const zone1HasTransformTable = !zone1HasOven;
+        // Décider aléatoirement quelle zone a 2 caisses
+        const zone1Has2Boxes = Math.random() < 0.5;
         
-        // Distribution aléatoire des ingrédients (1 type par zone, ~équilibré)
-        const ingredientDistribution = this.randomizeIngredientDistribution(waveLevel);
+        // Distribution des ingrédients de base (chocolat, beurre, farine)
+        const baseIngredients = [
+            { type: 6, name: 'chocolat' },   // choco_box
+            { type: 7, name: 'beurre' },     // butter_box
+            { type: 8, name: 'farine' }      // flour_box
+        ];
         
-        // Distribution aléatoire de la zone de livraison (uniquement pour la vague 1)
+        // Mélanger aléatoirement les ingrédients de base
+        const shuffled = [...baseIngredients].sort(() => Math.random() - 0.5);
+        
+        let zoneWith2Boxes: PlayerZone;
+        let zoneWith1Box: PlayerZone;
+        let ingredientsFor2BoxZone: typeof baseIngredients;
+        let ingredientsFor1BoxZone: typeof baseIngredients;
+        
+        if (zone1Has2Boxes) {
+            zoneWith2Boxes = zone1;
+            zoneWith1Box = zone2;
+            ingredientsFor2BoxZone = shuffled.slice(0, 2); // 2 premiers ingrédients
+            ingredientsFor1BoxZone = [shuffled[2]]; // Le dernier ingrédient
+        } else {
+            zoneWith2Boxes = zone2;
+            zoneWith1Box = zone1;
+            ingredientsFor2BoxZone = shuffled.slice(0, 2);
+            ingredientsFor1BoxZone = [shuffled[2]];
+        }
+        
+        // Placer les 2 caisses dans la zone avec 2 caisses
+        ingredientsFor2BoxZone.forEach(ingredient => {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith2Boxes);
+            if (position) {
+                mapData[position.y][position.x] = ingredient.type;
+                zoneWith2Boxes.ingredientBoxes.push(position);
+            }
+        });
+        
+        // À partir de la vague 2, ajouter le sucre dans la zone avec 2 caisses
+        if (waveLevel >= 2) {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith2Boxes);
+            if (position) {
+                mapData[position.y][position.x] = 12; // sugar-box
+                zoneWith2Boxes.ingredientBoxes.push(position);
+            }
+        }
+        
+        // Placer la 1 caisse dans la zone avec 1 caisse
+        ingredientsFor1BoxZone.forEach(ingredient => {
+            const position = this.findSafeEmptyPosition(mapData, zoneWith1Box);
+            if (position) {
+                mapData[position.y][position.x] = ingredient.type;
+                zoneWith1Box.ingredientBoxes.push(position);
+            }
+        });
+        
+        // Placer les tables normales (équilibré)
+        const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
+        this.placeNormalTables(mapData, zone1, elementsPerPlayer);
+        this.placeNormalTables(mapData, zone2, elementsPerPlayer);
+        
+        // Zone avec 2 caisses : Table de transformation
+        this.placeTransformationTables(mapData, zoneWith2Boxes, 1); // Toujours 1 seule table
+        
+        // Zone avec 1 caisse : Four + Casserole
+        this.placeOvens(mapData, zoneWith1Box, 1); // 1 four
+        this.placeCasseroles(mapData, zoneWith1Box, 1); // 1 casserole
+        
+        // Zone de livraison : aléatoire (50/50)
         const deliveryInZone1 = Math.random() < 0.5;
-
-        // Placer les ingrédients selon la distribution aléatoire
-        this.placeRandomIngredients(
-            mapData, 
-            zone1, 
-            zone2, 
-            ingredientDistribution
-        );
-        
-        // Stocker la zone de livraison pour plus tard (uniquement pour la vague 1)
         if (waveLevel === 1) {
             (zone1 as any).hasDeliveryZone = deliveryInZone1;
             (zone2 as any).hasDeliveryZone = !deliveryInZone1;
-        }
-        
-            // Placer les tables normales (équilibré) - Plus de tables pour plus d'interaction
-            const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
-            this.placeNormalTables(mapData, zone1, elementsPerPlayer);
-            this.placeNormalTables(mapData, zone2, elementsPerPlayer);
-        
-        // Distribution exclusive des éléments spéciaux
-        // Chaque zone a exactement 1 élément spécial (four XOR table de transformation)
-        if (zone1HasOven) {
-            // Zone 1 : Four
-            this.placeOvens(mapData, zone1, complexity);
-            // Zone 2 : Table de transformation
-            this.placeTransformationTables(mapData, zone2, complexity);
-        } else {
-            // Zone 1 : Table de transformation
-            this.placeTransformationTables(mapData, zone1, complexity);
-            // Zone 2 : Four
-            this.placeOvens(mapData, zone2, complexity);
         }
     }
 
@@ -409,17 +442,25 @@ export class RandomMapGenerator {
     /**
      * Place les fours dans une zone
      */
-    private static placeOvens(mapData: number[][], zone: PlayerZone, complexity: number): void {
-        // Toujours placer au moins 1 four par zone
-        const minOvens = 1;
-        const maxOvens = Math.min(complexity, 2); // Max 2 fours par zone
-        const ovenCount = Math.max(minOvens, maxOvens);
-        
-        for (let i = 0; i < ovenCount; i++) {
+    private static placeOvens(mapData: number[][], zone: PlayerZone, count: number): void {
+        for (let i = 0; i < count; i++) {
             const position = this.findSafeEmptyPosition(mapData, zone);
             if (position) {
                 mapData[position.y][position.x] = 11; // Four
                 zone.ovens.push(position);
+            }
+        }
+    }
+
+    /**
+     * Place les casseroles dans une zone
+     */
+    private static placeCasseroles(mapData: number[][], zone: PlayerZone, count: number): void {
+        for (let i = 0; i < count; i++) {
+            const position = this.findSafeEmptyPosition(mapData, zone);
+            if (position) {
+                mapData[position.y][position.x] = 13; // Casserole
+                // Note: on pourrait ajouter une propriété casseroles au PlayerZone si nécessaire
             }
         }
     }

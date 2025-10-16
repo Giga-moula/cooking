@@ -22,6 +22,12 @@ export interface OvenCooking {
     name: string;
 }
 
+export interface CasseroleCooking {
+    from: string;
+    to: string;
+    name: string;
+}
+
 /**
  * Liste de toutes les recettes disponibles dans le jeu
  */
@@ -100,18 +106,9 @@ export const SPECIAL_TRANSFORMATIONS: SpecialTransformation[] = [
 
 /**
  * Liste de toutes les cuissons au four disponibles dans le jeu
+ * Four : Cookie-mix uniquement (pas le beurre)
  */
 export const OVEN_COOKING: OvenCooking[] = [
-    {
-        from: "butter",
-        to: "molten_butter",
-        name: "Beurre fondu",
-    },
-    {
-        from: "sugar",
-        to: "caramel",
-        name: "Caramel",
-    },
     {
         from: "cookie-mix-choco",
         to: "cookie-choco",
@@ -126,6 +123,23 @@ export const OVEN_COOKING: OvenCooking[] = [
         from: "cookie-mix-choco-cara",
         to: "cookie-choco-cara",
         name: "Cookie chocolat caramel",
+    },
+];
+
+/**
+ * Liste de toutes les cuissons à la casserole disponibles dans le jeu
+ * Casserole : Sucre + Beurre uniquement
+ */
+export const CASSEROLE_COOKING: CasseroleCooking[] = [
+    {
+        from: "sugar",
+        to: "caramel",
+        name: "Caramel",
+    },
+    {
+        from: "butter",
+        to: "molten_butter",
+        name: "Beurre fondu",
     },
 ];
 

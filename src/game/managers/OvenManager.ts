@@ -53,6 +53,37 @@ export class OvenManager extends BaseCookingManager {
     }
 
     /**
+     * Cuire un objet dans le four
+     * Four : Beurre + Cookie-mix uniquement
+     */
+    cook(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        const item = this.itemsInDevice.get(key);
+
+        if (!item) {
+            return false;
+        }
+
+        const currentItem = item.texture.key;
+
+        // Chercher la recette de cuisson au four
+        const cookingRecipe = this.recipeManager.getOvenCooking(currentItem);
+
+        if (!cookingRecipe) {
+            this.showCookingMessage("❌ Ne peut pas cuire ça au four !", gridX, gridY);
+            return false;
+        }
+
+        // Remplacer l'objet par le résultat de la cuisson
+        item.setTexture(cookingRecipe.to);
+
+        this.showCookingMessage(`✅ ${cookingRecipe.name} !`, gridX, gridY);
+        this.playCookingEffect(gridX, gridY);
+
+        return true;
+    }
+
+    /**
      * Affiche un effet de cuisson (particules de feu)
      */
     protected playCookingEffect(gridX: number, gridY: number): void {
