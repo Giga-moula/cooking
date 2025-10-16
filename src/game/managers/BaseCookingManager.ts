@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { OVEN_COOKING } from "../data/recipes";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { RecipeManager } from "./RecipeManager";
 import { VisualEffectsManager } from "./VisualEffectsManager";
@@ -91,35 +90,9 @@ export abstract class BaseCookingManager {
 
     /**
      * Cuire/transformer un objet dans l'appareil
+     * Méthode abstraite - chaque appareil définit ses propres recettes de cuisson
      */
-    cook(gridX: number, gridY: number): boolean {
-        const key = `${gridX},${gridY}`;
-        const item = this.itemsInDevice.get(key);
-
-        if (!item) {
-            return false;
-        }
-
-        const currentItem = item.texture.key;
-
-        // Chercher la recette de transformation
-        const cookingRecipe = OVEN_COOKING.find(
-            (recipe) => recipe.from === currentItem
-        );
-
-        if (!cookingRecipe) {
-            this.showCookingMessage("❌ Ne peut pas cuire ça !", gridX, gridY);
-            return false;
-        }
-
-        // Remplacer l'objet par le résultat de la cuisson
-        item.setTexture(cookingRecipe.to);
-
-        this.showCookingMessage(`✅ ${cookingRecipe.name} !`, gridX, gridY);
-        this.playCookingEffect(gridX, gridY);
-
-        return true;
-    }
+    abstract cook(gridX: number, gridY: number): boolean;
 
     /**
      * Affiche un message temporaire au-dessus de l'appareil

@@ -53,6 +53,35 @@ export class CasseroleManager extends BaseCookingManager {
     }
 
     /**
+     * Cuire un objet dans la casserole
+     * Casserole : Sucre + Beurre uniquement
+     */
+    cook(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        const item = this.itemsInDevice.get(key);
+
+        if (!item) {
+            return false;
+        }
+
+        const currentItem = item.texture.key;
+
+        // Chercher la recette de cuisson à la casserole
+        const cookingRecipe = this.recipeManager.getCasseroleCooking(currentItem);
+
+        if (!cookingRecipe) {
+            return false;
+        }
+
+        // Remplacer l'objet par le résultat de la cuisson
+        item.setTexture(cookingRecipe.to);
+
+        this.playCookingEffect(gridX, gridY);
+
+        return true;
+    }
+
+    /**
      * Effet visuel de cuisson pour la casserole (vapeur/bulles)
      */
     protected playCookingEffect(gridX: number, gridY: number): void {
