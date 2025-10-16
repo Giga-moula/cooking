@@ -692,9 +692,9 @@ export class CraftActions {
         this.scene.tweens.add({
             targets: targetSprite,
             rotation: { from: -0.2, to: 0.2 },
-            duration: 100,
+            duration: 30,
             yoyo: true,
-            repeat: 9, // 10 oscillations au total (5 allers-retours)
+            repeat: 2, // 10 oscillations au total (5 allers-retours)
             ease: "Sine.easeInOut",
             onComplete: () => {
                 targetSprite.setRotation(0); // Remettre à 0
