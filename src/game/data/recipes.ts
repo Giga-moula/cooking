@@ -129,3 +129,15 @@ export const CASSEROLE_COOKING: CasseroleCooking[] = [
         name: "Beurre fondu",
     },
 ];
+
+/**
+ * Liste des recettes qui ne nécessitent pas de combinaison de touches
+ * (crafts instantanés)
+ */
+export const INSTANT_CRAFT_RECIPES = [
+    "molten_butter_flour_dough", // Pâte
+    "dough_chocolate_chunks_cookie_mix_choco", // Cookie Mix Choco
+    "dough_caramel_cookie_mix_cara", // Cookie Mix Cara
+    "cookie_mix_choco_caramel_choco_cara", // Cookie Mix Choco Cara
+    "cookie_mix_cara_chocolate_choco_cara", // Cookie Mix Choco Cara
+];

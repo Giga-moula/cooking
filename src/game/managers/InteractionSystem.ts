@@ -11,6 +11,7 @@ import { OvenManager } from "./OvenManager";
 import { CasseroleManager } from "./CasseroleManager";
 import { TrashManager } from "./TrashManager";
 import { Logger } from "../utils/Logger";
+import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 
 /**
  * Système d'interaction orienté objet
@@ -69,30 +70,33 @@ export class InteractionSystem {
         const targetX = target.x;
         const targetY = target.y;
 
+        // Vérifier d'abord le four pour la cuisson (utilise le timer, pas le système de craft)
+        if (this.handleOvenCooking(targetX, targetY, player)) {
+            return;
+        }
+
+        // La casserole utilise le système de craft (enchaînement de touches)
+        // Elle ne répond plus à un simple appui sur R/P
+
         // Vérifier si c'est un bloc de craft - si oui, ignorer la transformation automatique
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
         if (this.isCraftingTile(tileTypeId)) {
-            // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
-            Logger.log(
-                `Bloc de craft détecté - utilisez le système de craft à la place`
-            );
-            return;
+            // Exception : si c'est une table de transformation avec un craft instantané, autoriser
+            if (tileTypeId === 10 && this.isInstantCraftRecipe(targetX, targetY)) {
+                // Autoriser la transformation instantanée
+            } else {
+                // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
+                Logger.log(
+                    `Bloc de craft détecté - utilisez le système de craft à la place`
+                );
+                return;
+            }
         }
 
         // Seules les tables de transformation peuvent être utilisées
         if (
             this.handleTransformationTableInteraction(targetX, targetY, player)
         ) {
-            return;
-        }
-
-        // Vérifier aussi le four pour la cuisson
-        if (this.handleOvenCooking(targetX, targetY, player)) {
-            return;
-        }
-
-        // Vérifier aussi la casserole pour la cuisson
-        if (this.handleCasseroleCooking(targetX, targetY, player)) {
             return;
         }
     }
@@ -104,6 +108,35 @@ export class InteractionSystem {
         if (!tileTypeId) return false;
         // IDs des blocs de craft : table-mono (10), oven (11), casserole_cuisson (13)
         return tileTypeId === 10 || tileTypeId === 11 || tileTypeId === 13;
+    }
+
+    /**
+     * Vérifie si la recette qui va être créée est un craft instantané
+     */
+    private isInstantCraftRecipe(gridX: number, gridY: number): boolean {
+        // Vérifier s'il y a un item sur la table
+        if (!this.counterManager.hasItemOnCounter(gridX, gridY)) {
+            return false;
+        }
+
+        const itemOnCounter = this.counterManager.getItemTypeOnCounter(gridX, gridY);
+        if (!itemOnCounter) {
+            return false;
+        }
+
+        // Pour vérifier si c'est une recette instantanée, on doit savoir quelles recettes sont possibles
+        // avec cet item. On va vérifier toutes les recettes instantanées.
+        const allRecipes = this.recipeManager.getAllRecipes();
+        for (const recipe of allRecipes) {
+            if (INSTANT_CRAFT_RECIPES.includes(recipe.id)) {
+                // Vérifier si l'item sur la table fait partie de cette recette
+                if (itemOnCounter === recipe.ingredient1 || itemOnCounter === recipe.ingredient2) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

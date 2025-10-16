@@ -3,7 +3,9 @@ import {
     getCraftingItem,
     isValidCraftSequence,
     getRandomCraftSequence,
+    getTransformationSequence,
 } from "../config/craftingItems";
+import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 
 // Ré-exporter le type CraftDirection
 export type { CraftDirection };
@@ -123,12 +125,86 @@ export class CraftActions {
      * Génère une séquence de craft spécifique pour un type de bloc
      */
     private generateSequenceForTile(tileTypeId: number): void {
-        const sequence = getRandomCraftSequence(tileTypeId);
-        if (sequence) {
-            this.craftSequence.directions = sequence;
+        const target = this.playerManager.getTargetPosition();
+        
+        // Essayer d'abord de trouver une séquence spécifique basée sur la transformation
+        const specificSequence = this.getSpecificSequenceForTransformation(
+            target.x,
+            target.y,
+            tileTypeId
+        );
+        
+        if (specificSequence) {
+            this.craftSequence.directions = specificSequence;
         } else {
-            // Fallback: séquence basique
-            this.craftSequence.directions = ["up", "down"];
+            // Fallback: séquence aléatoire
+            const sequence = getRandomCraftSequence(tileTypeId);
+            if (sequence) {
+                this.craftSequence.directions = sequence;
+            } else {
+                // Fallback ultime: séquence basique
+                this.craftSequence.directions = ["up", "down"];
+            }
+        }
+    }
+
+    /**
+     * Récupère la séquence spécifique pour une transformation donnée
+     */
+    private getSpecificSequenceForTransformation(
+        gridX: number,
+        gridY: number,
+        tileTypeId: number
+    ): CraftDirection[] | null {
+        const counterManager = this.mapManager.getCounterManager();
+        const casseroleManager = this.mapManager.getCasseroleManager();
+        const recipeManager = this.mapManager.getRecipeManager();
+
+        if (!counterManager || !casseroleManager || !recipeManager) {
+            return null;
+        }
+
+        switch (tileTypeId) {
+            case 10: // Table de transformation
+                if (!counterManager.hasItemOnCounter(gridX, gridY)) {
+                    return null;
+                }
+                const itemOnCounter = counterManager.getItemTypeOnCounter(gridX, gridY);
+                if (!itemOnCounter) {
+                    return null;
+                }
+
+                // Vérifier s'il y a une transformation spéciale possible
+                const transformResult = recipeManager.performSpecialTransformation
+                    ? recipeManager.performSpecialTransformation(itemOnCounter)
+                    : null;
+                
+                if (transformResult) {
+                    return getTransformationSequence(itemOnCounter, transformResult);
+                }
+                return null;
+
+            case 13: // Casserole
+                if (!casseroleManager.hasItemInCasserole(gridX, gridY)) {
+                    return null;
+                }
+                const itemInCasserole = casseroleManager.getItemInCasserole(gridX, gridY);
+                if (!itemInCasserole) {
+                    return null;
+                }
+
+                // Vérifier la cuisson possible dans la casserole
+                const cookingRecipe = recipeManager.getCasseroleCooking
+                    ? recipeManager.getCasseroleCooking(itemInCasserole)
+                    : null;
+                
+                if (cookingRecipe) {
+                    return getTransformationSequence(itemInCasserole, cookingRecipe.to);
+                }
+                return null;
+
+            default:
+                return null;
         }
     }
 
@@ -139,7 +215,17 @@ export class CraftActions {
         const target = this.playerManager.getTargetPosition();
         const tileTypeId = this.mapManager.getTileTypeId(target.x, target.y);
 
+        // Le four (11) n'utilise plus le système de craft, mais un timer à la place
+        if (tileTypeId === 11) {
+            return null;
+        }
+
         if (!tileTypeId || !getCraftingItem(tileTypeId)) {
+            return null;
+        }
+
+        // Pour la table de transformation (10), vérifier si c'est un craft instantané
+        if (tileTypeId === 10 && this.isInstantCraftRecipe(target.x, target.y)) {
             return null;
         }
 
@@ -149,6 +235,55 @@ export class CraftActions {
         }
 
         return tileTypeId;
+    }
+
+    /**
+     * Vérifie si la recette qui va être créée est un craft instantané
+     */
+    private isInstantCraftRecipe(gridX: number, gridY: number): boolean {
+        const counterManager = this.mapManager.getCounterManager();
+        const recipeManager = this.mapManager.getRecipeManager();
+        
+        if (!counterManager || !recipeManager) {
+            return false;
+        }
+
+        // Vérifier s'il y a un item sur la table
+        if (!counterManager.hasItemOnCounter(gridX, gridY)) {
+            return false;
+        }
+
+        const itemOnCounter = counterManager.getItemTypeOnCounter(gridX, gridY);
+        if (!itemOnCounter) {
+            return false;
+        }
+
+        // Vérifier s'il y a un item dans la main du joueur
+        const playerInventory = this.playerManager.getInventory();
+        if (!playerInventory || playerInventory.isEmpty()) {
+            return false;
+        }
+
+        const itemInHand = playerInventory.peekItem();
+        if (!itemInHand) {
+            return false;
+        }
+
+        // Essayer de trouver une recette avec ces deux ingrédients
+        const allRecipes = recipeManager.getAllRecipes();
+        for (const recipe of allRecipes) {
+            if (
+                (itemOnCounter === recipe.ingredient1 && itemInHand === recipe.ingredient2) ||
+                (itemOnCounter === recipe.ingredient2 && itemInHand === recipe.ingredient1)
+            ) {
+                // Vérifier si c'est une recette instantanée
+                if (INSTANT_CRAFT_RECIPES.includes(recipe.id)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -687,9 +822,9 @@ export class CraftActions {
         this.scene.tweens.add({
             targets: targetSprite,
             rotation: { from: -0.2, to: 0.2 },
-            duration: 100,
+            duration: 30,
             yoyo: true,
-            repeat: 9, // 10 oscillations au total (5 allers-retours)
+            repeat: 2, // 10 oscillations au total (5 allers-retours)
             ease: "Sine.easeInOut",
             onComplete: () => {
                 targetSprite.setRotation(0); // Remettre à 0
