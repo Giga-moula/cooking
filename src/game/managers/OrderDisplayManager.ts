@@ -411,5 +411,23 @@ export class OrderDisplayManager {
             ease: "Back.easeOut",
         });
     }
+
+    /**
+     * Met en pause tous les timers des commandes actives
+     */
+    public pauseAllTimers(): void {
+        this.recipeBoxes.forEach(box => {
+            box.pause();
+        });
+    }
+
+    /**
+     * Reprend tous les timers des commandes actives
+     */
+    public resumeAllTimers(): void {
+        this.recipeBoxes.forEach(box => {
+            box.resume();
+        });
+    }
 }
 

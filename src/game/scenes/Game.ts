@@ -711,6 +711,11 @@ export default class Game extends Phaser.Scene {
 
         // Mettre le jeu en pause
         this.scene.pause();
+        
+        // Mettre en pause tous les timers
+        this.timerManager?.pause();
+        this.orderDisplayManager?.pauseAllTimers();
+        this.waveManager?.pauseOrderSpawnTimer();
 
         // Ouvrir la scène Shop en overlay
         this.scene.launch("Shop", {
@@ -719,19 +724,26 @@ export default class Game extends Phaser.Scene {
             coinsEarned: earnings.total,
             waveNumber: waveNumber,
             onClose: () => {
-                // Reprendre le jeu
+                // Reprendre le jeu immédiatement
                 this.scene.resume();
+                
+                // Reprendre uniquement le timer principal du jeu
+                this.timerManager?.resume();
 
                 // Appliquer les upgrades achetés
                 this.applyUpgrades();
 
-                // Mettre à jour la carte pour la nouvelle vague
-                const nextWaveNumber =
-                    this.waveManager?.getNextWaveNumber() || 1;
-                this.updateWaveLevel(nextWaveNumber);
+                // Attendre que la scène Shop soit fermée avant de démarrer la nouvelle vague
+                // Utiliser un delayedCall APRÈS avoir repris la scène pour que le timer fonctionne
+                this.time.delayedCall(200, () => {
+                    // Mettre à jour la carte pour la nouvelle vague
+                    const nextWaveNumber =
+                        this.waveManager?.getNextWaveNumber() || 1;
+                    this.updateWaveLevel(nextWaveNumber);
 
-                // Démarrer la vague suivante
-                this.waveManager?.startNextWave();
+                    // Démarrer la vague suivante (créera de nouvelles commandes et leurs timers)
+                    this.waveManager?.startNextWave();
+                });
             },
         });
     }
