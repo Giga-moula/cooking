@@ -88,7 +88,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetY,
             1
         );
-        
+
         this.player2 = new PlayerManager(
             this,
             this.mapOffsetX,
@@ -104,7 +104,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
-        
+
         this.communicationManager = new CommunicationManager(
             this,
             this.mapManager,
@@ -123,7 +123,7 @@ export default class Game extends Phaser.Scene {
             this.mapOffsetX,
             this.mapOffsetY
         );
-        
+
         // Connecter le DeliveryManager au MapManager
         this.deliveryManager.setMapManager(this.mapManager);
 
@@ -152,7 +152,19 @@ export default class Game extends Phaser.Scene {
 
         // Créer la carte en grille
         const isoMap = this.mapManager.createMap();
-        
+
+        // Connecter les managers de cuisine au MapManager
+        this.mapManager.setCookingManagers(
+            this.counterManager,
+            this.ovenManager,
+            this.casseroleManager,
+            this.recipeManager
+        );
+
+        // Connecter les joueurs au MapManager pour le système de craft
+        this.player1.setMapManager(this.mapManager);
+        this.player2.setMapManager(this.mapManager);
+
         // Initialiser les comptoirs de communication
         this.communicationManager.initializeCommunicationCounters();
 
@@ -229,9 +241,11 @@ export default class Game extends Phaser.Scene {
         });
 
         // Connecter le callback de vague complétée pour ouvrir le shop
-        this.waveManager.setWaveCompletedCallback((waveNumber, timeSpent, recipeIds) => {
-            this.openShop(waveNumber, timeSpent, recipeIds);
-        });
+        this.waveManager.setWaveCompletedCallback(
+            (waveNumber, timeSpent, recipeIds) => {
+                this.openShop(waveNumber, timeSpent, recipeIds);
+            }
+        );
 
         // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
         this.timerManager = new TimerManager(this);
@@ -342,7 +356,6 @@ export default class Game extends Phaser.Scene {
             // Callback quand le temps est écoulé
             this.endGame();
         });
-
     }
 
     /**
@@ -351,32 +364,54 @@ export default class Game extends Phaser.Scene {
     repositionPlayers(): void {
         const spawnPoints = this.mapManager?.getAllSpawnPoints();
         if (!spawnPoints) return;
-        
+
         // Repositionner le joueur 1
         if (this.player1) {
             const player1Sprite = this.player1.getPlayer();
             if (player1Sprite) {
-                const screenPos1 = IsometricUtils.gridToScreen(spawnPoints.player1.x, spawnPoints.player1.y);
+                const screenPos1 = IsometricUtils.gridToScreen(
+                    spawnPoints.player1.x,
+                    spawnPoints.player1.y
+                );
                 player1Sprite.setPosition(
-                    screenPos1.x + this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2,
-                    screenPos1.y + this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2 - 12
+                    screenPos1.x +
+                        this.mapOffsetX +
+                        IsometricUtils.TILE_WIDTH / 2,
+                    screenPos1.y +
+                        this.mapOffsetY +
+                        IsometricUtils.TILE_HEIGHT / 2 -
+                        12
                 );
                 // Mettre à jour la position en grille du joueur
-                this.player1.setGridPosition(spawnPoints.player1.x, spawnPoints.player1.y);
+                this.player1.setGridPosition(
+                    spawnPoints.player1.x,
+                    spawnPoints.player1.y
+                );
             }
         }
-        
+
         // Repositionner le joueur 2
         if (this.player2) {
             const player2Sprite = this.player2.getPlayer();
             if (player2Sprite) {
-                const screenPos2 = IsometricUtils.gridToScreen(spawnPoints.player2.x, spawnPoints.player2.y);
+                const screenPos2 = IsometricUtils.gridToScreen(
+                    spawnPoints.player2.x,
+                    spawnPoints.player2.y
+                );
                 player2Sprite.setPosition(
-                    screenPos2.x + this.mapOffsetX + IsometricUtils.TILE_WIDTH / 2,
-                    screenPos2.y + this.mapOffsetY + IsometricUtils.TILE_HEIGHT / 2 - 12
+                    screenPos2.x +
+                        this.mapOffsetX +
+                        IsometricUtils.TILE_WIDTH / 2,
+                    screenPos2.y +
+                        this.mapOffsetY +
+                        IsometricUtils.TILE_HEIGHT / 2 -
+                        12
                 );
                 // Mettre à jour la position en grille du joueur
-                this.player2.setGridPosition(spawnPoints.player2.x, spawnPoints.player2.y);
+                this.player2.setGridPosition(
+                    spawnPoints.player2.x,
+                    spawnPoints.player2.y
+                );
             }
         }
     }
@@ -414,16 +449,16 @@ export default class Game extends Phaser.Scene {
             this.player2?.getInventory().clear();
             
             this.mapManager.updateWaveLevel(waveLevel);
-            
+
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
-            
+
             // Réinitialiser les collisions avec les nouveaux tiles
             this.reinitializeCollisions();
-            
+
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
-            
+
             // Repositionner les joueurs
             this.repositionPlayers();
         }
@@ -444,16 +479,28 @@ export default class Game extends Phaser.Scene {
             this.player2?.getInventory().clear();
             
             this.mapManager.updateAvailableActions(actions);
-            
+
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
-            
+
+            // Reconnecter les managers de cuisine au MapManager après régénération
+            this.mapManager.setCookingManagers(
+                this.counterManager,
+                this.ovenManager,
+                this.casseroleManager,
+                this.recipeManager
+            );
+
+            // Reconnecter les joueurs au MapManager après régénération
+            this.player1.setMapManager(this.mapManager);
+            this.player2.setMapManager(this.mapManager);
+
             // Réinitialiser les collisions avec les nouveaux tiles
             this.reinitializeCollisions();
-            
+
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
-            
+
             // Repositionner les joueurs
             this.repositionPlayers();
         }
@@ -464,26 +511,44 @@ export default class Game extends Phaser.Scene {
      */
     handleCommunicationInteraction(player: PlayerManager): void {
         if (!this.communicationManager) return;
-        
+
         const counters = this.communicationManager.getCommunicationCounters();
-        
+
         for (let i = 0; i < counters.length; i++) {
-            if (this.communicationManager.isPlayerNearCommunicationCounter(player, i)) {
-                const availableIngredients = this.communicationManager.getAvailableIngredients(i);
-                
+            if (
+                this.communicationManager.isPlayerNearCommunicationCounter(
+                    player,
+                    i
+                )
+            ) {
+                const availableIngredients =
+                    this.communicationManager.getAvailableIngredients(i);
+
                 if (availableIngredients.length > 0) {
                     // Prendre le premier ingrédient disponible
                     const ingredient = availableIngredients[0];
-                    if (this.communicationManager.takeIngredient(player, ingredient, i)) {
+                    if (
+                        this.communicationManager.takeIngredient(
+                            player,
+                            ingredient,
+                            i
+                        )
+                    ) {
                     }
                 } else {
                     // Déposer un ingrédient si le comptoir est vide
                     const inventory = player.getInventory();
                     const ingredients = inventory.getAllIngredients();
-                    
+
                     if (ingredients.length > 0) {
                         const ingredient = ingredients[0];
-                        if (this.communicationManager.depositIngredient(player, ingredient, i)) {
+                        if (
+                            this.communicationManager.depositIngredient(
+                                player,
+                                ingredient,
+                                i
+                            )
+                        ) {
                         }
                     }
                 }
@@ -544,12 +609,16 @@ export default class Game extends Phaser.Scene {
 
         // Vitesse de cuisson du four
         if (this.ovenManager) {
-            this.ovenManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+            this.ovenManager.applyCookingSpeedMultiplier(
+                effects.ovenSpeedMultiplier
+            );
         }
 
         // Vitesse de cuisson de la casserole
         if (this.casseroleManager) {
-            this.casseroleManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+            this.casseroleManager.applyCookingSpeedMultiplier(
+                effects.ovenSpeedMultiplier
+            );
         }
 
         // Multiplicateur de score
@@ -559,11 +628,17 @@ export default class Game extends Phaser.Scene {
 
         // Bonus de temps par livraison
         if (this.timerManager) {
-            this.timerManager.setBonusTimePerDelivery(effects.bonusTimePerDelivery);
+            this.timerManager.setBonusTimePerDelivery(
+                effects.bonusTimePerDelivery
+            );
         }
 
         // Temps supplémentaire au démarrage (appliqué une seule fois au début)
-        if (effects.extraTime > 0 && this.timerManager && this.timerManager.isTimerRunning()) {
+        if (
+            effects.extraTime > 0 &&
+            this.timerManager &&
+            this.timerManager.isTimerRunning()
+        ) {
             this.timerManager.addTime(effects.extraTime);
         }
 
@@ -576,8 +651,13 @@ export default class Game extends Phaser.Scene {
     /**
      * Ouvre le shop entre les vagues
      */
-    private openShop(waveNumber: number, timeSpent: number, recipeIds: string[]): void {
-        if (!this.currencyManager || !this.upgradeManager || !this.waveManager) return;
+    private openShop(
+        waveNumber: number,
+        timeSpent: number,
+        recipeIds: string[]
+    ): void {
+        if (!this.currencyManager || !this.upgradeManager || !this.waveManager)
+            return;
 
         // Calculer les gains de la vague
         const waveConfig = this.waveManager.getCurrentWaveConfig();
@@ -606,14 +686,15 @@ export default class Game extends Phaser.Scene {
             onClose: () => {
                 // Reprendre le jeu
                 this.scene.resume();
-                
+
                 // Appliquer les upgrades achetés
                 this.applyUpgrades();
-                
+
                 // Mettre à jour la carte pour la nouvelle vague
-                const nextWaveNumber = this.waveManager?.getNextWaveNumber() || 1;
+                const nextWaveNumber =
+                    this.waveManager?.getNextWaveNumber() || 1;
                 this.updateWaveLevel(nextWaveNumber);
-                
+
                 // Démarrer la vague suivante
                 this.waveManager?.startNextWave();
             },
@@ -624,7 +705,6 @@ export default class Game extends Phaser.Scene {
      * Termine la partie et passe à l'écran GameOver
      */
     endGame(reason: "time" | "expired" = "time") {
-
         // Arrêter le timer s'il est actif
         if (this.timerManager) {
             this.timerManager.stop();
@@ -663,4 +743,3 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
-

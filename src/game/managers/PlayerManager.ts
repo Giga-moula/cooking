@@ -3,6 +3,7 @@ import { IsometricUtils } from "../utils/IsometricUtils";
 import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
 import { InventoryManager } from "./InventoryManager";
 import { GameConfig } from "../config/GameConfig";
+import { CraftActions, type CraftDirection } from "../actions/CraftActions";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -23,10 +24,12 @@ export class PlayerManager {
     private lastDirection: { x: number; y: number } = { x: 0, y: 1 }; // Direction actuelle du joueur (par défaut vers le bas)
     private mapOffsetX: number;
     private mapOffsetY: number;
+    private movementEnabled: boolean = true; // Contrôle si le joueur peut bouger
 
     private controls: PlayerControls;
 
     private inventory: InventoryManager;
+    private craftActions: CraftActions;
 
     constructor(
         scene: Phaser.Scene,
@@ -40,6 +43,8 @@ export class PlayerManager {
         this.playerNumber = playerNumber;
         this.controls = this.initializeControls(playerNumber);
         this.inventory = new InventoryManager(scene);
+        // CraftActions sera initialisé plus tard via setMapManager
+        this.craftActions = null as any;
 
         if (playerNumber === 1) {
             this.playerColor = GameConfig.COLORS.PLAYER_1;
@@ -66,6 +71,7 @@ export class PlayerManager {
         this.updateGridPosition();
         this.updateCarriedItemPosition();
         this.updatePlayerDepth();
+        this.handleCraftActions();
     }
 
     /**
@@ -134,7 +140,7 @@ export class PlayerManager {
     }
 
     handleMovement(): void {
-        if (!this.player) return;
+        if (!this.player || !this.movementEnabled) return;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -328,15 +334,80 @@ export class PlayerManager {
     getTargetPosition(): { x: number; y: number } {
         return {
             x: this.playerGridX + this.lastDirection.x,
-            y: this.playerGridY + this.lastDirection.y
+            y: this.playerGridY + this.lastDirection.y,
         };
     }
-
     /**
      * Définit la position en grille du joueur
      */
     setGridPosition(gridX: number, gridY: number): void {
         this.playerGridX = gridX;
         this.playerGridY = gridY;
+    }
+
+    /**
+     * Gère les actions de craft (affichage et input)
+     */
+    private handleCraftActions(): void {
+        if (!this.craftActions) return; // S'assurer que craftActions est initialisé
+
+        // Vérifier si la touche craft est maintenue
+        if (this.controls.craftKey.isDown) {
+            if (!this.craftActions.isActive()) {
+                this.craftActions.startCrafting();
+            } else {
+                // Mettre à jour la position de l'interface
+                this.craftActions.updatePosition();
+
+                // Vérifier les inputs de direction pour le craft
+                if (Phaser.Input.Keyboard.JustDown(this.controls.craftUpKey)) {
+                    this.craftActions.processDirectionInput("up");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftDownKey)
+                ) {
+                    this.craftActions.processDirectionInput("down");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftLeftKey)
+                ) {
+                    this.craftActions.processDirectionInput("left");
+                } else if (
+                    Phaser.Input.Keyboard.JustDown(this.controls.craftRightKey)
+                ) {
+                    this.craftActions.processDirectionInput("right");
+                }
+            }
+        } else {
+            // Arrêter le craft si la touche n'est plus maintenue
+            if (this.craftActions.isActive()) {
+                this.craftActions.stopCrafting();
+            }
+        }
+    }
+
+    /**
+     * Récupère l'instance CraftActions (pour debug ou usage externe)
+     */
+    public getCraftActions(): CraftActions | null {
+        return this.craftActions;
+    }
+
+    /**
+     * Active ou désactive le mouvement du joueur
+     */
+    setMovementEnabled(enabled: boolean): void {
+        this.movementEnabled = enabled;
+    }
+
+    /**
+     * Définit la référence vers le MapManager
+     */
+    setMapManager(mapManager: any): void {
+        // Recréer l'instance de CraftActions avec le MapManager
+        this.craftActions = new CraftActions(
+            this.scene,
+            this,
+            this.playerNumber,
+            mapManager
+        );
     }
 }

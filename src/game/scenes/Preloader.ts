@@ -93,6 +93,26 @@ export default class Preloader extends Phaser.Scene {
         // === MOBILIER ===
         this.load.image("craft_plan", "assets/craft_plan.png");
 
+        // Charger les assets de craft
+        this.load.image("controlsBox", "assets/craftActions/controlsBox.png");
+        this.load.image("arrow-up", "assets/craftActions/arrow-up.png");
+        this.load.image("arrow-down", "assets/craftActions/arrow-down.png");
+        this.load.image("arrow-left", "assets/craftActions/arrow-left.png");
+        this.load.image("arrow-right", "assets/craftActions/arrow-right.png");
+        this.load.image(
+            "spinning-arrow",
+            "assets/craftActions/spinning-arrow.png"
+        );
+        this.load.image(
+            "reverse-spinning-arrow",
+            "assets/craftActions/reverse-spinning-arrow.png"
+        );
+        this.load.image(
+            "prepare-smoke",
+            "assets/craftActions/prepare-smoke.png"
+        );
+
+        // Charger les tuiles de table
         // === SPRITES DES JOUEURS (GRAND-MÈRES) ===
         // Grand-mère bleue
         this.load.image("blue-grandma-back", "assets/grandma/blue/grandma_blue_back.png");
