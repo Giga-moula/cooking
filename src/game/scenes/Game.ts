@@ -4,23 +4,23 @@ import Phaser from "phaser";
 /* START-USER-IMPORTS */
 import { GameConfig } from "../config/GameConfig";
 import { EventBus } from "../EventBus";
-import { CounterInteractionManager } from "../managers/CounterInteractionManager";
-import { DeliveryManager } from "../managers/DeliveryManager";
-import { RecipeManager } from "../managers/RecipeManager";
-import { InteractionSystem } from "../managers/InteractionSystem";
-import { MapManager } from "../managers/MapManager";
-import { DynamicMapManager } from "../managers/DynamicMapManager";
+import { CasseroleManager } from "../managers/CasseroleManager";
 import { CommunicationManager } from "../managers/CommunicationManager";
-import { IsometricUtils } from "../utils/IsometricUtils";
+import { CounterInteractionManager } from "../managers/CounterInteractionManager";
+import { CurrencyManager } from "../managers/CurrencyManager";
+import { DeliveryManager } from "../managers/DeliveryManager";
+import { DynamicMapManager } from "../managers/DynamicMapManager";
+import { InteractionSystem } from "../managers/InteractionSystem";
+import { LivesManager } from "../managers/LivesManager";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { OvenManager } from "../managers/OvenManager";
-import { CasseroleManager } from "../managers/CasseroleManager";
 import { PlayerManager } from "../managers/PlayerManager";
+import { RecipeManager } from "../managers/RecipeManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
-import { WaveManager } from "../managers/WaveManager";
-import { CurrencyManager } from "../managers/CurrencyManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
+import { WaveManager } from "../managers/WaveManager";
+import { IsometricUtils } from "../utils/IsometricUtils";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -51,6 +51,7 @@ export default class Game extends Phaser.Scene {
     private waveManager?: WaveManager;
     private currencyManager?: CurrencyManager;
     private upgradeManager?: UpgradeManager;
+    private livesManager?: LivesManager;
     constructor() {
         super("Game");
 
@@ -216,6 +217,10 @@ export default class Game extends Phaser.Scene {
         // Initialiser l'affichage de la monnaie
         this.currencyManager.initializeCoinDisplay(850, 20);
 
+        // Initialiser le système de vies
+        this.livesManager = new LivesManager(this);
+        this.livesManager.initializeLivesDisplay(30, 200);
+
         // Initialiser le système de vagues
         this.waveManager = new WaveManager(
             this,
@@ -235,8 +240,13 @@ export default class Game extends Phaser.Scene {
             this.waveManager?.expireOrder();
         });
 
-        // Connecter le callback de Game Over par expiration de commande
-        this.waveManager.setGameOverCallback(() => {
+        // Connecter le callback de perte de vie
+        this.waveManager.setLoseLifeCallback(() => {
+            this.livesManager?.loseLife();
+        });
+
+        // Connecter le callback de Game Over quand toutes les vies sont perdues
+        this.livesManager.setGameOverCallback(() => {
             this.endGame("expired");
         });
 
@@ -354,7 +364,7 @@ export default class Game extends Phaser.Scene {
         // Démarrer le timer du jeu
         this.timerManager?.start(GameConfig.TIMER.GAME_DURATION, () => {
             // Callback quand le temps est écoulé
-            this.endGame();
+            this.endGame("time");
         });
     }
 
@@ -443,11 +453,11 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
-            
+
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
             this.player2?.getInventory().clear();
-            
+
             this.mapManager.updateWaveLevel(waveLevel);
 
             // Recréer la carte avec la nouvelle configuration
@@ -473,11 +483,11 @@ export default class Game extends Phaser.Scene {
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
             this.counterManager?.cleanup();
-            
+
             // Vider les inventaires des joueurs
             this.player1?.getInventory().clear();
             this.player2?.getInventory().clear();
-            
+
             this.mapManager.updateAvailableActions(actions);
 
             // Recréer la carte avec la nouvelle configuration
@@ -588,7 +598,7 @@ export default class Game extends Phaser.Scene {
      * Change de scène (retour au menu)
      */
     changeScene() {
-        this.endGame();
+        this.endGame("time");
     }
 
     /**
@@ -735,6 +745,9 @@ export default class Game extends Phaser.Scene {
         if (this.ovenManager) {
             this.ovenManager.cleanup();
         }
+        if (this.livesManager) {
+            this.livesManager.cleanup();
+        }
     }
 
     /* END-USER-CODE */
@@ -743,3 +756,4 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
+

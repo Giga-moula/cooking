@@ -1,6 +1,6 @@
 import Phaser from "phaser";
-import { RecipeManager } from "./RecipeManager";
 import { RecipeBox } from "./RecipeBox";
+import { RecipeManager } from "./RecipeManager";
 
 /**
  * Gestionnaire de l'affichage des commandes (recettes)
@@ -14,10 +14,7 @@ export class OrderDisplayManager {
     private orderDuration: number = 60;
     private recipeContainer?: Phaser.GameObjects.Container;
 
-    constructor(
-        scene: Phaser.Scene,
-        recipeManager: RecipeManager
-    ) {
+    constructor(scene: Phaser.Scene, recipeManager: RecipeManager) {
         this.scene = scene;
         this.recipeManager = recipeManager;
     }
@@ -110,7 +107,10 @@ export class OrderDisplayManager {
         if (this.onOrderCompleted && dishId) {
             this.onOrderCompleted(dishId);
         } else {
-            console.warn(`⚠️ Callback non appelé - onOrderCompleted: ${!!this.onOrderCompleted}, dishId: ${dishId}`);
+            console.warn(
+                `⚠️ Callback non appelé - onOrderCompleted: ${!!this
+                    .onOrderCompleted}, dishId: ${dishId}`
+            );
         }
     }
 
@@ -285,7 +285,7 @@ export class OrderDisplayManager {
      */
     private showExpirationEffect(box: RecipeBox): void {
         const container = box.container;
-        
+
         // Effet de tremblement violent
         this.scene.tweens.add({
             targets: container,
@@ -312,14 +312,19 @@ export class OrderDisplayManager {
         });
 
         // Afficher un message d'avertissement au centre de l'écran
-        const warningText = this.scene.add.text(512, 384, "⚠️ COMMANDE RATÉE !\nGAME OVER", {
-            fontFamily: "Arial Black",
-            fontSize: "72px",
-            color: "#FF0000",
-            stroke: "#FFFF00",
-            strokeThickness: 8,
-            align: "center",
-        });
+        const warningText = this.scene.add.text(
+            512,
+            384,
+            "⚠️ COMMANDE RATÉE !\nGAME OVER",
+            {
+                fontFamily: "Arial Black",
+                fontSize: "72px",
+                color: "#FF0000",
+                stroke: "#FFFF00",
+                strokeThickness: 8,
+                align: "center",
+            }
+        );
         warningText.setOrigin(0.5);
         warningText.setDepth(10000);
         warningText.setScrollFactor(0);
@@ -350,7 +355,7 @@ export class OrderDisplayManager {
 
         // Créer une nouvelle boîte à la fin
         const newIndex = this.recipeBoxes.length;
-        
+
         // Créer la boîte
         this.createRecipeBox(newIndex);
 
@@ -360,24 +365,23 @@ export class OrderDisplayManager {
         // Mettre à jour la boîte avec la recette
         const box = this.recipeBoxes[newIndex];
         if (!box) return;
-        
+
         box.updateWithRecipe(recipe);
 
         // Définir le callback d'expiration
         box.onExpired = () => {
-            
             // EFFET VISUEL DRAMATIQUE !
             this.showExpirationEffect(box);
-            
+
             // Retirer de la liste des commandes actives
             const expiredIndex = this.activeOrders.indexOf(recipe.result);
             if (expiredIndex !== -1) {
                 this.activeOrders.splice(expiredIndex, 1);
             }
-            
+
             // Attendre la fin de l'animation avant de notifier
             this.scene.time.delayedCall(1000, () => {
-                // Notifier le système de vagues (GAME OVER)
+                // Notifier le système de vagues (perte de vie + progression)
                 if (this.onOrderExpired) {
                     this.onOrderExpired();
                 }

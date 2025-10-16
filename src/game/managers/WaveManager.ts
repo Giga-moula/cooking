@@ -22,6 +22,7 @@ export interface WaveConfig {
 interface WaveState {
     currentWave: number;
     completedRecipes: number;
+    expiredRecipes: number; // Nombre de recettes expirées
     isActive: boolean;
     startTime: number;
     completedWaves: number[];
@@ -60,6 +61,7 @@ export class WaveManager {
         this.waveState = {
             currentWave: 1,
             completedRecipes: 0,
+            expiredRecipes: 0,
             isActive: false,
             startTime: 0,
             completedWaves: [],
@@ -86,7 +88,11 @@ export class WaveManager {
                 difficulty: "easy",
                 unlockedRecipe: "cookie-choco",
                 description: "Créez votre premier cookie chocolat !",
-                specificRecipes: ["cookie-choco", "cookie-choco", "cookie-choco"],
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-choco",
+                    "cookie-choco",
+                ],
                 orderSpawnDelay: 15, // Une commande toutes les 15 secondes
                 ordersPerSpawn: 1, // 1 commande à la fois
             },
@@ -101,7 +107,12 @@ export class WaveManager {
                 difficulty: "easy",
                 unlockedRecipe: "cookie-cara",
                 description: "Créez des cookies caramel !",
-                specificRecipes: ["cookie-choco", "cookie-cara", "cookie-choco", "cookie-cara"],
+                specificRecipes: [
+                    "cookie-choco",
+                    "cookie-cara",
+                    "cookie-choco",
+                    "cookie-cara",
+                ],
                 orderSpawnDelay: 14, // 14 secondes
                 ordersPerSpawn: 1,
             },
@@ -246,6 +257,7 @@ export class WaveManager {
         this.currentWaveConfig = waveConfig;
         this.waveState.currentWave = waveNumber;
         this.waveState.completedRecipes = 0;
+        this.waveState.expiredRecipes = 0;
         this.waveState.isActive = true;
         this.waveState.startTime = this.scene.time.now;
         this.waveState.pendingOrderIndex = 0;
@@ -272,7 +284,8 @@ export class WaveManager {
     private startOrderSpawnTimer(): void {
         if (!this.currentWaveConfig) return;
 
-        const spawnDelay = (this.currentWaveConfig.orderSpawnDelay || 15) * 1000;
+        const spawnDelay =
+            (this.currentWaveConfig.orderSpawnDelay || 15) * 1000;
 
         this.orderSpawnTimer = this.scene.time.addEvent({
             delay: spawnDelay,
@@ -299,7 +312,10 @@ export class WaveManager {
             }
 
             // Vérifier qu'il reste des commandes à faire apparaître
-            if (this.waveState.pendingOrderIndex >= this.currentWaveConfig.targetRecipes) {
+            if (
+                this.waveState.pendingOrderIndex >=
+                this.currentWaveConfig.targetRecipes
+            ) {
                 // Arrêter le timer
                 if (this.orderSpawnTimer) {
                     this.orderSpawnTimer.destroy();
@@ -343,15 +359,11 @@ export class WaveManager {
             const displayRecipe = {
                 ...recipe,
                 result: recipeId, // Afficher le cookie cuit
-                displayIngredients: [
-                    recipe.ingredient1,
-                    recipe.ingredient2,
-                ], // Mais garder les ingrédients du cookie-mix
+                displayIngredients: [recipe.ingredient1, recipe.ingredient2], // Mais garder les ingrédients du cookie-mix
             };
-            
+
             // Ajouter la commande progressivement
             this.orderDisplayManager.addNewOrder(displayRecipe);
-            
         } else {
             console.warn(`Recette non trouvée pour le plat: ${recipeId}`);
         }
@@ -374,7 +386,10 @@ export class WaveManager {
         }
 
         // Tenter de faire apparaître une nouvelle commande immédiatement
-        if (this.waveState.pendingOrderIndex < this.currentWaveConfig.targetRecipes) {
+        if (
+            this.waveState.pendingOrderIndex <
+            this.currentWaveConfig.targetRecipes
+        ) {
             this.spawnNextOrders();
         }
 
@@ -389,46 +404,73 @@ export class WaveManager {
 
     /**
      * Marque une commande comme expirée (timer à 0)
-     * GAME OVER - Une commande expirée = défaite immédiate !
+     * Perd une vie mais continue la progression si possible
      */
     public expireOrder(): void {
         if (!this.waveState.isActive || !this.currentWaveConfig) return;
 
-        // Arrêter le timer de spawn
-        if (this.orderSpawnTimer) {
-            this.orderSpawnTimer.destroy();
-            this.orderSpawnTimer = undefined;
+        // Déclencher le callback de perte de vie si défini
+        if (this.onLoseLife) {
+            this.onLoseLife();
         }
 
-        this.waveState.isActive = false;
+        // Incrémenter le compteur de recettes expirées
+        this.waveState.expiredRecipes++;
 
-        // Déclencher le callback de défaite si défini
-        if (this.onGameOverByExpiration) {
-            this.onGameOverByExpiration();
+        // Décrémenter le compteur de commandes actives
+        this.waveState.currentActiveOrders--;
+
+        // Tenter de faire apparaître une nouvelle commande immédiatement
+        if (
+            this.waveState.pendingOrderIndex <
+            this.currentWaveConfig.targetRecipes
+        ) {
+            this.spawnNextOrders();
+        }
+
+        // Vérifier si toutes les commandes ont été traitées (complétées + expirées)
+        const totalProcessed =
+            this.waveState.completedRecipes + this.waveState.expiredRecipes;
+
+        if (
+            totalProcessed >= this.currentWaveConfig.targetRecipes &&
+            this.waveState.currentActiveOrders <= 0
+        ) {
+            this.completeWave();
         }
     }
 
     /**
-     * Callback appelé quand une commande expire (Game Over)
+     * Callback appelé quand une commande expire (perte de vie)
      */
-    private onGameOverByExpiration?: () => void;
+    private onLoseLife?: () => void;
 
     /**
      * Callback appelé quand une vague est terminée (pour ouvrir le shop)
      */
-    private onWaveCompleted?: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void;
+    private onWaveCompleted?: (
+        waveNumber: number,
+        timeSpent: number,
+        recipeIds: string[]
+    ) => void;
 
     /**
-     * Définit le callback de Game Over par expiration
+     * Définit le callback de perte de vie
      */
-    public setGameOverCallback(callback: () => void): void {
-        this.onGameOverByExpiration = callback;
+    public setLoseLifeCallback(callback: () => void): void {
+        this.onLoseLife = callback;
     }
 
     /**
      * Définit le callback de complétion de vague (pour le shop)
      */
-    public setWaveCompletedCallback(callback: (waveNumber: number, timeSpent: number, recipeIds: string[]) => void): void {
+    public setWaveCompletedCallback(
+        callback: (
+            waveNumber: number,
+            timeSpent: number,
+            recipeIds: string[]
+        ) => void
+    ): void {
         this.onWaveCompleted = callback;
     }
 
@@ -452,7 +494,8 @@ export class WaveManager {
         this.scoreManager.addScore(waveScore);
 
         // Calculer le temps passé sur la vague
-        const timeSpent = (this.scene.time.now - this.waveState.startTime) / 1000;
+        const timeSpent =
+            (this.scene.time.now - this.waveState.startTime) / 1000;
 
         // Appeler le callback pour ouvrir le shop
         if (this.onWaveCompleted) {
@@ -573,6 +616,7 @@ export class WaveManager {
         this.waveState = {
             currentWave: 1,
             completedRecipes: 0,
+            expiredRecipes: 0,
             isActive: false,
             startTime: 0,
             completedWaves: [],

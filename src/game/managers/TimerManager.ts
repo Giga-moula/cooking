@@ -21,7 +21,7 @@ export class TimerManager {
      * Initialise l'affichage du timer
      */
     public initializeTimerDisplay(x: number = 512, y: number = 20): void {
-        this.timerText = this.scene.add.text(x, y, "⏱️ 5:00", {
+        this.timerText = this.scene.add.text(x, y, "⏱️ 2:00", {
             fontFamily: "Arial Black",
             fontSize: "32px",
             color: "#FFFFFF",
@@ -97,7 +97,9 @@ export class TimerManager {
 
         const minutes = Math.floor(this.timeRemaining / 60);
         const seconds = this.timeRemaining % 60;
-        const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+        const formattedTime = `${minutes}:${seconds
+            .toString()
+            .padStart(2, "0")}`;
 
         this.timerText.setText(`⏱️ ${formattedTime}`);
     }

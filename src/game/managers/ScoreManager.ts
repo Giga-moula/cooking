@@ -8,7 +8,7 @@ export class ScoreManager {
     private score: number = 0;
     private scoreText?: Phaser.GameObjects.Text;
     private totalDeliveries: number = 0;
-    private scoreMultiplier: number = 1.0; 
+    private scoreMultiplier: number = 1.0;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -17,7 +17,7 @@ export class ScoreManager {
     /**
      * Initialise l'affichage du score
      */
-    initializeScoreDisplay(x: number = 20, y: number = 200): void {
+    initializeScoreDisplay(x: number = 855, y: number = 60): void {
         this.scoreText = this.scene.add.text(x, y, "Score: 0", {
             fontFamily: "Arial",
             fontSize: "24px",
@@ -45,7 +45,6 @@ export class ScoreManager {
         const pointsToAdd = points * this.scoreMultiplier;
         this.score += pointsToAdd;
         this.totalDeliveries++;
-
 
         this.updateScoreDisplay();
         this.showScoreEffect(pointsToAdd);

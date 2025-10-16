@@ -62,13 +62,18 @@ export class OrderVisualEffects {
      * Crée un message d'expiration
      */
     private createExpirationMessage(x: number, y: number): void {
-        const message = this.scene.add.text(x, y, "❌ Recette expirée !", {
-            fontFamily: "Arial",
-            fontSize: "16px",
-            color: "#F44336",
-            stroke: "#ffffff",
-            strokeThickness: 2,
-        });
+        const message = this.scene.add.text(
+            x,
+            y,
+            "❌ Recette ratée ! Continuez !",
+            {
+                fontFamily: "Arial",
+                fontSize: "16px",
+                color: "#F44336",
+                stroke: "#ffffff",
+                strokeThickness: 2,
+            }
+        );
         message.setOrigin(0.5);
         message.setScrollFactor(0);
         message.setDepth(3000);

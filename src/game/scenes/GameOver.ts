@@ -24,26 +24,30 @@ export default class GameOver extends Phaser.Scene {
     }
 
     editorCreate(): void {
-        // background
-        const background = this.add.image(512, 384, "background");
-        background.alpha = 0.5;
-        background.alphaTopLeft = 0.5;
-        background.alphaTopRight = 0.5;
-        background.alphaBottomLeft = 0.5;
-        background.alphaBottomRight = 0.5;
+        // background - différent selon le type de fin de partie
+        let backgroundKey = "beautiful-kitchen"; // Par défaut pour le temps écoulé
+        if (this.reason === "expired") {
+            backgroundKey = "game-over-kitchen"; // Pour un vrai game over
+        }
 
-        // textgameover
-        const textgameover = this.add.text(512, 384, "", {});
-        textgameover.setOrigin(0.5, 0.5);
-        textgameover.text = "Game Over";
-        textgameover.setStyle({
-            align: "center",
-            color: "#ffffff",
-            fontFamily: "Arial Black",
-            fontSize: "64px",
-            stroke: "#000000",
-            strokeThickness: 8,
-        });
+        const background = this.add.image(512, 384, backgroundKey);
+        background.setDisplaySize(1024, 768);
+        background.alpha = 0.8;
+
+        // textgameover - seulement si c'est un vrai game over
+        if (this.reason === "expired") {
+            const textgameover = this.add.text(512, 384, "", {});
+            textgameover.setOrigin(0.5, 0.5);
+            textgameover.text = "Game Over";
+            textgameover.setStyle({
+                align: "center",
+                color: "#ffffff",
+                fontFamily: "Arial Black",
+                fontSize: "64px",
+                stroke: "#000000",
+                strokeThickness: 8,
+            });
+        }
 
         this.events.emit("scene-awake");
     }
@@ -52,7 +56,11 @@ export default class GameOver extends Phaser.Scene {
 
     // Write your code here
 
-    init(data: { score: number; deliveries: number; reason?: "time" | "expired" }) {
+    init(data: {
+        score: number;
+        deliveries: number;
+        reason?: "time" | "expired";
+    }) {
         // Récupérer les données passées depuis la scène Game
         this.score = data.score || 0;
         this.deliveries = data.deliveries || 0;
@@ -64,16 +72,19 @@ export default class GameOver extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor(0x000000);
 
+        // Effet de fondu d'entrée
+        this.cameras.main.fadeIn(1000, 0, 0, 0);
+
         // Titre selon la raison de la défaite
         let titleMessage = "⏱️ Temps écoulé !";
         let titleColor = "#ffffff";
-        
+
         if (this.reason === "expired") {
-            titleMessage = "💀 COMMANDE EXPIRÉE !";
+            titleMessage = "COMMANDE EXPIRÉE !";
             titleColor = "#FF4444"; // Rouge pour la défaite
         }
 
-        const titleText = this.add.text(512, 200, titleMessage, {
+        const titleText = this.add.text(512, 150, titleMessage, {
             fontFamily: "Arial Black",
             fontSize: "48px",
             color: titleColor,
@@ -86,7 +97,7 @@ export default class GameOver extends Phaser.Scene {
         // Afficher le score final
         const scoreText = this.add.text(
             512,
-            300,
+            250,
             `Score final : ${this.score}`,
             {
                 fontFamily: "Arial",
@@ -102,7 +113,7 @@ export default class GameOver extends Phaser.Scene {
         // Afficher le nombre de livraisons
         const deliveriesText = this.add.text(
             512,
-            360,
+            320,
             `Livraisons réussies : ${this.deliveries}`,
             {
                 fontFamily: "Arial",
@@ -115,28 +126,10 @@ export default class GameOver extends Phaser.Scene {
         );
         deliveriesText.setOrigin(0.5);
 
-        // Message de félicitations basé sur le score
-        let message = "Continuez à vous entraîner !";
-        if (this.score >= 500) {
-            message = "🌟 Excellent travail ! 🌟";
-        } else if (this.score >= 300) {
-            message = "👍 Bon travail !";
-        } else if (this.score >= 100) {
-            message = "Pas mal pour un début !";
-        }
-
-        const congratsText = this.add.text(512, 440, message, {
-            fontFamily: "Arial",
-            fontSize: "24px",
-            color: "#00FF00",
-            stroke: "#000000",
-            strokeThickness: 3,
-            align: "center",
+        // Afficher le formulaire de saisie du nom avec un délai
+        this.time.delayedCall(1600, () => {
+            this.showNameInputForm();
         });
-        congratsText.setOrigin(0.5);
-
-        // Afficher le formulaire de saisie du nom
-        this.showNameInputForm();
 
         EventBus.emit("current-scene-ready", this);
     }
@@ -149,7 +142,7 @@ export default class GameOver extends Phaser.Scene {
         const formContainer = document.createElement("div");
         formContainer.id = "name-input-container";
         formContainer.style.position = "absolute";
-        formContainer.style.top = "500px";
+        formContainer.style.top = "420px";
         formContainer.style.left = "50%";
         formContainer.style.transform = "translateX(-50%)";
         formContainer.style.textAlign = "center";
@@ -302,7 +295,7 @@ export default class GameOver extends Phaser.Scene {
         if (this.scoreSaved && this.playerRank) {
             const rankText = this.add.text(
                 512,
-                500,
+                520,
                 `🏆 Vous êtes ${this.playerRank}${this.getOrdinalSuffix(
                     this.playerRank
                 )} au classement !`,
@@ -321,7 +314,7 @@ export default class GameOver extends Phaser.Scene {
         // Instructions pour retourner au menu
         const instructionsText = this.add.text(
             512,
-            580,
+            600,
             "Appuyez sur ESPACE ou cliquez pour retourner au menu",
             {
                 fontFamily: "Arial",
