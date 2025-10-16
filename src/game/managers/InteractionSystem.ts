@@ -74,10 +74,8 @@ export class InteractionSystem {
             return;
         }
 
-        // Vérifier aussi la casserole pour la cuisson
-        if (this.handleCasseroleCooking(targetX, targetY, player)) {
-            return;
-        }
+        // La casserole utilise le système de craft (enchaînement de touches)
+        // Elle ne répond plus à un simple appui sur R/P
 
         // Vérifier si c'est un bloc de craft - si oui, ignorer la transformation automatique
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
