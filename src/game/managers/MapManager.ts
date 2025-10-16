@@ -21,6 +21,12 @@ export class MapManager {
         new Map(); // Track des craft_plans
     private currentMapConfig: MapConfig;
 
+    // Références vers les managers de cuisine
+    private counterManager?: any;
+    private ovenManager?: any;
+    private casseroleManager?: any;
+    private recipeManager?: any;
+
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
@@ -125,7 +131,6 @@ export class MapManager {
 
         // Nettoyer les ingrédients
         this.ingredientTiles.clear();
-
     }
 
     /**
@@ -547,5 +552,65 @@ export class MapManager {
     getTableTileManager(): TableTileManager | undefined {
         return this.tableTileManager;
     }
-}
 
+    /**
+     * Récupère l'ID du type de tile à une position donnée
+     */
+    getTileTypeId(gridX: number, gridY: number): number | null {
+        const mapData = this.currentMapConfig.mapData;
+
+        if (
+            gridY >= 0 &&
+            gridY < mapData.length &&
+            gridX >= 0 &&
+            gridX < mapData[gridY].length
+        ) {
+            return mapData[gridY][gridX];
+        }
+
+        return null;
+    }
+
+    /**
+     * Définit les références vers les managers de cuisine
+     */
+    setCookingManagers(
+        counterManager: any,
+        ovenManager: any,
+        casseroleManager: any,
+        recipeManager: any
+    ): void {
+        this.counterManager = counterManager;
+        this.ovenManager = ovenManager;
+        this.casseroleManager = casseroleManager;
+        this.recipeManager = recipeManager;
+    }
+
+    /**
+     * Récupère le manager de comptoirs
+     */
+    getCounterManager(): any {
+        return this.counterManager;
+    }
+
+    /**
+     * Récupère le manager de four
+     */
+    getOvenManager(): any {
+        return this.ovenManager;
+    }
+
+    /**
+     * Récupère le manager de casseroles
+     */
+    getCasseroleManager(): any {
+        return this.casseroleManager;
+    }
+
+    /**
+     * Récupère le manager de recettes
+     */
+    getRecipeManager(): any {
+        return this.recipeManager;
+    }
+}

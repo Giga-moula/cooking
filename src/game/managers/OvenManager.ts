@@ -8,6 +8,10 @@ import { BaseCookingManager } from "./BaseCookingManager";
  * Permet de faire fondre le beurre et cuire les cookies
  */
 export class OvenManager extends BaseCookingManager {
+    // Suivi des échecs de cuisson pour chaque four
+    private cookingFailures: Map<string, number> = new Map();
+    private readonly MAX_FAILURES_BEFORE_BURN = 3;
+
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
@@ -50,6 +54,52 @@ export class OvenManager extends BaseCookingManager {
      */
     performCooking(gridX: number, gridY: number): boolean {
         return this.cook(gridX, gridY);
+    }
+
+    /**
+     * Enregistre un échec de craft pour ce four
+     * Brûle l'ingrédient après 3 échecs consécutifs
+     */
+    recordCraftFailure(gridX: number, gridY: number): boolean {
+        const key = `${gridX},${gridY}`;
+        const item = this.itemsInDevice.get(key);
+
+        if (!item) return false;
+
+        const currentItem = item.texture.key;
+
+        // Vérifier que c'est un cookie-mix
+        if (!currentItem.startsWith("cookie-mix-")) {
+            return false;
+        }
+
+        // Incrémenter le compteur d'échecs
+        const currentFailures = this.cookingFailures.get(key) || 0;
+        const newFailures = currentFailures + 1;
+        this.cookingFailures.set(key, newFailures);
+
+        console.log(
+            `Four ${key}: Échec ${newFailures}/${this.MAX_FAILURES_BEFORE_BURN}`
+        );
+
+        // Si 3 échecs atteints, brûler le cookie
+        if (newFailures >= this.MAX_FAILURES_BEFORE_BURN) {
+            item.setTexture("cookie-dead");
+            this.cookingFailures.delete(key); // Reset le compteur
+            this.playCookingEffect(gridX, gridY);
+            console.log(`Four ${key}: Cookie brûlé !`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Remet à zéro les échecs pour un four (appelé lors d'un craft réussi)
+     */
+    resetCraftFailures(gridX: number, gridY: number): void {
+        const key = `${gridX},${gridY}`;
+        this.cookingFailures.delete(key);
     }
 
     /**
@@ -112,4 +162,3 @@ export class OvenManager extends BaseCookingManager {
         return "Four";
     }
 }
-

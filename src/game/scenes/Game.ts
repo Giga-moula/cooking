@@ -154,6 +154,18 @@ export default class Game extends Phaser.Scene {
         // Créer la carte en grille
         const isoMap = this.mapManager.createMap();
 
+        // Connecter les managers de cuisine au MapManager
+        this.mapManager.setCookingManagers(
+            this.counterManager,
+            this.ovenManager,
+            this.casseroleManager,
+            this.recipeManager
+        );
+
+        // Connecter les joueurs au MapManager pour le système de craft
+        this.player1.setMapManager(this.mapManager);
+        this.player2.setMapManager(this.mapManager);
+
         // Initialiser les comptoirs de communication
         this.communicationManager.initializeCommunicationCounters();
 
@@ -480,6 +492,18 @@ export default class Game extends Phaser.Scene {
 
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
+
+            // Reconnecter les managers de cuisine au MapManager après régénération
+            this.mapManager.setCookingManagers(
+                this.counterManager,
+                this.ovenManager,
+                this.casseroleManager,
+                this.recipeManager
+            );
+
+            // Reconnecter les joueurs au MapManager après régénération
+            this.player1.setMapManager(this.mapManager);
+            this.player2.setMapManager(this.mapManager);
 
             // Réinitialiser les collisions avec les nouveaux tiles
             this.reinitializeCollisions();

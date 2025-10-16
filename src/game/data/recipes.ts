@@ -87,21 +87,8 @@ export const SPECIAL_TRANSFORMATIONS: SpecialTransformation[] = [
         to: "chocolate-chunks",
         name: "Chocolat en chunks",
     },
-    {
-        from: "cookie-mix-choco",
-        to: "cookie-dead",
-        name: "Cookie brûlé (choco)",
-    },
-    {
-        from: "cookie-mix-cara",
-        to: "cookie-dead",
-        name: "Cookie brûlé (cara)",
-    },
-    {
-        from: "cookie-mix-choco-cara",
-        to: "cookie-dead",
-        name: "Cookie brûlé (choco-cara)",
-    },
+    // Les transformations vers cookie-dead sont gérées directement dans OvenManager pour les échecs de cuisson
+    // Elles ne doivent PAS être dans les transformations spéciales automatiques
 ];
 
 /**
@@ -142,4 +129,3 @@ export const CASSEROLE_COOKING: CasseroleCooking[] = [
         name: "Beurre fondu",
     },
 ];
-

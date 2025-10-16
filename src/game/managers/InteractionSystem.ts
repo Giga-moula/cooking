@@ -64,9 +64,20 @@ export class InteractionSystem {
         const targetX = target.x;
         const targetY = target.y;
 
+        // Vérifier si c'est un bloc de craft - si oui, ignorer la transformation automatique
+        const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
+        if (this.isCraftingTile(tileTypeId)) {
+            // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
+            console.log(
+                `Bloc de craft détecté - utilisez le système de craft à la place`
+            );
+            return;
+        }
 
         // Seules les tables de transformation peuvent être utilisées
-        if (this.handleTransformationTableInteraction(targetX, targetY, player)) {
+        if (
+            this.handleTransformationTableInteraction(targetX, targetY, player)
+        ) {
             return;
         }
 
@@ -79,7 +90,15 @@ export class InteractionSystem {
         if (this.handleCasseroleCooking(targetX, targetY, player)) {
             return;
         }
+    }
 
+    /**
+     * Vérifie si une tile est un bloc de craft
+     */
+    private isCraftingTile(tileTypeId: number | null): boolean {
+        if (!tileTypeId) return false;
+        // IDs des blocs de craft : table-mono (10), oven (11), casserole_cuisson (13)
+        return tileTypeId === 10 || tileTypeId === 11 || tileTypeId === 13;
     }
 
     /**
@@ -168,7 +187,6 @@ export class InteractionSystem {
         const playerSprite = player.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-
         if (inventory.isEmpty()) {
             const ingredientType = this.mapManager.getIngredientFromTile(
                 targetX,
@@ -246,7 +264,6 @@ export class InteractionSystem {
             return false;
         }
 
-
         const inventory = player.getInventory();
         const playerSprite = player.getPlayer();
         if (!inventory || !playerSprite) return false;
@@ -260,30 +277,53 @@ export class InteractionSystem {
         // Cas 1: Table pleine + Main pleine = Essayer de combiner (recette)
         if (hasItemOnTable && hasItemInHand) {
             const itemInHand = inventory.peekItem();
-            const itemOnTable = this.counterManager.getItemTypeOnCounter(targetX, targetY);
-            
+            const itemOnTable = this.counterManager.getItemTypeOnCounter(
+                targetX,
+                targetY
+            );
+
             if (itemInHand && itemOnTable) {
                 // Essayer d'abord une recette (combinaison)
-                const resultId = this.recipeManager.combineIngredients(itemInHand, itemOnTable);
+                const resultId = this.recipeManager.combineIngredients(
+                    itemInHand,
+                    itemOnTable
+                );
 
                 if (resultId) {
-
                     // Retirer les ingrédients
                     inventory.removeItem();
                     player.removeCarriedItem();
                     this.counterManager.removeItemFromCounter(targetX, targetY);
 
                     // Créer le résultat
-                    this.counterManager.placeItemOnCounter(targetX, targetY, resultId);
+                    this.counterManager.placeItemOnCounter(
+                        targetX,
+                        targetY,
+                        resultId
+                    );
 
                     // Effets visuels
                     this.counterManager.playFusionEffect(targetX, targetY);
+                    const ingredient =
+                        this.recipeManager.getIngredient(resultId);
+                    if (ingredient) {
+                        this.counterManager.showCombinationMessage(
+                            `✨ ${ingredient.name} créé !`,
+                            targetX,
+                            targetY
+                        );
+                    }
+
                     return true;
                 }
             }
 
             // Si pas de recette, essayer transformation spéciale
-            const success = this.counterManager.performSpecialTransformation(targetX, targetY, inventory);
+            const success = this.counterManager.performSpecialTransformation(
+                targetX,
+                targetY,
+                inventory
+            );
             if (success) {
                 player.updateCarriedItem();
                 return true;
@@ -294,7 +334,11 @@ export class InteractionSystem {
 
         // Cas 2: Table pleine + Main vide = Essayer transformation simple
         if (hasItemOnTable && !hasItemInHand) {
-            const success = this.counterManager.performSpecialTransformation(targetX, targetY, inventory);
+            const success = this.counterManager.performSpecialTransformation(
+                targetX,
+                targetY,
+                inventory
+            );
             if (success) {
                 player.updateCarriedItem();
             }
@@ -318,7 +362,10 @@ export class InteractionSystem {
             return false;
         }
 
-        const isTransformTable = this.mapManager.isTransformationTable(targetX, targetY);
+        const isTransformTable = this.mapManager.isTransformationTable(
+            targetX,
+            targetY
+        );
 
         const inventory = player.getInventory();
         const playerSprite = player.getPlayer();
@@ -441,7 +488,10 @@ export class InteractionSystem {
         const playerSprite = player.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(targetX, targetY);
+        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(
+            targetX,
+            targetY
+        );
         const inventoryEmpty = inventory.isEmpty();
 
         // Cas 1: Ramasser un objet de la casserole
@@ -465,7 +515,10 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const itemType = this.casseroleManager.removeItemFromCasserole(targetX, targetY);
+        const itemType = this.casseroleManager.removeItemFromCasserole(
+            targetX,
+            targetY
+        );
         if (itemType) {
             const inventory = player.getInventory();
             if (inventory) {
@@ -490,7 +543,11 @@ export class InteractionSystem {
 
         const itemType = inventory.removeItem();
         if (itemType) {
-            const success = this.casseroleManager.placeItemInCasserole(targetX, targetY, itemType);
+            const success = this.casseroleManager.placeItemInCasserole(
+                targetX,
+                targetY,
+                itemType
+            );
             if (success) {
                 player.removeCarriedItem();
                 return true;
@@ -557,7 +614,6 @@ export class InteractionSystem {
             return false;
         }
 
-
         const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
 
         if (hasItemInOven) {
@@ -579,14 +635,28 @@ export class InteractionSystem {
             return false;
         }
 
-
-        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(targetX, targetY);
+        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(
+            targetX,
+            targetY
+        );
 
         if (hasItemInCasserole) {
-            this.casseroleManager.cookInCasserole(targetX, targetY);
+            const success = this.casseroleManager.cookInCasserole(
+                targetX,
+                targetY
+            );
+            if (success) {
+                return true;
+            } else {
+                return true;
+            }
+        } else {
+            this.casseroleManager.showCookingMessage(
+                "❌ Vide !",
+                targetX,
+                targetY
+            );
+            return true;
         }
-
-        return true;
     }
 }
-
