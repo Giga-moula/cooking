@@ -439,10 +439,15 @@ export default class Game extends Phaser.Scene {
      */
     updateWaveLevel(waveLevel: number): void {
         if (this.mapManager) {
-            // Nettoyer les fours et casseroles avant de régénérer la carte
+            // Nettoyer tous les objets avant de régénérer la carte
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
-
+            this.counterManager?.cleanup();
+            
+            // Vider les inventaires des joueurs
+            this.player1?.getInventory().clear();
+            this.player2?.getInventory().clear();
+            
             this.mapManager.updateWaveLevel(waveLevel);
 
             // Recréer la carte avec la nouvelle configuration
@@ -464,10 +469,15 @@ export default class Game extends Phaser.Scene {
      */
     updateAvailableActions(actions: number): void {
         if (this.mapManager) {
-            // Nettoyer les fours et casseroles avant de régénérer la carte
+            // Nettoyer tous les objets avant de régénérer la carte
             this.ovenManager?.cleanup();
             this.casseroleManager?.cleanup();
-
+            this.counterManager?.cleanup();
+            
+            // Vider les inventaires des joueurs
+            this.player1?.getInventory().clear();
+            this.player2?.getInventory().clear();
+            
             this.mapManager.updateAvailableActions(actions);
 
             // Recréer la carte avec la nouvelle configuration
