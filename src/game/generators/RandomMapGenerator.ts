@@ -55,13 +55,16 @@ export class RandomMapGenerator {
         const playerZones = this.generatePlayerZones(mapWidth, mapHeight, separationWall, complexity);
         
         // Placer les éléments dans les zones
-        this.populatePlayerZones(mapData, playerZones, availableActions, complexity);
+        this.populatePlayerZones(mapData, playerZones, availableActions, complexity, waveLevel);
         
         // Ajouter les comptoirs de communication
         this.addCommunicationCounters(mapData, playerZones);
         
-        // Ajouter la zone de livraison dans la zone choisie
-        this.addDeliveryZone(mapData, playerZones);
+        // Ajouter la zone de livraison UNIQUEMENT lors de la première vague
+        // La zone de livraison reste fixe tout au long du jeu
+        if (waveLevel === 1) {
+            this.addDeliveryZone(mapData, playerZones);
+        }
         
         // Valider que tous les éléments sont accessibles
         const isValid = this.validateAccessibility(mapData, playerZones);
@@ -71,8 +74,6 @@ export class RandomMapGenerator {
             // Régénérer une nouvelle carte si l'accessibilité n'est pas validée
             return this.generateMap(config, attempt + 1);
         }
-        
-        console.log("✅ Validation d'accessibilité réussie - Tous les éléments sont atteignables");
         
         // Créer la configuration de carte
         return {
@@ -207,7 +208,8 @@ export class RandomMapGenerator {
         mapData: number[][], 
         zones: PlayerZone[], 
         availableActions: number, 
-        complexity: number
+        complexity: number,
+        waveLevel: number
     ): void {
         if (zones.length < 2) return;
         
@@ -221,16 +223,11 @@ export class RandomMapGenerator {
         const zone1HasTransformTable = !zone1HasOven;
         
         // Distribution aléatoire des ingrédients (1 type par zone, ~équilibré)
-        const ingredientDistribution = this.randomizeIngredientDistribution();
+        const ingredientDistribution = this.randomizeIngredientDistribution(waveLevel);
         
-        // Distribution aléatoire de la zone de livraison
+        // Distribution aléatoire de la zone de livraison (uniquement pour la vague 1)
         const deliveryInZone1 = Math.random() < 0.5;
-        
-        // Log de distribution
-        console.log(`🎲 Distribution aléatoire complète:`);
-        console.log(`  Zone 1: ${zone1HasOven ? '🔥 Four' : '📋 Table Transform'} | ${ingredientDistribution.zone1Ingredients.join(' ')} ${deliveryInZone1 ? '| 📦 Livraison' : ''}`);
-        console.log(`  Zone 2: ${!zone1HasOven ? '🔥 Four' : '📋 Table Transform'} | ${ingredientDistribution.zone2Ingredients.join(' ')} ${!deliveryInZone1 ? '| 📦 Livraison' : ''}`);
-        
+
         // Placer les ingrédients selon la distribution aléatoire
         this.placeRandomIngredients(
             mapData, 
@@ -239,9 +236,11 @@ export class RandomMapGenerator {
             ingredientDistribution
         );
         
-        // Stocker la zone de livraison pour plus tard
-        (zone1 as any).hasDeliveryZone = deliveryInZone1;
-        (zone2 as any).hasDeliveryZone = !deliveryInZone1;
+        // Stocker la zone de livraison pour plus tard (uniquement pour la vague 1)
+        if (waveLevel === 1) {
+            (zone1 as any).hasDeliveryZone = deliveryInZone1;
+            (zone2 as any).hasDeliveryZone = !deliveryInZone1;
+        }
         
             // Placer les tables normales (équilibré) - Plus de tables pour plus d'interaction
             const elementsPerPlayer = Math.max(4, Math.floor(availableActions / 2) + 2);
@@ -267,7 +266,7 @@ export class RandomMapGenerator {
      * Génère une distribution aléatoire des ingrédients
      * Garantit ~équilibre entre les zones (1 ou 2 types par zone)
      */
-    private static randomizeIngredientDistribution(): {
+    private static randomizeIngredientDistribution(waveLevel: number): {
         zone1Ingredients: string[];
         zone2Ingredients: string[];
         zone1Types: number[];
@@ -276,18 +275,37 @@ export class RandomMapGenerator {
         const allIngredients = [
             { type: 6, name: '🍫 Chocolat' },
             { type: 7, name: '🧈 Beurre' },
-            { type: 8, name: '🌾 Farine' }
+            { type: 8, name: '🌾 Farine' },
+            { type: 12, name: '🍬 Sucre' }
         ];
         
-        // Mélanger les ingrédients
-        const shuffled = [...allIngredients].sort(() => Math.random() - 0.5);
+        // Mélanger les ingrédients de base (sans le sucre)
+        const baseIngredients = allIngredients.slice(0, 3); // Chocolat, Beurre, Farine
+        const shuffled = [...baseIngredients].sort(() => Math.random() - 0.5);
         
-        // Distribution aléatoire : soit 2-1 soit 1-2
+        // Distribution selon les règles : casserole dans zone avec 1 caisse, sucre dans zone avec 2 caisses
         const zone1Count = Math.random() < 0.5 ? 2 : 1;
         const zone2Count = 3 - zone1Count;
         
         const zone1Ingredients = shuffled.slice(0, zone1Count);
         const zone2Ingredients = shuffled.slice(zone1Count);
+        
+        // Ajouter casserole et sucre selon les règles (seulement à partir de la vague 2)
+        const shouldIncludeCasserole = waveLevel >= 2;
+        
+        if (shouldIncludeCasserole) {
+            if (zone1Count === 1) {
+                // Zone 1 a 1 caisse → elle aura la casserole
+                zone1Ingredients.push({ type: 13, name: '🍳 Casserole' });
+                // Zone 2 a 2 caisses → elle aura le sucre
+                zone2Ingredients.push({ type: 12, name: '🍬 Sucre' });
+            } else {
+                // Zone 1 a 2 caisses → elle aura le sucre
+                zone1Ingredients.push({ type: 12, name: '🍬 Sucre' });
+                // Zone 2 a 1 caisse → elle aura la casserole
+                zone2Ingredients.push({ type: 13, name: '🍳 Casserole' });
+            }
+        }
         
         return {
             zone1Ingredients: zone1Ingredients.map(i => i.name),
@@ -349,18 +367,28 @@ export class RandomMapGenerator {
         }
 
         // Placer les tables dans les positions disponibles avec validation
+        let rejectedCount = 0;
         for (const pos of availablePositions) {
             if (placed >= count) break;
+            
+            // Vérifier que ce n'est pas le spawn ou trop proche
+            if (this.isSpawnPoint(pos.x, pos.y, zone) || this.isTooCloseToSpawn(pos.x, pos.y, zone)) {
+                continue;
+            }
             
             // Vérifier que placer cette table ne bloquera pas l'accès
             if (this.canPlaceElementSafely(mapData, pos.x, pos.y, zone)) {
                 mapData[pos.y][pos.x] = 5; // Table normale
                 zone.tables.push({ x: pos.x, y: pos.y });
                 placed++;
+            } else {
+                rejectedCount++;
             }
         }
 
-        console.log(`📋 Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables normales placées`);
+        if (placed < count) {
+            console.warn(`⚠️ Zone ${zone.startX}-${zone.endX}: ${placed}/${count} tables placées (${rejectedCount} positions rejetées pour blocage)`);
+        }
     }
 
     /**
@@ -402,9 +430,6 @@ export class RandomMapGenerator {
      * pas besoin d'ajouter des comptoirs supplémentaires
      */
     private static addCommunicationCounters(mapData: number[][], zones: PlayerZone[]): void {
-        // La ligne de tables de séparation sert déjà de comptoirs de communication
-        // Les joueurs peuvent déposer/récupérer des objets de part et d'autre
-        console.log("📋 Les tables de séparation servent de comptoirs de communication");
     }
 
     /**
@@ -454,7 +479,6 @@ export class RandomMapGenerator {
         const position = this.findRandomEmptyPosition(mapData, targetZone);
         if (position) {
             mapData[position.y][position.x] = 9; // Zone de livraison
-            console.log(`📦 Zone de livraison placée en (${position.x}, ${position.y})`);
         }
     }
 
@@ -469,7 +493,10 @@ export class RandomMapGenerator {
             const y = zone.startY + Math.floor(Math.random() * (zone.endY - zone.startY + 1));
             
             if (mapData[y][x] === 1) { // Sol libre
-                return { x, y };
+                // Vérifier que ce n'est pas le spawn point du joueur
+                if (!this.isSpawnPoint(x, y, zone)) {
+                    return { x, y };
+                }
             }
         }
         
@@ -486,6 +513,28 @@ export class RandomMapGenerator {
         for (let i = 0; i < zones.length; i++) {
             const zone = zones[i];
             const spawnPoint = zone.spawnPoint;
+            
+            // Vérifier que les 4 cases autour du spawn point sont libres
+            // Le joueur spawn ENTRE 4 cases en position isométrique
+            const spawnX = spawnPoint.x;
+            const spawnY = spawnPoint.y;
+            
+            const spawnTiles = [
+                { x: spawnX, y: spawnY, name: "principale" },
+                { x: spawnX + 1, y: spawnY, name: "droite" },
+                { x: spawnX, y: spawnY + 1, name: "bas" },
+                { x: spawnX + 1, y: spawnY + 1, name: "diagonale" }
+            ];
+            
+            for (const tile of spawnTiles) {
+                if (tile.y >= 0 && tile.y < mapData.length && tile.x >= 0 && tile.x < mapData[0].length) {
+                    const tileValue = mapData[tile.y][tile.x];
+                    if (tileValue !== 1 && tileValue !== 9) { // Doit être sol libre (1) ou zone de livraison (9)
+                        console.warn(`❌ Zone ${i + 1}: Case ${tile.name} du spawn à (${tile.x}, ${tile.y}) n'est pas libre (tile: ${tileValue})`);
+                        return false;
+                    }
+                }
+            }
             
             // Vérifier que tous les éléments de la zone sont accessibles depuis le spawn
             const accessiblePositions = this.floodFill(mapData, spawnPoint, zone);
@@ -539,15 +588,6 @@ export class RandomMapGenerator {
                 console.warn(`❌ Zone ${i + 1}: ${totalFloorTiles - accessibleFloorTiles} cases de sol inaccessibles (${accessibleFloorTiles}/${totalFloorTiles})`);
                 return false;
             }
-            
-            // Log de succès détaillé
-            console.log(`✅ Zone ${i + 1} validation réussie:`);
-            console.log(`   - ${zone.ingredientBoxes.length} boîtes d'ingrédients accessibles`);
-            console.log(`   - ${zone.tables.length} tables normales accessibles`);
-            console.log(`   - ${zone.transformationTables.length} tables de transformation accessibles`);
-            console.log(`   - ${zone.ovens.length} fours accessibles`);
-            if (deliveryZone) console.log(`   - 1 zone de livraison accessible`);
-            console.log(`   - ${accessibleFloorTiles}/${totalFloorTiles} cases de sol accessibles (100%)`);
         }
         
         return true;
@@ -576,16 +616,26 @@ export class RandomMapGenerator {
         y: number, 
         zone: PlayerZone
     ): boolean {
+        // Compter les cases accessibles AVANT le placement
+        const accessibleBefore = this.floodFill(mapData, zone.spawnPoint, zone);
+        const totalBefore = accessibleBefore.size;
+        
         // Créer une copie temporaire de la carte avec l'élément placé
         const tempMapData = mapData.map(row => [...row]);
-        tempMapData[y][x] = 5; // Placer temporairement l'élément (table)
+        tempMapData[y][x] = 5; // Placer temporairement l'élément (table/objet solide)
         
-        // Vérifier que toutes les cases de sol restent accessibles
-        const accessiblePositions = this.floodFill(tempMapData, zone.spawnPoint, zone);
-        const totalFloorTiles = this.countFloorTiles(mapData, zone) - 1; // -1 car on place un élément
+        // Compter les cases accessibles APRÈS le placement
+        const accessibleAfter = this.floodFill(tempMapData, zone.spawnPoint, zone);
+        const totalAfter = accessibleAfter.size;
         
-        // Si toutes les cases restantes sont accessibles, le placement est sûr
-        return accessiblePositions.size >= totalFloorTiles;
+        // Le placement est sûr si on ne perd qu'UNE SEULE case (celle où on place l'élément)
+        // Si on perd plus d'une case, ça veut dire qu'on a bloqué l'accès à d'autres cases
+        const lostCases = totalBefore - totalAfter;
+        
+        // On doit perdre exactement 1 case (celle où on place l'élément)
+        // Si on perd 0 cases, c'est bizarre (la case n'était pas accessible?)
+        // Si on perd >1 cases, on a bloqué l'accès à d'autres cases
+        return lostCases === 1;
     }
 
     /**
@@ -593,21 +643,67 @@ export class RandomMapGenerator {
      */
     private static findSafeEmptyPosition(mapData: number[][], zone: PlayerZone): SpawnPoint | null {
         const attempts = 100; // Plus d'attempts pour trouver une position sûre
+        let rejectedCount = 0;
         
         for (let i = 0; i < attempts; i++) {
             const x = zone.startX + Math.floor(Math.random() * (zone.endX - zone.startX + 1));
             const y = zone.startY + Math.floor(Math.random() * (zone.endY - zone.startY + 1));
             
             if (mapData[y][x] === 1) { // Sol libre
+                // Vérifier que ce n'est pas le spawn point du joueur ou trop proche
+                if (this.isSpawnPoint(x, y, zone) || this.isTooCloseToSpawn(x, y, zone)) {
+                    continue; // Passer à la position suivante
+                }
+                
                 // Vérifier que placer un élément ici ne bloquera pas l'accès
                 if (this.canPlaceElementSafely(mapData, x, y, zone)) {
                     return { x, y };
+                } else {
+                    rejectedCount++;
                 }
             }
         }
         
-        // Si aucune position sûre n'est trouvée, retourner n'importe quelle position vide
-        return this.findRandomEmptyPosition(mapData, zone);
+        console.warn(`⚠️ Aucune position sûre trouvée après ${attempts} tentatives (${rejectedCount} rejets pour blocage)`);
+        // Si aucune position sûre n'est trouvée, retourner null pour forcer la régénération
+        return null;
+    }
+
+    /**
+     * Vérifie si une position est un point de spawn
+     */
+    private static isSpawnPoint(x: number, y: number, zone: PlayerZone): boolean {
+        return zone.spawnPoint.x === x && zone.spawnPoint.y === y;
+    }
+
+    /**
+     * Vérifie si une position est trop proche du spawn point (pour laisser de l'espace)
+     * Le joueur spawn ENTRE 4 cases, donc on doit protéger les 4 cases autour du point de spawn
+     */
+    private static isTooCloseToSpawn(x: number, y: number, zone: PlayerZone): boolean {
+        const spawnX = zone.spawnPoint.x;
+        const spawnY = zone.spawnPoint.y;
+        
+        // Le joueur spawn au coin entre 4 cases, donc on protège:
+        // (spawnX, spawnY), (spawnX+1, spawnY), (spawnX, spawnY+1), (spawnX+1, spawnY+1)
+        // Et aussi les cases adjacentes pour laisser de l'espace
+        
+        const isInSpawnArea = 
+            (x === spawnX && y === spawnY) ||           // Case principale
+            (x === spawnX + 1 && y === spawnY) ||       // Case droite
+            (x === spawnX && y === spawnY + 1) ||       // Case bas
+            (x === spawnX + 1 && y === spawnY + 1) ||   // Case diagonale
+            (x === spawnX - 1 && y === spawnY) ||       // Case gauche
+            (x === spawnX && y === spawnY - 1) ||       // Case haut
+            (x === spawnX + 1 && y === spawnY - 1) ||   // Case haut-droite
+            (x === spawnX - 1 && y === spawnY + 1) ||   // Case bas-gauche
+            (x === spawnX - 1 && y === spawnY - 1) ||   // Case haut-gauche
+            (x === spawnX + 2 && y === spawnY) ||       // Case droite+1
+            (x === spawnX && y === spawnY + 2) ||       // Case bas+1
+            (x === spawnX + 1 && y === spawnY + 2) ||   // Case bas-droite
+            (x === spawnX + 2 && y === spawnY + 1);     // Case droite-bas
+        
+        return isInSpawnArea;
     }
 
     /**

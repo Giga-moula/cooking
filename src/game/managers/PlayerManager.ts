@@ -13,7 +13,9 @@ export class PlayerManager {
     private player?: Phaser.Physics.Arcade.Sprite;
     private playerColor: string = GameConfig.COLORS.PLAYER_1; // Couleur par défaut
     private playerNumber: number; // 1 ou 2
+    private baseSpeed: number = GameConfig.PLAYER_SPEED;
     private playerSpeed: number = GameConfig.PLAYER_SPEED;
+    private speedMultiplier: number = 1.0;
     private readonly DIAGONAL_FACTOR = Math.SQRT2 / 2; // ~0.707
     private lastPlayerY: number = 0;
     private playerGridX: number = GameConfig.PLAYER_START_POSITIONS.PLAYER_1.x;
@@ -302,6 +304,14 @@ export class PlayerManager {
 
     getInventory(): InventoryManager {
         return this.inventory;
+    }
+
+    /**
+     * Applique un multiplicateur de vitesse (depuis les upgrades)
+     */
+    applySpeedMultiplier(multiplier: number): void {
+        this.speedMultiplier = multiplier;
+        this.playerSpeed = this.baseSpeed * this.speedMultiplier;
     }
 
     getPlayerNumber(): number {

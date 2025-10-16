@@ -4,10 +4,10 @@ import { RecipeManager } from "./RecipeManager";
 import { BaseCookingManager } from "./BaseCookingManager";
 
 /**
- * Gestionnaire des interactions avec le four
- * Permet de faire fondre le beurre et cuire les cookies
+ * Gestionnaire des interactions avec la casserole
+ * Permet de faire fondre le beurre et transformer le sucre en caramel
  */
-export class OvenManager extends BaseCookingManager {
+export class CasseroleManager extends BaseCookingManager {
     constructor(
         scene: Phaser.Scene,
         mapOffsetX: number,
@@ -18,60 +18,60 @@ export class OvenManager extends BaseCookingManager {
     }
 
     /**
-     * Place un objet dans le four
+     * Place un objet dans la casserole
      */
-    placeItemInOven(gridX: number, gridY: number, itemType: string): boolean {
+    placeItemInCasserole(gridX: number, gridY: number, itemType: string): boolean {
         return this.placeItem(gridX, gridY, itemType);
     }
 
     /**
-     * Retire un objet du four
+     * Retire un objet de la casserole
      */
-    removeItemFromOven(gridX: number, gridY: number): string | null {
+    removeItemFromCasserole(gridX: number, gridY: number): string | null {
         return this.removeItem(gridX, gridY);
     }
 
     /**
-     * Vérifie si le four contient un objet
+     * Vérifie s'il y a un objet dans la casserole
      */
-    hasItemInOven(gridX: number, gridY: number): boolean {
+    hasItemInCasserole(gridX: number, gridY: number): boolean {
         return this.hasItem(gridX, gridY);
     }
 
     /**
-     * Récupère le type d'objet dans le four
+     * Obtient le type d'objet dans la casserole
      */
-    getItemTypeInOven(gridX: number, gridY: number): string | null {
+    getItemInCasserole(gridX: number, gridY: number): string | null {
         return this.getItemType(gridX, gridY);
     }
 
     /**
-     * Effectue la cuisson dans le four
+     * Cuire/transformer un objet dans la casserole
      */
-    performCooking(gridX: number, gridY: number): boolean {
+    cookInCasserole(gridX: number, gridY: number): boolean {
         return this.cook(gridX, gridY);
     }
 
     /**
-     * Affiche un effet de cuisson (particules de feu)
+     * Effet visuel de cuisson pour la casserole (vapeur/bulles)
      */
     protected playCookingEffect(gridX: number, gridY: number): void {
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY;
 
-        // Effet de particules orange/rouge pour simuler le feu
+        // Effet de particules bleues/blanches pour simuler la vapeur
         const particles = this.scene.add.particles(x, y, "star", {
-            speed: { min: -50, max: 50 },
-            angle: { min: 270, max: 90 }, // Particules qui montent
-            scale: { start: 0.3, end: 0 },
-            lifespan: 800,
-            quantity: 10,
-            tint: 0xff4500, // Couleur orange-rouge
+            speed: { min: -30, max: 30 },
+            angle: { min: 270, max: 270 }, // Particules qui montent
+            scale: { start: 0.2, end: 0 },
+            lifespan: 1000,
+            quantity: 8,
+            tint: 0x87ceeb, // Couleur bleu ciel
             blendMode: "ADD",
         });
 
-        this.scene.time.delayedCall(800, () => {
+        this.scene.time.delayedCall(1000, () => {
             particles.destroy();
         });
     }
@@ -80,7 +80,6 @@ export class OvenManager extends BaseCookingManager {
      * Obtient le nom de l'appareil
      */
     protected getDeviceName(): string {
-        return "Four";
+        return "Casserole";
     }
 }
-

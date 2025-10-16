@@ -53,7 +53,6 @@ export class CommunicationManager {
             }
         }
         
-        console.log(`📡 ${this.communicationCounters.length} comptoirs de communication initialisés`);
     }
 
     /**
@@ -80,25 +79,24 @@ export class CommunicationManager {
         
         // Vérifier si le comptoir a de la place
         if (counter.items.size >= counter.maxItems) {
-            console.log(`❌ Comptoir de communication plein`);
             return false;
         }
         
         // Vérifier si le joueur a l'ingrédient
         const inventory = player.getInventory();
-        if (!inventory.hasIngredient(ingredientType)) {
-            console.log(`❌ Joueur n'a pas l'ingrédient ${ingredientType}`);
+        if (!inventory.hasItem(ingredientType)) {
             return false;
         }
         
         // Retirer l'ingrédient de l'inventaire du joueur
-        inventory.removeIngredient(ingredientType);
+        if (!inventory.removeSpecificItem(ingredientType)) {
+            return false;
+        }
         
         // Ajouter l'ingrédient au comptoir
         const currentCount = counter.items.get(ingredientType) || 0;
         counter.items.set(ingredientType, currentCount + 1);
         
-        console.log(`📤 ${ingredientType} déposé sur le comptoir de communication`);
         return true;
     }
 
@@ -113,14 +111,12 @@ export class CommunicationManager {
         // Vérifier si l'ingrédient est disponible
         const currentCount = counter.items.get(ingredientType) || 0;
         if (currentCount <= 0) {
-            console.log(`❌ ${ingredientType} non disponible sur le comptoir`);
             return false;
         }
         
-        // Vérifier si le joueur peut prendre l'ingrédient
+        // Vérifier si le joueur peut prendre l'ingrédient (inventaire plein?)
         const inventory = player.getInventory();
-        if (!inventory.canAddIngredient(ingredientType)) {
-            console.log(`❌ Inventaire du joueur plein`);
+        if (inventory.isFull()) {
             return false;
         }
         
@@ -131,9 +127,12 @@ export class CommunicationManager {
         }
         
         // Ajouter l'ingrédient à l'inventaire du joueur
-        inventory.addIngredient(ingredientType);
+        if (!inventory.addItem(ingredientType)) {
+            // Si l'ajout échoue, remettre l'item sur le comptoir
+            counter.items.set(ingredientType, currentCount);
+            return false;
+        }
         
-        console.log(`📥 ${ingredientType} récupéré du comptoir de communication`);
         return true;
     }
 
@@ -179,17 +178,4 @@ export class CommunicationManager {
     /**
      * Affiche les informations des comptoirs de communication
      */
-    displayCommunicationInfo(): void {
-        console.log("📡 Comptoirs de communication:");
-        this.communicationCounters.forEach((counter, index) => {
-            console.log(`  Comptoir ${index + 1} (${counter.x}, ${counter.y}):`);
-            if (counter.items.size === 0) {
-                console.log("    Vide");
-            } else {
-                counter.items.forEach((count, ingredient) => {
-                    console.log(`    ${ingredient}: ${count}`);
-                });
-            }
-        });
-    }
 }

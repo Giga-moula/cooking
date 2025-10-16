@@ -18,11 +18,30 @@ export class GameConfig {
     // Configuration des objets
     static readonly OBJECT_SCALE = 1.2;
     static readonly OBJECT_DEPTH_OFFSET = 100;
+    static readonly CARRIED_ITEM_SCALE = 0.8;
+    static readonly CARRIED_ITEM_OFFSET_DISTANCE = 20;
+
+    // Configuration de l'inventaire
+    static readonly INVENTORY = {
+        MAX_ITEMS: 1, // Capacité maximale de l'inventaire
+        CARRIED_OFFSET_DISTANCE: 20,
+        CARRIED_SCALE: 0.8,
+        // Ajustements de position selon la direction
+        OFFSET_HORIZONTAL_Y: 8,
+        OFFSET_UP_Y: 15,
+        OFFSET_DOWN_Y: -5,
+    } as const;
 
     // Configuration des effets
     static readonly PARTICLE_LIFESPAN = 800;
     static readonly MESSAGE_DURATION = 2000;
     static readonly MESSAGE_OFFSET_Y = -50;
+    
+    // Configuration des boîtes de recettes
+    static readonly RECIPE_BOX = {
+        WIDTH: 120,
+        SPACING: 10,
+    } as const;
     static readonly CRAFT_PLAN_SCALE = 1.5; // Échelle du craft_plan
     static readonly CRAFT_PLAN_ALPHA = 1; // Transparence du craft_plan
     static readonly CRAFT_PLAN_OFFSET_Y = -5; // Décalage vertical du craft_plan
@@ -46,6 +65,8 @@ export class GameConfig {
         FLOUR: "flour",
         CHOCOLATE: "chocolate",
         SUGAR: "sugar",
+        SUGAR_BOX: "sugar-box",
+        CASSEROLE: "casserole_cuisson",
         MOLTEN_BUTTER: "molten_butter",
         DOUGH: "dough",
         COOKIE_MIX_CHOCO: "cookie-mix-choco",

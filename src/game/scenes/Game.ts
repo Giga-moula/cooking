@@ -6,7 +6,7 @@ import { GameConfig } from "../config/GameConfig";
 import { EventBus } from "../EventBus";
 import { CounterInteractionManager } from "../managers/CounterInteractionManager";
 import { DeliveryManager } from "../managers/DeliveryManager";
-import { IngredientInteractionManager } from "../managers/IngredientInteractionManager";
+import { RecipeManager } from "../managers/RecipeManager";
 import { InteractionSystem } from "../managers/InteractionSystem";
 import { MapManager } from "../managers/MapManager";
 import { DynamicMapManager } from "../managers/DynamicMapManager";
@@ -14,10 +14,13 @@ import { CommunicationManager } from "../managers/CommunicationManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
 import { OrderDisplayManager } from "../managers/OrderDisplayManager";
 import { OvenManager } from "../managers/OvenManager";
+import { CasseroleManager } from "../managers/CasseroleManager";
 import { PlayerManager } from "../managers/PlayerManager";
 import { ScoreManager } from "../managers/ScoreManager";
 import { TimerManager } from "../managers/TimerManager";
 import { WaveManager } from "../managers/WaveManager";
+import { CurrencyManager } from "../managers/CurrencyManager";
+import { UpgradeManager } from "../managers/UpgradeManager";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -37,14 +40,17 @@ export default class Game extends Phaser.Scene {
     private deliveryManager?: DeliveryManager;
     private scoreManager?: ScoreManager;
 
-    private ingredientManager?: IngredientInteractionManager;
+    private recipeManager?: RecipeManager;
 
     private interactionSystem?: InteractionSystem;
 
     private timerManager?: TimerManager;
 
     private ovenManager?: OvenManager;
+    private casseroleManager?: CasseroleManager;
     private waveManager?: WaveManager;
+    private currencyManager?: CurrencyManager;
+    private upgradeManager?: UpgradeManager;
     constructor() {
         super("Game");
 
@@ -122,19 +128,24 @@ export default class Game extends Phaser.Scene {
         this.deliveryManager.setMapManager(this.mapManager);
 
         this.scoreManager = new ScoreManager(this);
-        this.ingredientManager = new IngredientInteractionManager();
+        this.recipeManager = new RecipeManager();
 
         this.ovenManager = new OvenManager(
             this,
             this.mapOffsetX,
             this.mapOffsetY,
-            this.ingredientManager.getRecipeManager()
+            this.recipeManager
+        );
+
+        this.casseroleManager = new CasseroleManager(
+            this,
+            this.mapOffsetX,
+            this.mapOffsetY,
+            this.recipeManager
         );
 
         // Passer le RecipeManager partagé au CounterInteractionManager
-        this.counterManager.setRecipeManager(
-            this.ingredientManager.getRecipeManager()
-        );
+        this.counterManager.setRecipeManager(this.recipeManager);
 
         // Créer les tiles procéduralement
         this.mapManager.createIsometricTiles();
@@ -181,40 +192,57 @@ export default class Game extends Phaser.Scene {
         // Initialiser les systèmes d'affichage
         this.orderDisplayManager = new OrderDisplayManager(
             this,
-            this.ingredientManager
+            this.recipeManager
         );
         this.orderDisplayManager.initializeRecipeDisplay();
 
         this.deliveryManager.initializeDeliveryZone();
         this.scoreManager.initializeScoreDisplay();
 
+        // Initialiser le système de monnaie et d'upgrades
+        this.currencyManager = new CurrencyManager(this, 100);
+        this.upgradeManager = new UpgradeManager();
+
+        // Initialiser l'affichage de la monnaie
+        this.currencyManager.initializeCoinDisplay(850, 20);
+
         // Initialiser le système de vagues
         this.waveManager = new WaveManager(
             this,
             this.orderDisplayManager,
             this.scoreManager,
-            this.ingredientManager.getRecipeManager()
+            this.recipeManager
         );
         this.waveManager.initializeWaveDisplay();
 
         // Connecter le système de vagues avec OrderDisplayManager
-        this.orderDisplayManager.setOrderCompletedCallback(() => {
-            this.waveManager?.completeRecipe();
+        this.orderDisplayManager.setOrderCompletedCallback((dishId: string) => {
+            this.waveManager?.completeRecipe(dishId);
         });
 
-        // Démarrer la première vague
-        this.waveManager.startWave(1);
+        // Connecter le callback d'expiration pour décrémenter le compteur de commandes actives
+        this.orderDisplayManager.setOrderExpiredCallback(() => {
+            this.waveManager?.expireOrder();
+        });
 
-        // Initialiser le timer AVANT InteractionSystem
+        // Connecter le callback de Game Over par expiration de commande
+        this.waveManager.setGameOverCallback(() => {
+            this.endGame("expired");
+        });
+
+        // Connecter le callback de vague complétée pour ouvrir le shop
+        this.waveManager.setWaveCompletedCallback((waveNumber, timeSpent, recipeIds) => {
+            this.openShop(waveNumber, timeSpent, recipeIds);
+        });
+
+        // Initialiser le timer AVANT InteractionSystem (mais ne pas le démarrer)
         this.timerManager = new TimerManager(this);
         this.timerManager.initializeTimerDisplay(
             GameConfig.TIMER.DISPLAY_X,
             GameConfig.TIMER.DISPLAY_Y
         );
-        this.timerManager.start(GameConfig.TIMER.GAME_DURATION, () => {
-            // Callback quand le temps est écoulé
-            this.endGame();
-        });
+
+        // NE PAS démarrer immédiatement - attendre le countdown
 
         // Créer le système d'interaction orienté objet (APRÈS tous les managers)
         this.interactionSystem = new InteractionSystem(
@@ -222,11 +250,12 @@ export default class Game extends Phaser.Scene {
             this.mapManager,
             this.counterManager,
             this.deliveryManager,
-            this.ingredientManager,
+            this.recipeManager,
             this.orderDisplayManager,
             this.scoreManager,
             this.timerManager,
-            this.ovenManager
+            this.ovenManager,
+            this.casseroleManager
         );
 
         // Touche espace pour retourner au menu
@@ -235,6 +264,87 @@ export default class Game extends Phaser.Scene {
         });
 
         EventBus.emit("current-scene-ready", this);
+
+        // Démarrer le countdown de 3 secondes avant de commencer le jeu
+        this.startCountdown();
+    }
+
+    /**
+     * Affiche un countdown de 3 secondes avant de démarrer le jeu
+     */
+    private startCountdown(): void {
+        // Créer un texte de countdown au centre de l'écran
+        const countdownText = this.add.text(512, 384, "3", {
+            fontFamily: "Arial Black",
+            fontSize: "120px",
+            color: "#FFD700",
+            stroke: "#8B4513",
+            strokeThickness: 12,
+        });
+        countdownText.setOrigin(0.5);
+        countdownText.setDepth(10000);
+        countdownText.setScrollFactor(0);
+
+        let count = 3;
+
+        // Timer pour le countdown
+        const countdownTimer = this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                count--;
+                if (count > 0) {
+                    countdownText.setText(count.toString());
+                    // Animation de pulsation
+                    countdownText.setScale(1.5);
+                    this.tweens.add({
+                        targets: countdownText,
+                        scaleX: 1,
+                        scaleY: 1,
+                        duration: 500,
+                        ease: "Back.easeOut",
+                    });
+                } else if (count === 0) {
+                    // Afficher "GO!" une seule fois
+                    countdownText.setText("GO!");
+                    countdownText.setScale(2);
+                    this.tweens.add({
+                        targets: countdownText,
+                        scaleX: 0,
+                        scaleY: 0,
+                        alpha: 0,
+                        duration: 800,
+                        ease: "Back.easeIn",
+                        onComplete: () => {
+                            countdownText.destroy();
+                        },
+                    });
+
+                    // DÉMARRER LE JEU !
+                    this.startGame();
+                }
+            },
+            repeat: 3,
+        });
+    }
+
+    /**
+     * Démarre réellement le jeu après le countdown
+     */
+    private startGame(): void {
+        // Appliquer les upgrades au démarrage
+        this.applyUpgrades();
+
+        // Pas besoin de régénérer la carte ici - elle a déjà été créée pour la vague 1 dans le constructeur de DynamicMapManager
+
+        // Démarrer la première vague
+        this.waveManager?.startWave(1);
+
+        // Démarrer le timer du jeu
+        this.timerManager?.start(GameConfig.TIMER.GAME_DURATION, () => {
+            // Callback quand le temps est écoulé
+            this.endGame();
+        });
+
     }
 
     /**
@@ -274,22 +384,45 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
+     * Réinitialise les collisions avec la nouvelle carte
+     */
+    private reinitializeCollisions(): void {
+        const isoMap = this.mapManager?.getIsoMap();
+        if (!isoMap || !this.playerList) return;
+
+        const solidTiles = isoMap.getSolidTiles();
+        if (solidTiles.length > 0) {
+            for (const player of this.playerList) {
+                const playerSprite = player.getPlayer();
+                if (playerSprite) {
+                    this.physics.add.collider(playerSprite, solidTiles);
+                }
+            }
+        }
+    }
+
+    /**
      * Met à jour le niveau de vague et génère une nouvelle carte
      */
     updateWaveLevel(waveLevel: number): void {
         if (this.mapManager) {
+            // Nettoyer les fours et casseroles avant de régénérer la carte
+            this.ovenManager?.cleanup();
+            this.casseroleManager?.cleanup();
+            
             this.mapManager.updateWaveLevel(waveLevel);
             
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
+            
+            // Réinitialiser les collisions avec les nouveaux tiles
+            this.reinitializeCollisions();
             
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
             
             // Repositionner les joueurs
             this.repositionPlayers();
-            
-            console.log(`🌊 Vague ${waveLevel} - Nouvelle carte générée`);
         }
     }
 
@@ -298,18 +431,23 @@ export default class Game extends Phaser.Scene {
      */
     updateAvailableActions(actions: number): void {
         if (this.mapManager) {
+            // Nettoyer les fours et casseroles avant de régénérer la carte
+            this.ovenManager?.cleanup();
+            this.casseroleManager?.cleanup();
+            
             this.mapManager.updateAvailableActions(actions);
             
             // Recréer la carte avec la nouvelle configuration
             this.mapManager.createMap();
+            
+            // Réinitialiser les collisions avec les nouveaux tiles
+            this.reinitializeCollisions();
             
             // Réinitialiser les comptoirs de communication
             this.communicationManager?.initializeCommunicationCounters();
             
             // Repositionner les joueurs
             this.repositionPlayers();
-            
-            console.log(`⚡ Actions disponibles: ${actions} - Nouvelle carte générée`);
         }
     }
 
@@ -329,7 +467,6 @@ export default class Game extends Phaser.Scene {
                     // Prendre le premier ingrédient disponible
                     const ingredient = availableIngredients[0];
                     if (this.communicationManager.takeIngredient(player, ingredient, i)) {
-                        console.log(`📥 ${player.getPlayerNumber()} a récupéré ${ingredient} du comptoir de communication`);
                     }
                 } else {
                     // Déposer un ingrédient si le comptoir est vide
@@ -339,7 +476,6 @@ export default class Game extends Phaser.Scene {
                     if (ingredients.length > 0) {
                         const ingredient = ingredients[0];
                         if (this.communicationManager.depositIngredient(player, ingredient, i)) {
-                            console.log(`📤 ${player.getPlayerNumber()} a déposé ${ingredient} sur le comptoir de communication`);
                         }
                     }
                 }
@@ -383,13 +519,111 @@ export default class Game extends Phaser.Scene {
     }
 
     /**
+     * Applique tous les effets des upgrades achetés
+     */
+    private applyUpgrades(): void {
+        if (!this.upgradeManager) return;
+
+        const effects = this.upgradeManager.getActiveEffects();
+
+        // Vitesse de déplacement des joueurs
+        if (this.player1) {
+            this.player1.applySpeedMultiplier(effects.speedMultiplier);
+        }
+        if (this.player2) {
+            this.player2.applySpeedMultiplier(effects.speedMultiplier);
+        }
+
+        // Vitesse de cuisson du four
+        if (this.ovenManager) {
+            this.ovenManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+        }
+
+        // Vitesse de cuisson de la casserole
+        if (this.casseroleManager) {
+            this.casseroleManager.applyCookingSpeedMultiplier(effects.ovenSpeedMultiplier);
+        }
+
+        // Multiplicateur de score
+        if (this.scoreManager) {
+            this.scoreManager.applyScoreMultiplier(effects.scoreMultiplier);
+        }
+
+        // Bonus de temps par livraison
+        if (this.timerManager) {
+            this.timerManager.setBonusTimePerDelivery(effects.bonusTimePerDelivery);
+        }
+
+        // Temps supplémentaire au démarrage (appliqué une seule fois au début)
+        if (effects.extraTime > 0 && this.timerManager && this.timerManager.isTimerRunning()) {
+            this.timerManager.addTime(effects.extraTime);
+        }
+
+        // Nombre maximum de commandes simultanées
+        if (this.orderDisplayManager && effects.maxOrders !== 4) {
+            this.orderDisplayManager.setMaxOrders(effects.maxOrders);
+        }
+    }
+
+    /**
+     * Ouvre le shop entre les vagues
+     */
+    private openShop(waveNumber: number, timeSpent: number, recipeIds: string[]): void {
+        if (!this.currencyManager || !this.upgradeManager || !this.waveManager) return;
+
+        // Calculer les gains de la vague
+        const waveConfig = this.waveManager.getCurrentWaveConfig();
+        if (!waveConfig) return;
+
+        const earnings = this.currencyManager.calculateWaveEarnings(
+            recipeIds.length,
+            timeSpent,
+            waveConfig.targetRecipes * waveConfig.orderDuration,
+            recipeIds,
+            waveConfig.difficulty
+        );
+
+        // Ajouter les coins gagnés
+        this.currencyManager.addCoins(earnings.total);
+
+        // Mettre le jeu en pause
+        this.scene.pause();
+
+        // Ouvrir la scène Shop en overlay
+        this.scene.launch("Shop", {
+            currencyManager: this.currencyManager,
+            upgradeManager: this.upgradeManager,
+            coinsEarned: earnings.total,
+            waveNumber: waveNumber,
+            onClose: () => {
+                // Reprendre le jeu
+                this.scene.resume();
+                
+                // Appliquer les upgrades achetés
+                this.applyUpgrades();
+                
+                // Mettre à jour la carte pour la nouvelle vague
+                const nextWaveNumber = this.waveManager?.getNextWaveNumber() || 1;
+                this.updateWaveLevel(nextWaveNumber);
+                
+                // Démarrer la vague suivante
+                this.waveManager?.startNextWave();
+            },
+        });
+    }
+
+    /**
      * Termine la partie et passe à l'écran GameOver
      */
-    endGame() {
+    endGame(reason: "time" | "expired" = "time") {
+
         // Arrêter le timer s'il est actif
         if (this.timerManager) {
             this.timerManager.stop();
         }
+
+        // Arrêter les timers des commandes
+        this.orderDisplayManager?.stopAllTimers();
 
         // Passer le score à la scène GameOver
         const finalScore = this.scoreManager?.getScore() || 0;
@@ -398,6 +632,7 @@ export default class Game extends Phaser.Scene {
         this.scene.start("GameOver", {
             score: finalScore,
             deliveries: totalDeliveries,
+            reason: reason,
         });
     }
 
@@ -405,8 +640,12 @@ export default class Game extends Phaser.Scene {
      * Nettoyage quand on quitte la scène
      */
     shutdown() {
-        if (this.ingredientManager) {
-            this.ingredientManager.cleanup();
+        // RecipeManager n'a pas besoin de cleanup
+        if (this.casseroleManager) {
+            this.casseroleManager.cleanup();
+        }
+        if (this.ovenManager) {
+            this.ovenManager.cleanup();
         }
     }
 

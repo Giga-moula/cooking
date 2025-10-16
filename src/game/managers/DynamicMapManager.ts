@@ -9,6 +9,7 @@ import { MapConfig } from "../config/MapConfig";
 export class DynamicMapManager extends MapManager {
     private currentWaveLevel: number = 1;
     private availableActions: number = 3; // Nombre d'actions disponibles
+    private deliveryZonePosition: { x: number; y: number } | null = null; // Position fixe de la zone de livraison
 
     constructor(
         scene: Phaser.Scene,
@@ -53,14 +54,45 @@ export class DynamicMapManager extends MapManager {
 
         const newMapConfig = RandomMapGenerator.generateMap(config);
         
+        // Stocker la position de la zone de livraison lors de la première génération
+        if (this.currentWaveLevel === 1 && !this.deliveryZonePosition) {
+            // Trouver la position de la zone de livraison dans la carte générée
+            for (let y = 0; y < newMapConfig.mapData.length; y++) {
+                for (let x = 0; x < newMapConfig.mapData[y].length; x++) {
+                    if (newMapConfig.mapData[y][x] === 9) { // Tile type 9 = zone de livraison
+                        this.deliveryZonePosition = { x, y };
+                        break;
+                    }
+                }
+                if (this.deliveryZonePosition) break;
+            }
+        }
+        
+        // Réappliquer la zone de livraison pour les vagues 2+ à la même position
+        if (this.currentWaveLevel > 1 && this.deliveryZonePosition) {
+            const { x, y } = this.deliveryZonePosition;
+            // Vérifier que la position est valide (sol libre)
+            if (newMapConfig.mapData[y] && newMapConfig.mapData[y][x] === 1) {
+                newMapConfig.mapData[y][x] = 9; // Zone de livraison
+            } else {
+                console.warn(`⚠️ Position de livraison (${x}, ${y}) non disponible, recherche d'une nouvelle position...`);
+                // Chercher une position proche
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const newY = y + dy;
+                        const newX = x + dx;
+                        if (newMapConfig.mapData[newY] && newMapConfig.mapData[newY][newX] === 1) {
+                            newMapConfig.mapData[newY][newX] = 9;
+                            this.deliveryZonePosition = { x: newX, y: newY };
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
         // Appliquer la nouvelle configuration
         this.setMapConfig(newMapConfig);
-        
-        console.log(`🗺️ Nouvelle carte générée - Vague ${this.currentWaveLevel}, Actions: ${this.availableActions}`);
-        console.log(`📍 Joueur 1: (${newMapConfig.spawnPoints.player1.x}, ${newMapConfig.spawnPoints.player1.y})`);
-        console.log(`📍 Joueur 2: (${newMapConfig.spawnPoints.player2.x}, ${newMapConfig.spawnPoints.player2.y})`);
-        console.log(`📋 Les joueurs sont séparés par des tables (communication possible)`);
-        console.log(`⚖️ Distribution exclusive des éléments spéciaux entre les zones`);
         
         return newMapConfig;
     }
