@@ -143,6 +143,18 @@ export default class Preloader extends Phaser.Scene {
             "blue-grandma-side",
             "assets/grandma/blue/grandma_blue_side.png"
         );
+        this.load.image(
+            "skating-grandma-blue-back",
+            "assets/grandma/blue/skating_grandma_blue_back.png"
+        );
+        this.load.image(
+            "skating-grandma-blue-front",
+            "assets/grandma/blue/skating_grandma_blue_front.png"
+        );
+        this.load.image(
+            "skating-grandma-blue-side",
+            "assets/grandma/blue/skating_grandma_blue_side.png"
+        );
 
         // Grand-mère rouge
         this.load.image(
@@ -156,6 +168,18 @@ export default class Preloader extends Phaser.Scene {
         this.load.image(
             "red-grandma-side",
             "assets/grandma/red/grandma_red_side.png"
+        );
+        this.load.image(
+            "skating-grandma-red-back",
+            "assets/grandma/red/skating_grandma_red_back.png"
+        );
+        this.load.image(
+            "skating-grandma-red-front",
+            "assets/grandma/red/skating_grandma_red_front.png"
+        );
+        this.load.image(
+            "skating-grandma-red-side",
+            "assets/grandma/red/skating_grandma_red_side.png"
         );
 
         // === TUILES DE TABLE (par ordre de complexité) ===

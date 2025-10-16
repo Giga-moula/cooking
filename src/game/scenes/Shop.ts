@@ -1,6 +1,10 @@
 import Phaser from "phaser";
 import { CurrencyManager } from "../managers/CurrencyManager";
-import { Upgrade, UpgradeManager } from "../managers/UpgradeManager";
+import {
+    UpgradeManager,
+    Upgrade,
+    UpgradeType,
+} from "../managers/UpgradeManager";
 
 /**
  * Scène Shop - Apparaît entre les vagues
@@ -40,23 +44,39 @@ export default class Shop extends Phaser.Scene {
         overlay.setDepth(5000);
         overlay.setScrollFactor(0);
 
+        // Calculer les dimensions dynamiques
+        const { containerHeight, containerWidth } =
+            this.calculateContainerSize();
+
         // Conteneur principal
         const container = this.add.container(512, 384);
         container.setDepth(5001);
         container.setScrollFactor(0);
 
-        // Fond du shop
+        // Fond du shop avec dimensions adaptatives
         const shopBg = this.add.graphics();
         shopBg.fillStyle(0x2c3e50, 1);
-        shopBg.fillRoundedRect(-450, -320, 900, 640, 20);
+        shopBg.fillRoundedRect(
+            -containerWidth / 2,
+            -containerHeight / 2,
+            containerWidth,
+            containerHeight,
+            20
+        );
         shopBg.lineStyle(6, 0xffd700, 1);
-        shopBg.strokeRoundedRect(-450, -320, 900, 640, 20);
+        shopBg.strokeRoundedRect(
+            -containerWidth / 2,
+            -containerHeight / 2,
+            containerWidth,
+            containerHeight,
+            20
+        );
         container.add(shopBg);
 
         // Titre
         const titleText = this.add.text(
             0,
-            -280,
+            -containerHeight / 2 + 40,
             `🏪 BOUTIQUE - Vague ${this.waveNumber} Terminée !`,
             {
                 fontFamily: "Arial Black",
@@ -72,7 +92,7 @@ export default class Shop extends Phaser.Scene {
         // Affichage des gains
         const earningsText = this.add.text(
             0,
-            -230,
+            -containerHeight / 2 + 80,
             `💰 Vous avez gagné ${this.coinsEarned} coins !`,
             {
                 fontFamily: "Arial",
@@ -88,7 +108,7 @@ export default class Shop extends Phaser.Scene {
         // Solde actuel
         const balanceText = this.add.text(
             0,
-            -200,
+            -containerHeight / 2 + 110,
             `Solde: ${this.currencyManager?.getTotalCoins() || 0} coins`,
             {
                 fontFamily: "Arial Black",
@@ -103,7 +123,7 @@ export default class Shop extends Phaser.Scene {
         this.displayUpgrades(container);
 
         // Bouton continuer
-        this.createContinueButton(container);
+        this.createContinueButton(container, containerHeight);
     }
 
     /**
@@ -114,12 +134,19 @@ export default class Shop extends Phaser.Scene {
 
         const upgrades = this.upgradeManager.getAllUpgrades();
         const upgradesPerRow = 3;
-        const startX = -380;
-        const startY = -140;
         const cardWidth = 250;
-        const cardHeight = 200;
+        const cardHeight = 220;
         const spacingX = 260;
-        const spacingY = 210;
+        const spacingY = 230;
+
+        // Calculer le nombre de rangées nécessaires
+        const totalRows = Math.ceil(upgrades.length / upgradesPerRow);
+
+        // Centrer horizontalement et verticalement
+        const totalWidth = (upgradesPerRow - 1) * spacingX;
+        const totalHeight = (totalRows - 1) * spacingY;
+        const startX = -totalWidth / 2;
+        const startY = -totalHeight / 2 + 30; // Position ajustée pour plus d'espace avec les textes du haut
 
         upgrades.forEach((upgrade, index) => {
             const row = Math.floor(index / upgradesPerRow);
@@ -314,9 +341,10 @@ export default class Shop extends Phaser.Scene {
      * Crée le bouton continuer
      */
     private createContinueButton(
-        container: Phaser.GameObjects.Container
+        container: Phaser.GameObjects.Container,
+        containerHeight: number
     ): void {
-        const buttonContainer = this.add.container(0, 270);
+        const buttonContainer = this.add.container(0, containerHeight / 2 - 40);
         container.add(buttonContainer);
 
         // Fond du bouton
@@ -361,6 +389,46 @@ export default class Shop extends Phaser.Scene {
         buttonContainer.on("pointerdown", () => {
             this.closeShop();
         });
+    }
+
+    /**
+     * Calcule la taille du container en fonction du contenu
+     */
+    private calculateContainerSize(): {
+        containerWidth: number;
+        containerHeight: number;
+    } {
+        if (!this.upgradeManager) {
+            return { containerWidth: 900, containerHeight: 640 };
+        }
+
+        const upgrades = this.upgradeManager.getAllUpgrades();
+        const upgradesPerRow = 3;
+        const cardWidth = 250;
+        const cardHeight = 220;
+        const spacingX = 260;
+        const spacingY = 230;
+
+        // Calculer le nombre de rangées
+        const totalRows = Math.ceil(upgrades.length / upgradesPerRow);
+
+        // Calculer les dimensions du contenu
+        const upgradesWidth =
+            Math.min(upgrades.length, upgradesPerRow) * cardWidth +
+            (Math.min(upgrades.length, upgradesPerRow) - 1) *
+                (spacingX - cardWidth);
+        const upgradesHeight =
+            totalRows * cardHeight + (totalRows - 1) * (spacingY - cardHeight);
+
+        // Marges et espaces pour les autres éléments
+        const topMargin = 180; // Espace pour titre, gains, solde (augmenté)
+        const bottomMargin = 80; // Espace pour le bouton continuer
+        const sideMargin = 60; // Marges latérales
+
+        const containerWidth = Math.max(600, upgradesWidth + sideMargin * 2);
+        const containerHeight = topMargin + upgradesHeight + bottomMargin;
+
+        return { containerWidth, containerHeight };
     }
 
     /**

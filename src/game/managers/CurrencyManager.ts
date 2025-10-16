@@ -16,11 +16,11 @@ export interface WaveEarnings {
  */
 export class CurrencyManager {
     private scene: Phaser.Scene;
-    private totalCoins: number = 0;
+    private totalCoins: number = 9999;
     private coinsText?: Phaser.GameObjects.Text;
-    private startCoins: number = 100; // Argent de départ
+    private startCoins: number = 9999; // Argent de départ
 
-    constructor(scene: Phaser.Scene, startingCoins: number = 100) {
+    constructor(scene: Phaser.Scene, startingCoins: number = 9999) {
         this.scene = scene;
         this.totalCoins = startingCoins;
         this.startCoins = startingCoins;
@@ -30,13 +30,18 @@ export class CurrencyManager {
      * Initialise l'affichage de la monnaie
      */
     public initializeCoinDisplay(x: number = 850, y: number = 20): void {
-        this.coinsText = this.scene.add.text(x, y, `💰 ${this.totalCoins} coins`, {
-            fontFamily: "Arial Black",
-            fontSize: "24px",
-            color: "#FFD700",
-            stroke: "#8B4513",
-            strokeThickness: 4,
-        });
+        this.coinsText = this.scene.add.text(
+            x,
+            y,
+            `💰 ${this.totalCoins} coins`,
+            {
+                fontFamily: "Arial Black",
+                fontSize: "24px",
+                color: "#FFD700",
+                stroke: "#8B4513",
+                strokeThickness: 4,
+            }
+        );
         this.coinsText.setScrollFactor(0);
         this.coinsText.setDepth(2500);
     }
@@ -222,4 +227,3 @@ export class CurrencyManager {
         }
     }
 }
-

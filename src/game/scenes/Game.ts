@@ -226,7 +226,7 @@ export default class Game extends Phaser.Scene {
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades
-        this.currencyManager = new CurrencyManager(this, 100);
+        this.currencyManager = new CurrencyManager(this, 9999);
         this.upgradeManager = new UpgradeManager();
 
         // Initialiser l'affichage de la monnaie
@@ -656,12 +656,14 @@ export default class Game extends Phaser.Scene {
 
         const effects = this.upgradeManager.getActiveEffects();
 
-        // Vitesse de déplacement des joueurs
+        // Vitesse de déplacement des joueurs et changement de skin
         if (this.player1) {
             this.player1.applySpeedMultiplier(effects.speedMultiplier);
+            this.player1.changeSkin(effects.skinChange);
         }
         if (this.player2) {
             this.player2.applySpeedMultiplier(effects.speedMultiplier);
+            this.player2.changeSkin(effects.skinChange);
         }
 
         // Vitesse de cuisson du four
@@ -821,4 +823,3 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
-
