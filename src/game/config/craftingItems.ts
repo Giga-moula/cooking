@@ -19,6 +19,15 @@ export interface CraftingItem {
 }
 
 /**
+ * Séquences de craft spécifiques pour chaque transformation
+ */
+export interface TransformationSequence {
+    from: string;
+    to: string;
+    sequence: CraftDirection[];
+}
+
+/**
  * Configuration des blocs autorisés pour le craft
  */
 export const CRAFTING_ITEMS: { [key: number]: CraftingItem } = {
@@ -79,6 +88,32 @@ export function getCraftingItem(tileTypeId: number): CraftingItem | undefined {
 }
 
 /**
+ * Séquences spécifiques pour chaque transformation
+ */
+export const TRANSFORMATION_SEQUENCES: TransformationSequence[] = [
+    // Table de transformation - Chocolat en chunks
+    {
+        from: "chocolate",
+        to: "chocolate-chunks",
+        sequence: ["up", "down", "up", "down"],
+    },
+    
+    // Casserole - Beurre en beurre fondu
+    {
+        from: "butter",
+        to: "molten_butter",
+        sequence: ["spin"],
+    },
+    
+    // Casserole - Sucre en caramel
+    {
+        from: "sugar",
+        to: "caramel",
+        sequence: ["left", "right", "left", "right"],
+    },
+];
+
+/**
  * Vérifie si une séquence de craft est valide pour un bloc donné
  */
 export function isValidCraftSequence(
@@ -88,11 +123,36 @@ export function isValidCraftSequence(
     const craftingItem = getCraftingItem(tileTypeId);
     if (!craftingItem) return false;
 
+    // Vérifier d'abord dans les séquences spécifiques de transformation
+    const isTransformationSequence = TRANSFORMATION_SEQUENCES.some(
+        (transformation) =>
+            transformation.sequence.length === sequence.length &&
+            transformation.sequence.every((dir, index) => dir === sequence[index])
+    );
+    
+    if (isTransformationSequence) {
+        return true;
+    }
+
+    // Sinon, vérifier dans les séquences générales du bloc
     return craftingItem.craftingSequences.some(
         (validSequence) =>
             validSequence.length === sequence.length &&
             validSequence.every((dir, index) => dir === sequence[index])
     );
+}
+
+/**
+ * Récupère la séquence de craft spécifique pour une transformation donnée
+ */
+export function getTransformationSequence(
+    from: string,
+    to: string
+): CraftDirection[] | null {
+    const transformation = TRANSFORMATION_SEQUENCES.find(
+        (t) => t.from === from && t.to === to
+    );
+    return transformation ? [...transformation.sequence] : null;
 }
 
 /**

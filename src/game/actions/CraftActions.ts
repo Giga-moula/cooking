@@ -3,6 +3,7 @@ import {
     getCraftingItem,
     isValidCraftSequence,
     getRandomCraftSequence,
+    getTransformationSequence,
 } from "../config/craftingItems";
 import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 
@@ -124,12 +125,86 @@ export class CraftActions {
      * Génère une séquence de craft spécifique pour un type de bloc
      */
     private generateSequenceForTile(tileTypeId: number): void {
-        const sequence = getRandomCraftSequence(tileTypeId);
-        if (sequence) {
-            this.craftSequence.directions = sequence;
+        const target = this.playerManager.getTargetPosition();
+        
+        // Essayer d'abord de trouver une séquence spécifique basée sur la transformation
+        const specificSequence = this.getSpecificSequenceForTransformation(
+            target.x,
+            target.y,
+            tileTypeId
+        );
+        
+        if (specificSequence) {
+            this.craftSequence.directions = specificSequence;
         } else {
-            // Fallback: séquence basique
-            this.craftSequence.directions = ["up", "down"];
+            // Fallback: séquence aléatoire
+            const sequence = getRandomCraftSequence(tileTypeId);
+            if (sequence) {
+                this.craftSequence.directions = sequence;
+            } else {
+                // Fallback ultime: séquence basique
+                this.craftSequence.directions = ["up", "down"];
+            }
+        }
+    }
+
+    /**
+     * Récupère la séquence spécifique pour une transformation donnée
+     */
+    private getSpecificSequenceForTransformation(
+        gridX: number,
+        gridY: number,
+        tileTypeId: number
+    ): CraftDirection[] | null {
+        const counterManager = this.mapManager.getCounterManager();
+        const casseroleManager = this.mapManager.getCasseroleManager();
+        const recipeManager = this.mapManager.getRecipeManager();
+
+        if (!counterManager || !casseroleManager || !recipeManager) {
+            return null;
+        }
+
+        switch (tileTypeId) {
+            case 10: // Table de transformation
+                if (!counterManager.hasItemOnCounter(gridX, gridY)) {
+                    return null;
+                }
+                const itemOnCounter = counterManager.getItemTypeOnCounter(gridX, gridY);
+                if (!itemOnCounter) {
+                    return null;
+                }
+
+                // Vérifier s'il y a une transformation spéciale possible
+                const transformResult = recipeManager.performSpecialTransformation
+                    ? recipeManager.performSpecialTransformation(itemOnCounter)
+                    : null;
+                
+                if (transformResult) {
+                    return getTransformationSequence(itemOnCounter, transformResult);
+                }
+                return null;
+
+            case 13: // Casserole
+                if (!casseroleManager.hasItemInCasserole(gridX, gridY)) {
+                    return null;
+                }
+                const itemInCasserole = casseroleManager.getItemInCasserole(gridX, gridY);
+                if (!itemInCasserole) {
+                    return null;
+                }
+
+                // Vérifier la cuisson possible dans la casserole
+                const cookingRecipe = recipeManager.getCasseroleCooking
+                    ? recipeManager.getCasseroleCooking(itemInCasserole)
+                    : null;
+                
+                if (cookingRecipe) {
+                    return getTransformationSequence(itemInCasserole, cookingRecipe.to);
+                }
+                return null;
+
+            default:
+                return null;
         }
     }
 
