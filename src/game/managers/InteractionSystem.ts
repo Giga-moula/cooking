@@ -470,6 +470,7 @@ export class InteractionSystem {
             const inventory = player.getInventory();
             if (inventory) {
                 inventory.addItem(itemType);
+                player.updateCarriedItem();
                 return true;
             }
         }
@@ -491,6 +492,7 @@ export class InteractionSystem {
         if (itemType) {
             const success = this.casseroleManager.placeItemInCasserole(targetX, targetY, itemType);
             if (success) {
+                player.removeCarriedItem();
                 return true;
             } else {
                 // Remettre l'objet dans l'inventaire si ça a échoué
