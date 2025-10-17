@@ -104,11 +104,11 @@ export class TutorialMapManager extends MapManager {
                     rotation: Math.PI,
                 }, // Boîte farine
                 9: {
-                    texture: "iso-delivery-zone",
+                    texture: "caisse",
                     isSolid: true,
                     isCounter: false,
                     isDeliveryZone: true,
-                }, // Zone de livraison
+                }, // Zone de livraison (caisse)
                 10: {
                     texture: "table-mono",
                     isSolid: true,

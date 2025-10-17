@@ -1,9 +1,14 @@
 import Phaser from "phaser";
+import {
+    COOKING_CONSTANTS,
+    PARTICLE_CONSTANTS,
+    TIME_CONSTANTS,
+} from "../config/Constants";
 import { IsometricUtils } from "../utils/IsometricUtils";
-import { RecipeManager } from "./RecipeManager";
-import { BaseCookingManager } from "./BaseCookingManager";
-import { PARTICLE_CONSTANTS, TIME_CONSTANTS, COOKING_CONSTANTS } from "../config/Constants";
 import { Logger } from "../utils/Logger";
+import { BaseCookingManager } from "./BaseCookingManager";
+import { RecipeManager } from "./RecipeManager";
+import { VoiceManager } from "./VoiceManager";
 
 /**
  * Gestionnaire des interactions avec le four
@@ -12,15 +17,21 @@ import { Logger } from "../utils/Logger";
 export class OvenManager extends BaseCookingManager {
     // Suivi des échecs de cuisson pour chaque four
     private cookingFailures: Map<string, number> = new Map();
-    private readonly MAX_FAILURES_BEFORE_BURN = COOKING_CONSTANTS.MAX_FAILURES_BEFORE_BURN;
-    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
-    
+    private readonly MAX_FAILURES_BEFORE_BURN =
+        COOKING_CONSTANTS.MAX_FAILURES_BEFORE_BURN;
+    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] =
+        [];
+    private voiceManager?: VoiceManager;
+
     // Système de timer de cuisson
-    private cookingTimers: Map<string, { 
-        startTime: number, 
-        timerText?: Phaser.GameObjects.Text,
-        originalItem: string 
-    }> = new Map();
+    private cookingTimers: Map<
+        string,
+        {
+            startTime: number;
+            timerText?: Phaser.GameObjects.Text;
+            originalItem: string;
+        }
+    > = new Map();
     private readonly COOKING_TIME = 8000; // 10 secondes en millisecondes
     private readonly BURN_TIME = 13000; // 15 secondes en millisecondes (10 + 5)
 
@@ -31,6 +42,13 @@ export class OvenManager extends BaseCookingManager {
         recipeManager: RecipeManager
     ) {
         super(scene, mapOffsetX, mapOffsetY, recipeManager);
+    }
+
+    /**
+     * Définit le gestionnaire de voix
+     */
+    setVoiceManager(voiceManager: VoiceManager): void {
+        this.voiceManager = voiceManager;
     }
 
     /**
@@ -45,14 +63,14 @@ export class OvenManager extends BaseCookingManager {
      */
     removeItemFromOven(gridX: number, gridY: number): string | null {
         const key = `${gridX},${gridY}`;
-        
+
         // Supprimer le timer si actif
         const timer = this.cookingTimers.get(key);
         if (timer && timer.timerText) {
             timer.timerText.destroy();
         }
         this.cookingTimers.delete(key);
-        
+
         return this.removeItem(gridX, gridY);
     }
 
@@ -73,7 +91,11 @@ export class OvenManager extends BaseCookingManager {
     /**
      * Démarre la cuisson dans le four (démarre le timer de 10 secondes)
      */
-    performCooking(gridX: number, gridY: number): boolean {
+    performCooking(
+        gridX: number,
+        gridY: number,
+        playerNumber: number = 1
+    ): boolean {
         const key = `${gridX},${gridY}`;
         const item = this.itemsInDevice.get(key);
 
@@ -96,7 +118,15 @@ export class OvenManager extends BaseCookingManager {
 
         // Démarrer le timer de cuisson
         this.startCookingTimer(gridX, gridY, currentItem, cookingRecipe.to);
-        
+
+        // Déclencher une voix pour l'utilisation du four
+        if (this.voiceManager) {
+            console.log(
+                `🔥 Cuisson de ${currentItem} dans le four - déclencher voix (Joueur ${playerNumber})`
+            );
+            this.voiceManager.playVoiceForOven(playerNumber);
+        }
+
         return true;
     }
 
@@ -149,19 +179,24 @@ export class OvenManager extends BaseCookingManager {
     /**
      * Démarre le timer de cuisson pour un four
      */
-    private startCookingTimer(gridX: number, gridY: number, originalItem: string, cookedItem: string): void {
+    private startCookingTimer(
+        gridX: number,
+        gridY: number,
+        originalItem: string,
+        cookedItem: string
+    ): void {
         const key = `${gridX},${gridY}`;
         const screenPos = IsometricUtils.gridToScreen(gridX, gridY);
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY - 40; // Au-dessus du four
 
         // Créer un texte pour afficher le timer
-        const timerText = this.scene.add.text(x, y, '8s', {
-            fontSize: '24px',
-            color: '#ffffff',
-            stroke: '#000000',
+        const timerText = this.scene.add.text(x, y, "8s", {
+            fontSize: "24px",
+            color: "#ffffff",
+            stroke: "#000000",
             strokeThickness: 4,
-            fontStyle: 'bold'
+            fontStyle: "bold",
         });
         timerText.setOrigin(0.5, 0.5);
         timerText.setDepth(10000); // Au-dessus de tout
@@ -170,13 +205,15 @@ export class OvenManager extends BaseCookingManager {
         this.cookingTimers.set(key, {
             startTime: this.scene.time.now,
             timerText: timerText,
-            originalItem: originalItem
+            originalItem: originalItem,
         });
 
         // Effet visuel de démarrage
         this.playCookingEffect(gridX, gridY);
-        
-        Logger.log(`Four ${key}: Cuisson démarrée pour ${originalItem} → ${cookedItem}`);
+
+        Logger.log(
+            `Four ${key}: Cuisson démarrée pour ${originalItem} → ${cookedItem}`
+        );
     }
 
     /**
@@ -189,7 +226,7 @@ export class OvenManager extends BaseCookingManager {
 
         this.cookingTimers.forEach((timer, key) => {
             const elapsedTime = currentTime - timer.startTime;
-            const [gridX, gridY] = key.split(',').map(Number);
+            const [gridX, gridY] = key.split(",").map(Number);
             const item = this.itemsInDevice.get(key);
 
             if (!item) {
@@ -203,10 +240,10 @@ export class OvenManager extends BaseCookingManager {
 
             // Vérifier si le cookie doit brûler (15 secondes)
             if (elapsedTime >= this.BURN_TIME) {
-                item.setTexture('cookie-dead');
+                item.setTexture("cookie-dead");
                 this.playCookingEffect(gridX, gridY);
                 Logger.log(`Four ${key}: Cookie brûlé après 15 secondes !`);
-                
+
                 if (timer.timerText) {
                     timer.timerText.destroy();
                 }
@@ -216,51 +253,62 @@ export class OvenManager extends BaseCookingManager {
             else if (elapsedTime >= this.COOKING_TIME) {
                 // Transformer en cookie cuit seulement une fois
                 if (item.texture.key === timer.originalItem) {
-                    const cookingRecipe = this.recipeManager.getOvenCooking(timer.originalItem);
+                    const cookingRecipe = this.recipeManager.getOvenCooking(
+                        timer.originalItem
+                    );
                     if (cookingRecipe) {
                         item.setTexture(cookingRecipe.to);
                         this.playCookingEffect(gridX, gridY);
-                        Logger.log(`Four ${key}: Cookie cuit après 10 secondes !`);
+                        Logger.log(
+                            `Four ${key}: Cookie cuit après 10 secondes !`
+                        );
                     }
                 }
 
                 // Afficher le timer clignotant rouge/blanc (5 secondes restantes avant de brûler)
                 if (timer.timerText) {
-                    const burnRemainingTime = Math.max(0, this.BURN_TIME - elapsedTime);
+                    const burnRemainingTime = Math.max(
+                        0,
+                        this.BURN_TIME - elapsedTime
+                    );
                     const seconds = Math.ceil(burnRemainingTime / 1000);
                     timer.timerText.setText(`${seconds}s`);
-                    
+
                     // Effet de clignotement entre rouge et blanc
                     const blinkSpeed = 4; // Vitesse de clignotement (changements par seconde)
-                    const blinkPhase = Math.floor((currentTime / 1000) * blinkSpeed) % 2;
-                    
+                    const blinkPhase =
+                        Math.floor((currentTime / 1000) * blinkSpeed) % 2;
+
                     if (blinkPhase === 0) {
-                        timer.timerText.setColor('#ff0000'); // Rouge
+                        timer.timerText.setColor("#ff0000"); // Rouge
                     } else {
-                        timer.timerText.setColor('#ffffff'); // Blanc
+                        timer.timerText.setColor("#ffffff"); // Blanc
                     }
                     timer.timerText.setAlpha(1); // Opacité complète
                 }
             } else {
                 // Cuisson en cours (0-10 secondes)
                 if (timer.timerText) {
-                    const remainingTime = Math.max(0, this.COOKING_TIME - elapsedTime);
+                    const remainingTime = Math.max(
+                        0,
+                        this.COOKING_TIME - elapsedTime
+                    );
                     const seconds = Math.ceil(remainingTime / 1000);
                     timer.timerText.setText(`${seconds}s`);
                     timer.timerText.setAlpha(1); // Opacité complète
 
                     // Changer la couleur selon le temps restant
                     if (seconds > 3) {
-                        timer.timerText.setColor('#ffffff'); // Blanc de 10s à 4s
+                        timer.timerText.setColor("#ffffff"); // Blanc de 10s à 4s
                     } else {
-                        timer.timerText.setColor('#00ff00'); // Vert pour les 3 dernières secondes (3s, 2s, 1s)
+                        timer.timerText.setColor("#00ff00"); // Vert pour les 3 dernières secondes (3s, 2s, 1s)
                     }
                 }
             }
         });
 
         // Nettoyer les timers terminés
-        timersToRemove.forEach(key => this.cookingTimers.delete(key));
+        timersToRemove.forEach((key) => this.cookingTimers.delete(key));
     }
 
     /**
@@ -314,15 +362,18 @@ export class OvenManager extends BaseCookingManager {
         // Tracker les particules actives
         this.activeParticles.push(particles);
 
-        this.scene.time.delayedCall(TIME_CONSTANTS.PARTICLE_LIFESPAN_FIRE, () => {
-            const index = this.activeParticles.indexOf(particles);
-            if (index > -1) {
-                this.activeParticles.splice(index, 1);
+        this.scene.time.delayedCall(
+            TIME_CONSTANTS.PARTICLE_LIFESPAN_FIRE,
+            () => {
+                const index = this.activeParticles.indexOf(particles);
+                if (index > -1) {
+                    this.activeParticles.splice(index, 1);
+                }
+                if (particles && particles.scene) {
+                    particles.destroy();
+                }
             }
-            if (particles && particles.scene) {
-                particles.destroy();
-            }
-        });
+        );
     }
 
     /**
@@ -337,25 +388,26 @@ export class OvenManager extends BaseCookingManager {
      */
     cleanup(): void {
         // Nettoyer les particules actives
-        this.activeParticles.forEach(particles => {
+        this.activeParticles.forEach((particles) => {
             if (particles && particles.scene) {
                 particles.destroy();
             }
         });
         this.activeParticles = [];
-        
+
         // Nettoyer les timers de cuisson
-        this.cookingTimers.forEach(timer => {
+        this.cookingTimers.forEach((timer) => {
             if (timer.timerText) {
                 timer.timerText.destroy();
             }
         });
         this.cookingTimers.clear();
-        
+
         // Nettoyer les échecs de cuisson
         this.cookingFailures.clear();
-        
+
         // Appeler le cleanup parent
         super.cleanup();
     }
 }
+

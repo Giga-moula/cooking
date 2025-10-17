@@ -1,17 +1,19 @@
 import Phaser from "phaser";
+import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
+import { Logger } from "../utils/Logger";
+import { ActionSoundManager } from "./ActionSoundManager";
+import { CasseroleManager } from "./CasseroleManager";
 import { CounterInteractionManager } from "./CounterInteractionManager";
 import { DeliveryManager } from "./DeliveryManager";
-import { RecipeManager } from "./RecipeManager";
 import { MapManager } from "./MapManager";
 import { OrderDisplayManager } from "./OrderDisplayManager";
+import { OvenManager } from "./OvenManager";
 import { PlayerManager } from "./PlayerManager";
+import { RecipeManager } from "./RecipeManager";
 import { ScoreManager } from "./ScoreManager";
 import { TimerManager } from "./TimerManager";
-import { OvenManager } from "./OvenManager";
-import { CasseroleManager } from "./CasseroleManager";
 import { TrashManager } from "./TrashManager";
-import { Logger } from "../utils/Logger";
-import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
+import { VoiceManager } from "./VoiceManager";
 
 /**
  * Système d'interaction orienté objet
@@ -29,6 +31,8 @@ export class InteractionSystem {
     private ovenManager: OvenManager;
     private casseroleManager: CasseroleManager;
     private trashManager: TrashManager;
+    private voiceManager: VoiceManager;
+    private actionSoundManager: ActionSoundManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -54,6 +58,13 @@ export class InteractionSystem {
         this.ovenManager = ovenManager;
         this.casseroleManager = casseroleManager;
         this.trashManager = trashManager;
+        this.voiceManager = new VoiceManager(scene);
+        this.actionSoundManager = new ActionSoundManager(scene);
+
+        // Initialiser le VoiceManager après un délai pour s'assurer que les sons sont chargés
+        scene.time.delayedCall(1000, () => {
+            this.voiceManager.initializeAfterLoad();
+        });
     }
 
     /**
@@ -82,7 +93,10 @@ export class InteractionSystem {
         const tileTypeId = this.mapManager.getTileTypeId(targetX, targetY);
         if (this.isCraftingTile(tileTypeId)) {
             // Exception : si c'est une table de transformation avec un craft instantané, autoriser
-            if (tileTypeId === 10 && this.isInstantCraftRecipe(targetX, targetY)) {
+            if (
+                tileTypeId === 10 &&
+                this.isInstantCraftRecipe(targetX, targetY)
+            ) {
                 // Autoriser la transformation instantanée
             } else {
                 // Les blocs de craft ne répondent plus à R/P, seulement au système de craft
@@ -119,7 +133,10 @@ export class InteractionSystem {
             return false;
         }
 
-        const itemOnCounter = this.counterManager.getItemTypeOnCounter(gridX, gridY);
+        const itemOnCounter = this.counterManager.getItemTypeOnCounter(
+            gridX,
+            gridY
+        );
         if (!itemOnCounter) {
             return false;
         }
@@ -130,7 +147,10 @@ export class InteractionSystem {
         for (const recipe of allRecipes) {
             if (INSTANT_CRAFT_RECIPES.includes(recipe.id)) {
                 // Vérifier si l'item sur la table fait partie de cette recette
-                if (itemOnCounter === recipe.ingredient1 || itemOnCounter === recipe.ingredient2) {
+                if (
+                    itemOnCounter === recipe.ingredient1 ||
+                    itemOnCounter === recipe.ingredient2
+                ) {
                     return true;
                 }
             }
@@ -239,6 +259,18 @@ export class InteractionSystem {
             if (ingredientType) {
                 inventory.addItem(ingredientType);
                 player.updateCarriedItem();
+
+                // Déclencher une voix pour cet ingrédient
+                this.voiceManager.playVoiceForIngredient(
+                    ingredientType,
+                    player.getPlayerNumber()
+                );
+
+                // Jouer le son de récupération réussie
+                console.log(
+                    `🎵 Récupération d'ingrédient depuis caisse: ${ingredientType}`
+                );
+                this.actionSoundManager.playRecupSuccess();
             }
         }
 
@@ -255,14 +287,17 @@ export class InteractionSystem {
         player: PlayerManager
     ): boolean {
         // Vérifier si la cible est la zone de livraison (utilise le MapManager pour la vraie position)
-        const isTargetDeliveryZone = this.mapManager.isDeliveryZone(targetX, targetY);
-        
+        const isTargetDeliveryZone = this.mapManager.isDeliveryZone(
+            targetX,
+            targetY
+        );
+
         if (!isTargetDeliveryZone) {
             return false;
         }
 
         const inventory = player.getInventory();
-        
+
         // Si l'inventaire est vide, on montre juste qu'on a détecté la zone
         if (!inventory || inventory.isEmpty()) {
             return true;
@@ -453,6 +488,11 @@ export class InteractionSystem {
         if (itemType) {
             inventory.addItem(itemType);
             player.updateCarriedItem();
+
+            // Jouer le son de récupération réussie pour tous les items
+            console.log(`🎵 Récupération d'item depuis comptoir: ${itemType}`);
+            this.actionSoundManager.playRecupSuccess();
+
             return true;
         }
 
@@ -661,7 +701,11 @@ export class InteractionSystem {
         const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
 
         if (hasItemInOven) {
-            this.ovenManager.performCooking(targetX, targetY);
+            this.ovenManager.performCooking(
+                targetX,
+                targetY,
+                player.getPlayerNumber()
+            );
         }
 
         return true;
@@ -687,7 +731,8 @@ export class InteractionSystem {
         if (hasItemInCasserole) {
             const success = this.casseroleManager.cookInCasserole(
                 targetX,
-                targetY
+                targetY,
+                player.getPlayerNumber()
             );
             if (success) {
                 return true;
@@ -713,6 +758,39 @@ export class InteractionSystem {
         player: PlayerManager
     ): boolean {
         const mapData = this.mapManager.getCurrentMapConfig().mapData;
-        return this.trashManager.handleTrashInteraction(player, targetX, targetY, mapData);
+        return this.trashManager.handleTrashInteraction(
+            player,
+            targetX,
+            targetY,
+            mapData
+        );
+    }
+
+    /**
+     * Obtient le gestionnaire de voix
+     */
+    getVoiceManager(): VoiceManager {
+        return this.voiceManager;
+    }
+
+    /**
+     * Obtient le gestionnaire de sons d'actions
+     */
+    getActionSoundManager(): ActionSoundManager {
+        return this.actionSoundManager;
+    }
+
+    /**
+     * Nettoie les ressources du système d'interaction
+     */
+    cleanup(): void {
+        // Nettoyer les managers si nécessaire
+        if (this.voiceManager) {
+            this.voiceManager.cleanup();
+        }
+        if (this.actionSoundManager) {
+            this.actionSoundManager.cleanup();
+        }
     }
 }
+

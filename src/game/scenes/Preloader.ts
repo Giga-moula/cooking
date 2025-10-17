@@ -55,6 +55,8 @@ export default class Preloader extends Phaser.Scene {
     }
 
     preload() {
+        console.log("🚀 PRELOADER DÉMARRÉ - Chargement des assets...");
+
         // Asset pack principal
         this.load.pack("preload", "assets/preload-asset-pack.json");
 
@@ -108,6 +110,7 @@ export default class Preloader extends Phaser.Scene {
         // === MOBILIER ===
         this.load.image("craft_plan", "assets/craft_plan.png");
         this.load.image("thrash", "assets/thrash.png");
+        this.load.image("caisse", "assets/caisse.png");
 
         // Charger les assets de craft
         this.load.image("controlsBox", "assets/craftActions/controlsBox.png");
@@ -252,6 +255,85 @@ export default class Preloader extends Phaser.Scene {
 
         // === AUDIO ===
         this.load.audio("grandma-song", "assets/musics/grandma_song.mp3");
+
+        // === VOIX DES PERSONNAGES ===
+        this.load.audio(
+            "danielle-beurre",
+            "assets/danielle-voices/danielle-beurre.ogg"
+        );
+        this.load.audio(
+            "danielle-huile",
+            "assets/danielle-voices/danielle-huile.ogg"
+        );
+        this.load.audio(
+            "danielle-enfourne",
+            "assets/danielle-voices/danielle-enfourne.ogg"
+        );
+        this.load.audio(
+            "danielle-godiche",
+            "assets/danielle-voices/danielle-godiche.ogg"
+        );
+        this.load.audio(
+            "danielle-povcruche",
+            "assets/danielle-voices/danielle-povcruche.ogg"
+        );
+        this.load.audio(
+            "mireille-tgmireille",
+            "assets/danielle-voices/mireille-tgmireille.ogg"
+        );
+        this.load.audio(
+            "mireille-beurre",
+            "assets/mireille-voices/mireille-beurre.ogg"
+        );
+        this.load.audio(
+            "mireille-enfourne",
+            "assets/mireille-voices/mireille-enfourne.ogg"
+        );
+        this.load.audio(
+            "mireille-huile",
+            "assets/mireille-voices/mireille-huile.ogg"
+        );
+        this.load.audio(
+            "mireille-povcruche",
+            "assets/mireille-voices/mireille-povcruche.ogg"
+        );
+        this.load.audio(
+            "mireille-godiche",
+            "assets/mireille-voices/mireille-godiche.ogg"
+        );
+        this.load.audio(
+            "mireille-tgmireille",
+            "assets/mireille-voices/mireille-tgmireille.ogg"
+        );
+
+        // === SONS D'ACTIONS ===
+        this.load.audio(
+            "recup_success",
+            "assets/actions-sounds/recup_success.ogg"
+        );
+        this.load.audio("dash", "assets/actions-sounds/dash.ogg");
+        this.load.audio("failedInput", "assets/actions-sounds/failedInput.ogg");
+        this.load.audio("goodInput1", "assets/actions-sounds/goodInput1.ogg");
+        this.load.audio("goodInput2", "assets/actions-sounds/goodInput2.ogg");
+        this.load.audio("goodInput3", "assets/actions-sounds/goodInput3.ogg");
+        this.load.audio("goodInput4", "assets/actions-sounds/goodInput4.ogg");
+
+        // Log pour debug
+        console.log("🎵 Chargement du son danielle-beurre...");
+
+        // Événements de chargement pour debug
+        this.load.on("filecomplete-audio-danielle-beurre", () => {
+            console.log("✅ Son danielle-beurre chargé avec succès!");
+        });
+
+        this.load.on("loaderror", (file: any) => {
+            if (file.key === "danielle-beurre") {
+                console.error(
+                    "❌ Erreur de chargement du son danielle-beurre:",
+                    file
+                );
+            }
+        });
 
         // === IMAGES DE TUTORIEL ===
         this.load.image("craft-table", "assets/tuto/craft-table.png");

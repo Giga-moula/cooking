@@ -64,11 +64,11 @@ export const DEFAULT_TILE_TYPES: { [key: number]: TileTypeConfig } = {
         rotation: Math.PI,
     }, // Boîte farine
     9: {
-        texture: "iso-delivery-zone",
+        texture: "caisse",
         isSolid: true,
         isCounter: false,
         isDeliveryZone: true,
-    }, // Zone de livraison (solide)
+    }, // Zone de livraison (caisse)
     10: {
         texture: "table-mono",
         isSolid: true,

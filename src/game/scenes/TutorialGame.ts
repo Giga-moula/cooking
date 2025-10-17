@@ -176,7 +176,10 @@ export default class TutorialGame extends Phaser.Scene {
             this.recipeManager
         );
 
-        // Connecter les joueurs au MapManager pour le système de craft
+        // Configuration du MapManager pour les joueurs (sans ActionSoundManager pour l'instant)
+        console.log(
+            "🎵 TutorialGame: Configuration du MapManager pour les joueurs"
+        );
         this.player1.setMapManager(this.mapManager);
         this.player2.setMapManager(this.mapManager);
 
@@ -265,6 +268,39 @@ export default class TutorialGame extends Phaser.Scene {
             this.casseroleManager,
             this.trashManager
         );
+
+        // Connecter le VoiceManager et ActionSoundManager aux managers
+        if (this.interactionSystem) {
+            const voiceManager = this.interactionSystem.getVoiceManager();
+            const actionSoundManager =
+                this.interactionSystem.getActionSoundManager();
+
+            // Connecter au CommunicationManager
+            if (this.communicationManager) {
+                this.communicationManager.setVoiceManager(voiceManager);
+                this.communicationManager.setActionSoundManager(
+                    actionSoundManager
+                );
+            }
+
+            // Connecter l'ActionSoundManager aux joueurs
+            console.log(
+                "🎵 TutorialGame: Configuration de l'ActionSoundManager pour les joueurs",
+                actionSoundManager
+            );
+            this.player1.setActionSoundManager(actionSoundManager);
+            this.player2.setActionSoundManager(actionSoundManager);
+
+            // Connecter au CasseroleManager
+            if (this.casseroleManager) {
+                this.casseroleManager.setVoiceManager(voiceManager);
+            }
+
+            // Connecter au OvenManager
+            if (this.ovenManager) {
+                this.ovenManager.setVoiceManager(voiceManager);
+            }
+        }
 
         // Touche espace pour retourner au menu
         this.spaceKeyHandler = () => {
@@ -674,6 +710,11 @@ export default class TutorialGame extends Phaser.Scene {
         }
         if (this.livesManager) {
             this.livesManager.cleanup();
+        }
+
+        // Nettoyer le VoiceManager et ActionSoundManager
+        if (this.interactionSystem) {
+            this.interactionSystem.cleanup();
         }
     }
 
