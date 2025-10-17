@@ -190,8 +190,13 @@ export class OvenManager extends BaseCookingManager {
         const x = screenPos.x + this.mapOffsetX;
         const y = screenPos.y + this.mapOffsetY - 40; // Au-dessus du four
 
+        // Calculer le temps de cuisson ajusté
+        const adjustedCookingTime =
+            this.COOKING_TIME * this.cookingSpeedMultiplier;
+        const initialSeconds = Math.ceil(adjustedCookingTime / 1000);
+
         // Créer un texte pour afficher le timer
-        const timerText = this.scene.add.text(x, y, "8s", {
+        const timerText = this.scene.add.text(x, y, `${initialSeconds}s`, {
             fontSize: "24px",
             color: "#ffffff",
             stroke: "#000000",
@@ -212,7 +217,7 @@ export class OvenManager extends BaseCookingManager {
         this.playCookingEffect(gridX, gridY);
 
         Logger.log(
-            `Four ${key}: Cuisson démarrée pour ${originalItem} → ${cookedItem}`
+            `Four ${key}: Cuisson démarrée pour ${originalItem} → ${cookedItem} (${initialSeconds}s avec multiplicateur ${this.cookingSpeedMultiplier})`
         );
     }
 
@@ -223,6 +228,11 @@ export class OvenManager extends BaseCookingManager {
     public update(): void {
         const currentTime = this.scene.time.now;
         const timersToRemove: string[] = [];
+
+        // Appliquer le multiplicateur de vitesse aux temps de cuisson
+        const adjustedCookingTime =
+            this.COOKING_TIME * this.cookingSpeedMultiplier;
+        const adjustedBurnTime = this.BURN_TIME * this.cookingSpeedMultiplier;
 
         this.cookingTimers.forEach((timer, key) => {
             const elapsedTime = currentTime - timer.startTime;
@@ -238,19 +248,23 @@ export class OvenManager extends BaseCookingManager {
                 return;
             }
 
-            // Vérifier si le cookie doit brûler (15 secondes)
-            if (elapsedTime >= this.BURN_TIME) {
+            // Vérifier si le cookie doit brûler (15 secondes * multiplicateur)
+            if (elapsedTime >= adjustedBurnTime) {
                 item.setTexture("cookie-dead");
                 this.playCookingEffect(gridX, gridY);
-                Logger.log(`Four ${key}: Cookie brûlé après 15 secondes !`);
+                Logger.log(
+                    `Four ${key}: Cookie brûlé après ${(
+                        adjustedBurnTime / 1000
+                    ).toFixed(1)} secondes !`
+                );
 
                 if (timer.timerText) {
                     timer.timerText.destroy();
                 }
                 timersToRemove.push(key);
             }
-            // Vérifier si le cookie est cuit (10 secondes)
-            else if (elapsedTime >= this.COOKING_TIME) {
+            // Vérifier si le cookie est cuit (10 secondes * multiplicateur)
+            else if (elapsedTime >= adjustedCookingTime) {
                 // Transformer en cookie cuit seulement une fois
                 if (item.texture.key === timer.originalItem) {
                     const cookingRecipe = this.recipeManager.getOvenCooking(
@@ -260,7 +274,9 @@ export class OvenManager extends BaseCookingManager {
                         item.setTexture(cookingRecipe.to);
                         this.playCookingEffect(gridX, gridY);
                         Logger.log(
-                            `Four ${key}: Cookie cuit après 10 secondes !`
+                            `Four ${key}: Cookie cuit après ${(
+                                adjustedCookingTime / 1000
+                            ).toFixed(1)} secondes !`
                         );
                     }
                 }
@@ -269,7 +285,7 @@ export class OvenManager extends BaseCookingManager {
                 if (timer.timerText) {
                     const burnRemainingTime = Math.max(
                         0,
-                        this.BURN_TIME - elapsedTime
+                        adjustedBurnTime - elapsedTime
                     );
                     const seconds = Math.ceil(burnRemainingTime / 1000);
                     timer.timerText.setText(`${seconds}s`);
@@ -291,7 +307,7 @@ export class OvenManager extends BaseCookingManager {
                 if (timer.timerText) {
                     const remainingTime = Math.max(
                         0,
-                        this.COOKING_TIME - elapsedTime
+                        adjustedCookingTime - elapsedTime
                     );
                     const seconds = Math.ceil(remainingTime / 1000);
                     timer.timerText.setText(`${seconds}s`);
@@ -299,9 +315,9 @@ export class OvenManager extends BaseCookingManager {
 
                     // Changer la couleur selon le temps restant
                     if (seconds > 3) {
-                        timer.timerText.setColor("#ffffff"); // Blanc de 10s à 4s
+                        timer.timerText.setColor("#ffffff"); // Blanc
                     } else {
-                        timer.timerText.setColor("#00ff00"); // Vert pour les 3 dernières secondes (3s, 2s, 1s)
+                        timer.timerText.setColor("#00ff00"); // Vert pour les 3 dernières secondes
                     }
                 }
             }

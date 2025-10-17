@@ -92,7 +92,7 @@ export class GameConfig {
 
     // Configuration du timer
     static readonly TIMER = {
-        GAME_DURATION: 200, // 5 minutes en secondes
+        GAME_DURATION: 600, // 10 minutes en secondes
         DELIVERY_BONUS: 15, // Bonus de temps par livraison (en secondes)
         DISPLAY_X: 512,
         DISPLAY_Y: 20,
