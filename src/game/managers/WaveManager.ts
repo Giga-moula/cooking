@@ -82,7 +82,7 @@ export class WaveManager {
             {
                 waveNumber: 1,
                 name: "Premier cookie",
-                targetRecipes: 1,
+                targetRecipes: 3,
                 orderCount: 4, // Maximum 4 commandes simultanées (fixe)
                 orderDuration: 90,
                 difficulty: "easy",
@@ -378,12 +378,12 @@ export class WaveManager {
     private getOrderDuration(recipeId: string): number {
         // Cookie chocolat-caramel : 2 minutes (120 secondes)
         if (recipeId === "cookie-choco-cara") {
-            return 120;
+            return 150;
         }
 
         // Cookie chocolat ou caramel : 1 minute 30 (90 secondes)
         if (recipeId === "cookie-choco" || recipeId === "cookie-cara") {
-            return 2;
+            return 120;
         }
 
         // Durée par défaut (si nouvelle recette)

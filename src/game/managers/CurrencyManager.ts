@@ -16,11 +16,11 @@ export interface WaveEarnings {
  */
 export class CurrencyManager {
     private scene: Phaser.Scene;
-    private totalCoins: number = 9999;
+    private totalCoins: number = 0;
     private coinsText?: Phaser.GameObjects.Text;
-    private startCoins: number = 9999; // Argent de départ
+    private startCoins: number = 0; // Argent de départ
 
-    constructor(scene: Phaser.Scene, startingCoins: number = 9999) {
+    constructor(scene: Phaser.Scene, startingCoins: number = 0) {
         this.scene = scene;
         this.totalCoins = startingCoins;
         this.startCoins = startingCoins;

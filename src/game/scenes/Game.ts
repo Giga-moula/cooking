@@ -226,9 +226,9 @@ export default class Game extends Phaser.Scene {
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades
-        this.currencyManager = new CurrencyManager(this, 9999);
+        this.currencyManager = new CurrencyManager(this, 0);        
         this.upgradeManager = new UpgradeManager();
-
+        
         // Initialiser l'affichage de la monnaie
         this.currencyManager.initializeCoinDisplay(850, 20);
 

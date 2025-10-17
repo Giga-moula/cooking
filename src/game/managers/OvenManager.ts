@@ -21,8 +21,8 @@ export class OvenManager extends BaseCookingManager {
         timerText?: Phaser.GameObjects.Text,
         originalItem: string 
     }> = new Map();
-    private readonly COOKING_TIME = 10000; // 10 secondes en millisecondes
-    private readonly BURN_TIME = 15000; // 15 secondes en millisecondes (10 + 5)
+    private readonly COOKING_TIME = 8000; // 10 secondes en millisecondes
+    private readonly BURN_TIME = 13000; // 15 secondes en millisecondes (10 + 5)
 
     constructor(
         scene: Phaser.Scene,
@@ -156,7 +156,7 @@ export class OvenManager extends BaseCookingManager {
         const y = screenPos.y + this.mapOffsetY - 40; // Au-dessus du four
 
         // Créer un texte pour afficher le timer
-        const timerText = this.scene.add.text(x, y, '10s', {
+        const timerText = this.scene.add.text(x, y, '8s', {
             fontSize: '24px',
             color: '#ffffff',
             stroke: '#000000',
