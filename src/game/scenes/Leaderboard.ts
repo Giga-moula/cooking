@@ -109,6 +109,25 @@ export default class Leaderboard extends Phaser.Scene {
         }
     }
 
+    /**
+     * Calcule le rang réel en tenant compte des ex aequo
+     */
+    private calculateRealRank(
+        entry: ScoreEntry,
+        allEntries: ScoreEntry[]
+    ): number {
+        const currentScore = entry.score;
+        let rank = 1;
+
+        for (const otherEntry of allEntries) {
+            if (otherEntry.score > currentScore) {
+                rank++;
+            }
+        }
+
+        return rank;
+    }
+
     displayLeaderboard() {
         if (this.leaderboardData.length === 0) {
             const emptyText = this.add.text(
@@ -133,6 +152,10 @@ export default class Leaderboard extends Phaser.Scene {
 
         this.leaderboardData.forEach((entry, index) => {
             const y = startY + index * lineHeight;
+            const realRank = this.calculateRealRank(
+                entry,
+                this.leaderboardData
+            );
 
             // Conteneur pour chaque entrée
             const entryContainer = this.add.container(512, y);
@@ -140,22 +163,22 @@ export default class Leaderboard extends Phaser.Scene {
             // Fond de l'entrée
             const bg = this.add.graphics();
 
-            // Couleur spéciale pour le top 3
+            // Couleur spéciale pour le top 3 (basé sur le rang réel)
             let bgColor1 = 0x4a4a4a;
             let bgColor2 = 0x2a2a2a;
             let borderColor = 0x666666;
 
-            if (index === 0) {
+            if (realRank === 1) {
                 // Or
                 bgColor1 = 0xffd700;
                 bgColor2 = 0xffaa00;
                 borderColor = 0xffdd00;
-            } else if (index === 1) {
+            } else if (realRank === 2) {
                 // Argent
                 bgColor1 = 0xc0c0c0;
                 bgColor2 = 0xa0a0a0;
                 borderColor = 0xe0e0e0;
-            } else if (index === 2) {
+            } else if (realRank === 3) {
                 // Bronze
                 bgColor1 = 0xcd7f32;
                 bgColor2 = 0xb8722c;
@@ -170,20 +193,20 @@ export default class Leaderboard extends Phaser.Scene {
 
             entryContainer.add(bg);
 
-            // Médailles pour le top 3
+            // Médailles pour le top 3 (basé sur le rang réel)
             let medal = "";
-            if (index === 0) medal = "🥇";
-            else if (index === 1) medal = "🥈";
-            else if (index === 2) medal = "🥉";
-            else medal = `${index + 1}.`;
+            if (realRank === 1) medal = "🥇";
+            else if (realRank === 2) medal = "🥈";
+            else if (realRank === 3) medal = "🥉";
+            else medal = `${realRank}.`;
 
             // Rang
             const rankText = this.add.text(-380, 0, medal, {
                 fontFamily: "Arial Black",
                 fontSize: "28px",
-                color: index < 3 ? "#000000" : "#ffffff",
-                stroke: index < 3 ? "#ffffff" : "#000000",
-                strokeThickness: index < 3 ? 2 : 3,
+                color: realRank <= 3 ? "#000000" : "#ffffff",
+                stroke: realRank <= 3 ? "#ffffff" : "#000000",
+                strokeThickness: realRank <= 3 ? 2 : 3,
             });
             rankText.setOrigin(0, 0.5);
             entryContainer.add(rankText);
@@ -192,9 +215,9 @@ export default class Leaderboard extends Phaser.Scene {
             const nameText = this.add.text(-320, 0, entry.playerName, {
                 fontFamily: "Arial Black",
                 fontSize: "24px",
-                color: index < 3 ? "#000000" : "#ffffff",
-                stroke: index < 3 ? "#ffffff" : "#000000",
-                strokeThickness: index < 3 ? 2 : 3,
+                color: realRank <= 3 ? "#000000" : "#ffffff",
+                stroke: realRank <= 3 ? "#ffffff" : "#000000",
+                strokeThickness: realRank <= 3 ? 2 : 3,
             });
             nameText.setOrigin(0, 0.5);
             entryContainer.add(nameText);
@@ -207,9 +230,9 @@ export default class Leaderboard extends Phaser.Scene {
                 {
                     fontFamily: "Arial Black",
                     fontSize: "24px",
-                    color: index < 3 ? "#000000" : "#ffffff",
-                    stroke: index < 3 ? "#ffffff" : "#000000",
-                    strokeThickness: index < 3 ? 2 : 3,
+                    color: realRank <= 3 ? "#000000" : "#ffffff",
+                    stroke: realRank <= 3 ? "#ffffff" : "#000000",
+                    strokeThickness: realRank <= 3 ? 2 : 3,
                 }
             );
             scoreText.setOrigin(1, 0.5);
@@ -229,7 +252,7 @@ export default class Leaderboard extends Phaser.Scene {
             });
 
             // Animation de hover pour les entrées du podium
-            if (index < 3) {
+            if (realRank <= 3) {
                 this.tweens.add({
                     targets: entryContainer,
                     scaleX: 1.02,
