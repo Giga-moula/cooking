@@ -17,6 +17,12 @@ export default class Shop extends Phaser.Scene {
     private onClose?: () => void;
 
     private upgradeButtons: Phaser.GameObjects.Container[] = [];
+    private continueButton?: Phaser.GameObjects.Container;
+    
+    // Navigation au clavier
+    private selectedIndex: number = 0; // -1 pour le bouton continuer, 0+ pour les upgrades
+    private selectionIndicator?: Phaser.GameObjects.Graphics;
+    private upgradesPerRow: number = 3;
 
     constructor() {
         super("Shop");
@@ -28,12 +34,17 @@ export default class Shop extends Phaser.Scene {
         coinsEarned: number;
         waveNumber: number;
         onClose: () => void;
+        selectedIndex?: number;
     }) {
         this.currencyManager = data.currencyManager;
         this.upgradeManager = data.upgradeManager;
         this.coinsEarned = data.coinsEarned;
         this.waveNumber = data.waveNumber;
         this.onClose = data.onClose;
+        // Restaurer la sélection précédente si elle existe
+        if (data.selectedIndex !== undefined) {
+            this.selectedIndex = data.selectedIndex;
+        }
     }
 
     create() {
@@ -124,6 +135,19 @@ export default class Shop extends Phaser.Scene {
 
         // Bouton continuer
         this.createContinueButton(container, containerHeight);
+
+        // Créer l'indicateur de sélection
+        this.selectionIndicator = this.add.graphics();
+        this.selectionIndicator.setDepth(5002);
+        this.selectionIndicator.setScrollFactor(0);
+        container.add(this.selectionIndicator);
+
+        // Initialiser la sélection sur le premier upgrade (si pas déjà défini dans init)
+        // selectedIndex est déjà défini si on vient d'un restart après achat
+        this.updateSelectionIndicator();
+
+        // Configurer les contrôles clavier
+        this.setupKeyboardControls();
     }
 
     /**
@@ -326,13 +350,14 @@ export default class Shop extends Phaser.Scene {
         if (this.currencyManager.spendCoins(upgrade.cost)) {
             this.upgradeManager.purchaseUpgrade(upgrade.id);
 
-            // Rafraîchir l'affichage
+            // Rafraîchir l'affichage en gardant la sélection actuelle
             this.scene.restart({
                 currencyManager: this.currencyManager,
                 upgradeManager: this.upgradeManager,
                 coinsEarned: 0,
                 waveNumber: this.waveNumber,
                 onClose: this.onClose,
+                selectedIndex: this.selectedIndex,
             });
         }
     }
@@ -345,6 +370,7 @@ export default class Shop extends Phaser.Scene {
         containerHeight: number
     ): void {
         const buttonContainer = this.add.container(0, containerHeight / 2 - 40);
+        this.continueButton = buttonContainer;
         container.add(buttonContainer);
 
         // Fond du bouton
@@ -442,6 +468,157 @@ export default class Shop extends Phaser.Scene {
 
         // Fermer la scène
         this.scene.stop("Shop");
+    }
+
+    /**
+     * Configure les contrôles clavier pour la navigation
+     */
+    private setupKeyboardControls(): void {
+        // Touches de navigation
+        const keyZ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+        const keyQ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+        const keyS = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+        const keyD = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        const keyE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+        // Haut (Z)
+        keyZ?.on('down', () => {
+            this.moveSelection(0, -1);
+        });
+
+        // Bas (S)
+        keyS?.on('down', () => {
+            this.moveSelection(0, 1);
+        });
+
+        // Gauche (Q)
+        keyQ?.on('down', () => {
+            this.moveSelection(-1, 0);
+        });
+
+        // Droite (D)
+        keyD?.on('down', () => {
+            this.moveSelection(1, 0);
+        });
+
+        // Sélection (E)
+        keyE?.on('down', () => {
+            this.selectCurrentItem();
+        });
+    }
+
+    /**
+     * Déplace la sélection dans la direction donnée
+     */
+    private moveSelection(dx: number, dy: number): void {
+        const totalUpgrades = this.upgradeButtons.length;
+        
+        // Si on est sur le bouton continuer
+        if (this.selectedIndex === -1) {
+            if (dy < 0) {
+                // Monter vers la dernière ligne d'upgrades
+                const lastRow = Math.floor((totalUpgrades - 1) / this.upgradesPerRow);
+                const lastCol = (totalUpgrades - 1) % this.upgradesPerRow;
+                this.selectedIndex = lastRow * this.upgradesPerRow + Math.min(lastCol, this.upgradesPerRow - 1);
+                this.updateSelectionIndicator();
+            }
+            return;
+        }
+
+        // Calculer la position actuelle dans la grille
+        const currentRow = Math.floor(this.selectedIndex / this.upgradesPerRow);
+        const currentCol = this.selectedIndex % this.upgradesPerRow;
+
+        // Calculer la nouvelle position
+        let newRow = currentRow + dy;
+        let newCol = currentCol + dx;
+
+        // Gérer les déplacements horizontaux
+        if (dx !== 0) {
+            // Limiter les colonnes
+            if (newCol < 0) newCol = 0;
+            if (newCol >= this.upgradesPerRow) newCol = this.upgradesPerRow - 1;
+        }
+
+        // Calculer le nouvel index
+        let newIndex = newRow * this.upgradesPerRow + newCol;
+
+        // Si on monte au-dessus de la première rangée, ne rien faire
+        if (newRow < 0) {
+            return;
+        }
+
+        // Si on descend en dessous de la dernière rangée, aller au bouton continuer
+        const lastRow = Math.floor((totalUpgrades - 1) / this.upgradesPerRow);
+        if (newRow > lastRow) {
+            this.selectedIndex = -1;
+            this.updateSelectionIndicator();
+            return;
+        }
+
+        // Vérifier que le nouvel index est valide
+        if (newIndex >= 0 && newIndex < totalUpgrades) {
+            this.selectedIndex = newIndex;
+            this.updateSelectionIndicator();
+        }
+    }
+
+    /**
+     * Sélectionne l'élément actuellement en surbrillance
+     */
+    private selectCurrentItem(): void {
+        if (this.selectedIndex === -1) {
+            // Fermer le shop
+            this.closeShop();
+        } else if (this.selectedIndex >= 0 && this.selectedIndex < this.upgradeButtons.length) {
+            // Acheter l'upgrade sélectionné
+            const upgrade = this.upgradeManager?.getAllUpgrades()[this.selectedIndex];
+            if (upgrade) {
+                const canAfford = this.currencyManager?.canAfford(upgrade.cost) || false;
+                const canPurchase = this.upgradeManager?.canPurchase(upgrade.id) || false;
+                const isMaxed = upgrade.currentLevel >= upgrade.maxLevel;
+
+                if (!isMaxed && canAfford && canPurchase) {
+                    this.purchaseUpgrade(upgrade);
+                }
+            }
+        }
+    }
+
+    /**
+     * Met à jour l'indicateur visuel de sélection
+     */
+    private updateSelectionIndicator(): void {
+        if (!this.selectionIndicator) return;
+
+        this.selectionIndicator.clear();
+
+        if (this.selectedIndex === -1) {
+            // Sélection sur le bouton continuer
+            if (this.continueButton) {
+                this.selectionIndicator.lineStyle(4, 0x00ffff, 1);
+                this.selectionIndicator.strokeRoundedRect(
+                    this.continueButton.x - 125,
+                    this.continueButton.y - 30,
+                    250,
+                    60,
+                    10
+                );
+            }
+        } else if (this.selectedIndex >= 0 && this.selectedIndex < this.upgradeButtons.length) {
+            // Sélection sur un upgrade
+            const selectedButton = this.upgradeButtons[this.selectedIndex];
+            if (selectedButton) {
+                this.selectionIndicator.lineStyle(4, 0x00ffff, 1);
+                this.selectionIndicator.strokeRoundedRect(
+                    selectedButton.x - 130,
+                    selectedButton.y - 115,
+                    260,
+                    230,
+                    10
+                );
+            }
+        }
     }
 }
 
