@@ -1,11 +1,12 @@
 import {
     CraftDirection,
     getCraftingItem,
-    isValidCraftSequence,
     getRandomCraftSequence,
     getTransformationSequence,
+    isValidCraftSequence,
 } from "../config/craftingItems";
 import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
+import { ActionSoundManager } from "../managers/ActionSoundManager";
 
 // Ré-exporter le type CraftDirection
 export type { CraftDirection };
@@ -23,6 +24,7 @@ export class CraftActions {
     private playerManager: any; // Référence au PlayerManager
     private playerNumber: number;
     private mapManager: any; // Référence au MapManager
+    private actionSoundManager: ActionSoundManager | null;
 
     // Éléments visuels
     private controlsBox?: Phaser.GameObjects.Sprite;
@@ -67,12 +69,25 @@ export class CraftActions {
         scene: Phaser.Scene,
         playerManager: any,
         playerNumber: number,
-        mapManager: any
+        mapManager: any,
+        actionSoundManager: ActionSoundManager | null = null
     ) {
         this.scene = scene;
         this.playerManager = playerManager;
         this.playerNumber = playerNumber;
         this.mapManager = mapManager;
+        this.actionSoundManager = actionSoundManager;
+    }
+
+    /**
+     * Définit l'ActionSoundManager
+     */
+    public setActionSoundManager(actionSoundManager: ActionSoundManager): void {
+        console.log(
+            "🎵 CraftActions: ActionSoundManager défini",
+            actionSoundManager
+        );
+        this.actionSoundManager = actionSoundManager;
     }
 
     /**
@@ -96,6 +111,9 @@ export class CraftActions {
         this.craftSequence.isActive = true;
         this.craftSequence.currentIndex = 0;
         this.craftSequence.tileTypeId = craftingTileId;
+
+        // Réinitialiser la séquence des sons pour commencer par goodInput1
+        this.actionSoundManager?.resetInputSequence();
 
         // Immobiliser le joueur
         this.setPlayerMovement(false);
@@ -126,14 +144,14 @@ export class CraftActions {
      */
     private generateSequenceForTile(tileTypeId: number): void {
         const target = this.playerManager.getTargetPosition();
-        
+
         // Essayer d'abord de trouver une séquence spécifique basée sur la transformation
         const specificSequence = this.getSpecificSequenceForTransformation(
             target.x,
             target.y,
             tileTypeId
         );
-        
+
         if (specificSequence) {
             this.craftSequence.directions = specificSequence;
         } else {
@@ -169,18 +187,27 @@ export class CraftActions {
                 if (!counterManager.hasItemOnCounter(gridX, gridY)) {
                     return null;
                 }
-                const itemOnCounter = counterManager.getItemTypeOnCounter(gridX, gridY);
+                const itemOnCounter = counterManager.getItemTypeOnCounter(
+                    gridX,
+                    gridY
+                );
                 if (!itemOnCounter) {
                     return null;
                 }
 
                 // Vérifier s'il y a une transformation spéciale possible
-                const transformResult = recipeManager.performSpecialTransformation
-                    ? recipeManager.performSpecialTransformation(itemOnCounter)
-                    : null;
-                
+                const transformResult =
+                    recipeManager.performSpecialTransformation
+                        ? recipeManager.performSpecialTransformation(
+                              itemOnCounter
+                          )
+                        : null;
+
                 if (transformResult) {
-                    return getTransformationSequence(itemOnCounter, transformResult);
+                    return getTransformationSequence(
+                        itemOnCounter,
+                        transformResult
+                    );
                 }
                 return null;
 
@@ -188,7 +215,10 @@ export class CraftActions {
                 if (!casseroleManager.hasItemInCasserole(gridX, gridY)) {
                     return null;
                 }
-                const itemInCasserole = casseroleManager.getItemInCasserole(gridX, gridY);
+                const itemInCasserole = casseroleManager.getItemInCasserole(
+                    gridX,
+                    gridY
+                );
                 if (!itemInCasserole) {
                     return null;
                 }
@@ -197,9 +227,12 @@ export class CraftActions {
                 const cookingRecipe = recipeManager.getCasseroleCooking
                     ? recipeManager.getCasseroleCooking(itemInCasserole)
                     : null;
-                
+
                 if (cookingRecipe) {
-                    return getTransformationSequence(itemInCasserole, cookingRecipe.to);
+                    return getTransformationSequence(
+                        itemInCasserole,
+                        cookingRecipe.to
+                    );
                 }
                 return null;
 
@@ -225,7 +258,10 @@ export class CraftActions {
         }
 
         // Pour la table de transformation (10), vérifier si c'est un craft instantané
-        if (tileTypeId === 10 && this.isInstantCraftRecipe(target.x, target.y)) {
+        if (
+            tileTypeId === 10 &&
+            this.isInstantCraftRecipe(target.x, target.y)
+        ) {
             return null;
         }
 
@@ -243,7 +279,7 @@ export class CraftActions {
     private isInstantCraftRecipe(gridX: number, gridY: number): boolean {
         const counterManager = this.mapManager.getCounterManager();
         const recipeManager = this.mapManager.getRecipeManager();
-        
+
         if (!counterManager || !recipeManager) {
             return false;
         }
@@ -273,8 +309,10 @@ export class CraftActions {
         const allRecipes = recipeManager.getAllRecipes();
         for (const recipe of allRecipes) {
             if (
-                (itemOnCounter === recipe.ingredient1 && itemInHand === recipe.ingredient2) ||
-                (itemOnCounter === recipe.ingredient2 && itemInHand === recipe.ingredient1)
+                (itemOnCounter === recipe.ingredient1 &&
+                    itemInHand === recipe.ingredient2) ||
+                (itemOnCounter === recipe.ingredient2 &&
+                    itemInHand === recipe.ingredient1)
             ) {
                 // Vérifier si c'est une recette instantanée
                 if (INSTANT_CRAFT_RECIPES.includes(recipe.id)) {
@@ -700,16 +738,20 @@ export class CraftActions {
                 this.rotationTracker.completedDirections.length >= 5
             ) {
                 // Rotation complète réussie
+                this.actionSoundManager?.playGoodInput();
                 this.playSuccessAnimation(() => {
                     this.craftSequence.currentIndex++;
                     this.checkSequenceCompletion();
                     this.isProcessingInput = false;
                 });
             } else {
+                // Direction correcte mais rotation pas encore terminée
+                this.actionSoundManager?.playGoodInput();
                 this.isProcessingInput = false;
             }
         } else {
             // Mauvaise direction dans la rotation
+            this.actionSoundManager?.playFailedInput();
             this.playErrorAnimation(() => {
                 // Enregistrer l'échec sur le four si c'est un four
                 this.recordCraftFailure();
@@ -730,6 +772,11 @@ export class CraftActions {
     ): void {
         if (direction === expectedDirection) {
             // Bonne direction
+            console.log(
+                "🎵 CraftActions: Tentative de jouer good input, actionSoundManager:",
+                this.actionSoundManager
+            );
+            this.actionSoundManager?.playGoodInput();
             this.playSuccessAnimation(() => {
                 this.craftSequence.currentIndex++;
                 this.checkSequenceCompletion();
@@ -737,6 +784,11 @@ export class CraftActions {
             });
         } else {
             // Mauvaise direction
+            console.log(
+                "🎵 CraftActions: Tentative de jouer failed input, actionSoundManager:",
+                this.actionSoundManager
+            );
+            this.actionSoundManager?.playFailedInput();
             this.playErrorAnimation(() => {
                 // Enregistrer l'échec sur le four si c'est un four
                 this.recordCraftFailure();
@@ -980,3 +1032,4 @@ export class CraftActions {
         }
     }
 }
+

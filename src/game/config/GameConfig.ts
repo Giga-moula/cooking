@@ -57,7 +57,7 @@ export class GameConfig {
     // Configuration des textures
     static readonly TEXTURE_KEYS = {
         WALL: "iso-wall",
-        DELIVERY_ZONE: "iso-delivery-zone",
+        DELIVERY_ZONE: "caisse",
         TRANSFORMATION_TABLE: "table-mono", // Maintenant utilise les vraies tables
         OVEN: "oven",
         CRAFT_PLAN: "craft_plan",

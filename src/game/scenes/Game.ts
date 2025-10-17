@@ -177,7 +177,8 @@ export default class Game extends Phaser.Scene {
             this.recipeManager
         );
 
-        // Connecter les joueurs au MapManager pour le système de craft
+        // Configuration du MapManager pour les joueurs (sans ActionSoundManager pour l'instant)
+        console.log("🎵 Game: Configuration du MapManager pour les joueurs");
         this.player1.setMapManager(this.mapManager);
         this.player2.setMapManager(this.mapManager);
 
@@ -226,9 +227,9 @@ export default class Game extends Phaser.Scene {
         this.scoreManager.initializeScoreDisplay();
 
         // Initialiser le système de monnaie et d'upgrades
-        this.currencyManager = new CurrencyManager(this, 0);        
+        this.currencyManager = new CurrencyManager(this, 0);
         this.upgradeManager = new UpgradeManager();
-        
+
         // Initialiser l'affichage de la monnaie
         this.currencyManager.initializeCoinDisplay(850, 20);
 
@@ -302,6 +303,39 @@ export default class Game extends Phaser.Scene {
             this.casseroleManager,
             this.trashManager
         );
+
+        // Connecter le VoiceManager et ActionSoundManager aux managers
+        if (this.interactionSystem) {
+            const voiceManager = this.interactionSystem.getVoiceManager();
+            const actionSoundManager =
+                this.interactionSystem.getActionSoundManager();
+
+            // Connecter au CommunicationManager
+            if (this.communicationManager) {
+                this.communicationManager.setVoiceManager(voiceManager);
+                this.communicationManager.setActionSoundManager(
+                    actionSoundManager
+                );
+            }
+
+            // Connecter l'ActionSoundManager aux joueurs
+            console.log(
+                "🎵 Game: Configuration de l'ActionSoundManager pour les joueurs",
+                actionSoundManager
+            );
+            this.player1.setActionSoundManager(actionSoundManager);
+            this.player2.setActionSoundManager(actionSoundManager);
+
+            // Connecter au CasseroleManager
+            if (this.casseroleManager) {
+                this.casseroleManager.setVoiceManager(voiceManager);
+            }
+
+            // Connecter au OvenManager
+            if (this.ovenManager) {
+                this.ovenManager.setVoiceManager(voiceManager);
+            }
+        }
 
         // Touche espace pour retourner au menu
         this.spaceKeyHandler = () => {
@@ -528,6 +562,12 @@ export default class Game extends Phaser.Scene {
             );
 
             // Reconnecter les joueurs au MapManager après régénération
+            if (this.interactionSystem) {
+                const actionSoundManager =
+                    this.interactionSystem.getActionSoundManager();
+                this.player1.setActionSoundManager(actionSoundManager);
+                this.player2.setActionSoundManager(actionSoundManager);
+            }
             this.player1.setMapManager(this.mapManager);
             this.player2.setMapManager(this.mapManager);
 
@@ -815,6 +855,11 @@ export default class Game extends Phaser.Scene {
         if (this.livesManager) {
             this.livesManager.cleanup();
         }
+
+        // Nettoyer le VoiceManager et ActionSoundManager
+        if (this.interactionSystem) {
+            this.interactionSystem.cleanup();
+        }
     }
 
     /* END-USER-CODE */
@@ -823,3 +868,4 @@ export default class Game extends Phaser.Scene {
 /* END OF COMPILED CODE */
 
 // You can write more code here
+

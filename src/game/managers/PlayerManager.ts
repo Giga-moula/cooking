@@ -1,16 +1,17 @@
 import Phaser from "phaser";
-import { IsometricUtils } from "../utils/IsometricUtils";
 import { ControlsManager, PlayerControls } from "../actions/ControlsManager";
-import { InventoryManager } from "./InventoryManager";
-import { GameConfig } from "../config/GameConfig";
-import { CraftActions, type CraftDirection } from "../actions/CraftActions";
+import { CraftActions } from "../actions/CraftActions";
 import { DashAction } from "../actions/dashAction";
 import {
+    DEPTH_CONSTANTS,
     PHYSICS_CONSTANTS,
     PLAYER_OFFSET,
-    DEPTH_CONSTANTS,
 } from "../config/Constants";
+import { GameConfig } from "../config/GameConfig";
 import { IMapManager } from "../types/interfaces";
+import { IsometricUtils } from "../utils/IsometricUtils";
+import { ActionSoundManager } from "./ActionSoundManager";
+import { InventoryManager } from "./InventoryManager";
 
 /**
  * Gestionnaire du joueur : mouvement, sprites, position, profondeur
@@ -40,6 +41,7 @@ export class PlayerManager {
     private inventory: InventoryManager;
     private craftActions: CraftActions | null = null;
     private dashAction: DashAction;
+    private actionSoundManager: ActionSoundManager | null = null;
 
     constructor(
         scene: Phaser.Scene,
@@ -543,6 +545,24 @@ export class PlayerManager {
     }
 
     /**
+     * Définit la référence vers l'ActionSoundManager
+     */
+    setActionSoundManager(actionSoundManager: ActionSoundManager): void {
+        console.log(
+            `🎵 PlayerManager ${this.playerNumber}: Configuration de l'ActionSoundManager`,
+            actionSoundManager
+        );
+        this.actionSoundManager = actionSoundManager;
+        // Si CraftActions existe déjà, lui passer l'ActionSoundManager
+        if (this.craftActions) {
+            console.log(
+                `🎵 PlayerManager ${this.playerNumber}: Passage de l'ActionSoundManager à CraftActions`
+            );
+            this.craftActions.setActionSoundManager(actionSoundManager);
+        }
+    }
+
+    /**
      * Définit la référence vers le MapManager
      */
     setMapManager(mapManager: IMapManager): void {
@@ -551,8 +571,17 @@ export class PlayerManager {
             this.scene,
             this,
             this.playerNumber,
-            mapManager
+            mapManager,
+            this.actionSoundManager
         );
+
+        // Si l'ActionSoundManager n'était pas encore défini, le passer maintenant
+        if (this.actionSoundManager && this.craftActions) {
+            console.log(
+                `🎵 PlayerManager ${this.playerNumber}: Passage de l'ActionSoundManager à CraftActions après création`
+            );
+            this.craftActions.setActionSoundManager(this.actionSoundManager);
+        }
 
         // Passer la référence du MapManager au DashAction
         this.dashAction.setMapManager(mapManager);
@@ -610,3 +639,4 @@ export class PlayerManager {
         return this.dashAction.isDashActive();
     }
 }
+

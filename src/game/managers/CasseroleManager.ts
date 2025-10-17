@@ -1,15 +1,18 @@
 import Phaser from "phaser";
-import { IsometricUtils } from "../utils/IsometricUtils";
-import { RecipeManager } from "./RecipeManager";
-import { BaseCookingManager } from "./BaseCookingManager";
 import { PARTICLE_CONSTANTS, TIME_CONSTANTS } from "../config/Constants";
+import { IsometricUtils } from "../utils/IsometricUtils";
+import { BaseCookingManager } from "./BaseCookingManager";
+import { RecipeManager } from "./RecipeManager";
+import { VoiceManager } from "./VoiceManager";
 
 /**
  * Gestionnaire des interactions avec la casserole
  * Permet de faire fondre le beurre et transformer le sucre en caramel
  */
 export class CasseroleManager extends BaseCookingManager {
-    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+    private activeParticles: Phaser.GameObjects.Particles.ParticleEmitter[] =
+        [];
+    private voiceManager?: VoiceManager;
 
     constructor(
         scene: Phaser.Scene,
@@ -21,9 +24,20 @@ export class CasseroleManager extends BaseCookingManager {
     }
 
     /**
+     * Définit le gestionnaire de voix
+     */
+    setVoiceManager(voiceManager: VoiceManager): void {
+        this.voiceManager = voiceManager;
+    }
+
+    /**
      * Place un objet dans la casserole
      */
-    placeItemInCasserole(gridX: number, gridY: number, itemType: string): boolean {
+    placeItemInCasserole(
+        gridX: number,
+        gridY: number,
+        itemType: string
+    ): boolean {
         return this.placeItem(gridX, gridY, itemType);
     }
 
@@ -51,7 +65,11 @@ export class CasseroleManager extends BaseCookingManager {
     /**
      * Cuire/transformer un objet dans la casserole (cuisson instantanée)
      */
-    cookInCasserole(gridX: number, gridY: number): boolean {
+    cookInCasserole(
+        gridX: number,
+        gridY: number,
+        playerNumber: number = 1
+    ): boolean {
         const key = `${gridX},${gridY}`;
         const item = this.itemsInDevice.get(key);
 
@@ -62,7 +80,8 @@ export class CasseroleManager extends BaseCookingManager {
         const currentItem = item.texture.key;
 
         // Chercher la recette de cuisson à la casserole
-        const cookingRecipe = this.recipeManager.getCasseroleCooking(currentItem);
+        const cookingRecipe =
+            this.recipeManager.getCasseroleCooking(currentItem);
 
         if (!cookingRecipe) {
             return false;
@@ -72,6 +91,17 @@ export class CasseroleManager extends BaseCookingManager {
         item.setTexture(cookingRecipe.to);
         this.playCookingEffect(gridX, gridY);
 
+        // Déclencher une voix seulement pour le beurre et le sucre
+        if (
+            this.voiceManager &&
+            (currentItem === "butter" || currentItem === "sugar")
+        ) {
+            console.log(
+                `🍳 Cuisson de ${currentItem} dans la casserole - déclencher voix (Joueur ${playerNumber})`
+            );
+            this.voiceManager.playVoiceForCasserole(playerNumber);
+        }
+
         return true;
     }
 
@@ -79,8 +109,8 @@ export class CasseroleManager extends BaseCookingManager {
      * Cuire un objet dans la casserole
      * Casserole : Sucre + Beurre uniquement
      */
-    cook(gridX: number, gridY: number): boolean {
-        return this.cookInCasserole(gridX, gridY);
+    cook(gridX: number, gridY: number, playerNumber: number = 1): boolean {
+        return this.cookInCasserole(gridX, gridY, playerNumber);
     }
 
     /**
@@ -105,15 +135,18 @@ export class CasseroleManager extends BaseCookingManager {
         // Tracker les particules actives
         this.activeParticles.push(particles);
 
-        this.scene.time.delayedCall(TIME_CONSTANTS.PARTICLE_LIFESPAN_STEAM, () => {
-            const index = this.activeParticles.indexOf(particles);
-            if (index > -1) {
-                this.activeParticles.splice(index, 1);
+        this.scene.time.delayedCall(
+            TIME_CONSTANTS.PARTICLE_LIFESPAN_STEAM,
+            () => {
+                const index = this.activeParticles.indexOf(particles);
+                if (index > -1) {
+                    this.activeParticles.splice(index, 1);
+                }
+                if (particles && particles.scene) {
+                    particles.destroy();
+                }
             }
-            if (particles && particles.scene) {
-                particles.destroy();
-            }
-        });
+        );
     }
 
     /**
@@ -128,14 +161,15 @@ export class CasseroleManager extends BaseCookingManager {
      */
     cleanup(): void {
         // Nettoyer les particules actives
-        this.activeParticles.forEach(particles => {
+        this.activeParticles.forEach((particles) => {
             if (particles && particles.scene) {
                 particles.destroy();
             }
         });
         this.activeParticles = [];
-        
+
         // Appeler le cleanup parent
         super.cleanup();
     }
 }
+
