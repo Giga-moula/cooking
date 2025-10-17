@@ -71,8 +71,8 @@ export class TutorialMapManager extends MapManager {
             description: "Map 8x8 pour le tutoriel cookie-choco",
             mapData: grid,
             spawnPoints: {
-                player1: { x: 1, y: 6 },
-                player2: { x: 2, y: 6 },
+                player1: { x: 1, y: 5 },
+                player2: { x: 2, y: 5 },
             },
             deliveryZone: { x: 5, y: 5 },
             mapWidth: mapWidth,
