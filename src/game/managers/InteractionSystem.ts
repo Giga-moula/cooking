@@ -72,14 +72,16 @@ export class InteractionSystem {
      * Cette méthode doit être appelée uniquement lors de l'appui sur la touche de transformation (R/P)
      */
     public handlePlayerTransformation(player: PlayerManager): void {
-        const playerSprite = player.getPlayer();
+        const playerSprite = player?.getPlayer();
         if (!playerSprite) return;
 
         const playerGridX = player.getPlayerGridX();
         const playerGridY = player.getPlayerGridY();
         const target = player.getTargetPosition();
-        const targetX = target.x;
-        const targetY = target.y;
+        if (!target) return;
+
+        const targetX = target.x ?? playerGridX;
+        const targetY = target.y ?? playerGridY;
 
         // Vérifier d'abord le four pour la cuisson (utilise le timer, pas le système de craft)
         if (this.handleOvenCooking(targetX, targetY, player)) {
@@ -164,20 +166,22 @@ export class InteractionSystem {
      * Cette méthode doit être appelée uniquement lors de l'appui sur la touche d'interaction (E/O)
      */
     public handlePlayerInteraction(player: PlayerManager): void {
-        const playerSprite = player.getPlayer();
+        const playerSprite = player?.getPlayer();
         if (!playerSprite) return;
 
-        const isoMap = this.mapManager.getIsoMap();
+        const isoMap = this.mapManager?.getIsoMap();
         if (!isoMap) return;
 
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return;
 
         const playerGridX = player.getPlayerGridX();
         const playerGridY = player.getPlayerGridY();
         const target = player.getTargetPosition();
-        let targetX = target.x;
-        let targetY = target.y;
+        if (!target) return;
+
+        let targetX = target.x ?? playerGridX;
+        let targetY = target.y ?? playerGridY;
 
         // Si le joueur est sur une tile interactive, interagir avec cette même position
         if (this.isInteractiveTile(playerGridX, playerGridY, isoMap)) {
@@ -287,7 +291,7 @@ export class InteractionSystem {
         player: PlayerManager
     ): boolean {
         // Vérifier si la cible est la zone de livraison (utilise le MapManager pour la vraie position)
-        const isTargetDeliveryZone = this.mapManager.isDeliveryZone(
+        const isTargetDeliveryZone = this.mapManager?.isDeliveryZone(
             targetX,
             targetY
         );
@@ -296,7 +300,7 @@ export class InteractionSystem {
             return false;
         }
 
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
 
         // Si l'inventaire est vide, on montre juste qu'on a détecté la zone
         if (!inventory || inventory.isEmpty()) {
@@ -307,23 +311,23 @@ export class InteractionSystem {
         if (!carriedItem) return true;
 
         // Vérifier si c'est un plat fini
-        if (this.recipeManager.isDish(carriedItem)) {
-            if (this.orderDisplayManager.checkOrderCompletion(carriedItem)) {
+        if (this.recipeManager?.isDish(carriedItem)) {
+            if (this.orderDisplayManager?.checkOrderCompletion(carriedItem)) {
                 // Livraison réussie
                 inventory.removeItem();
-                player.removeCarriedItem();
+                player?.removeCarriedItem();
 
                 const points =
-                    this.scoreManager.calculateRecipePoints(carriedItem);
-                this.scoreManager.addScore(points, `Livraison ${carriedItem}`);
+                    this.scoreManager?.calculateRecipePoints(carriedItem) ?? 0;
+                this.scoreManager?.addScore(points, `Livraison ${carriedItem}`);
 
                 // Bonus de temps : +15 secondes par livraison + bonus des upgrades
-                if (this.timerManager && this.timerManager.isTimerRunning()) {
+                if (this.timerManager?.isTimerRunning()) {
                     this.timerManager.addTime(15);
                     this.timerManager.addDeliveryBonus(); // Ajouter le bonus d'upgrade
                 }
 
-                this.deliveryManager.showDeliverySuccessEffect();
+                this.deliveryManager?.showDeliverySuccessEffect();
             }
         }
 
@@ -339,31 +343,31 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        if (!this.mapManager.isTransformationTable(targetX, targetY)) {
+        if (!this.mapManager?.isTransformationTable(targetX, targetY)) {
             return false;
         }
 
-        const inventory = player.getInventory();
-        const playerSprite = player.getPlayer();
+        const inventory = player?.getInventory();
+        const playerSprite = player?.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-        const hasItemOnTable = this.counterManager.hasItemOnCounter(
+        const hasItemOnTable = this.counterManager?.hasItemOnCounter(
             targetX,
             targetY
-        );
+        ) ?? false;
         const hasItemInHand = !inventory.isEmpty();
 
         // Cas 1: Table pleine + Main pleine = Essayer de combiner (recette)
         if (hasItemOnTable && hasItemInHand) {
             const itemInHand = inventory.peekItem();
-            const itemOnTable = this.counterManager.getItemTypeOnCounter(
+            const itemOnTable = this.counterManager?.getItemTypeOnCounter(
                 targetX,
                 targetY
             );
 
             if (itemInHand && itemOnTable) {
                 // Essayer d'abord une recette (combinaison)
-                const resultId = this.recipeManager.combineIngredients(
+                const resultId = this.recipeManager?.combineIngredients(
                     itemInHand,
                     itemOnTable
                 );
@@ -371,22 +375,22 @@ export class InteractionSystem {
                 if (resultId) {
                     // Retirer les ingrédients
                     inventory.removeItem();
-                    player.removeCarriedItem();
-                    this.counterManager.removeItemFromCounter(targetX, targetY);
+                    player?.removeCarriedItem();
+                    this.counterManager?.removeItemFromCounter(targetX, targetY);
 
                     // Créer le résultat
-                    this.counterManager.placeItemOnCounter(
+                    this.counterManager?.placeItemOnCounter(
                         targetX,
                         targetY,
                         resultId
                     );
 
                     // Effets visuels
-                    this.counterManager.playFusionEffect(targetX, targetY);
+                    this.counterManager?.playFusionEffect(targetX, targetY);
                     const ingredient =
-                        this.recipeManager.getIngredient(resultId);
+                        this.recipeManager?.getIngredient(resultId);
                     if (ingredient) {
-                        this.counterManager.showCombinationMessage(
+                        this.counterManager?.showCombinationMessage(
                             `✨ ${ingredient.name} créé !`,
                             targetX,
                             targetY
@@ -398,13 +402,13 @@ export class InteractionSystem {
             }
 
             // Si pas de recette, essayer transformation spéciale
-            const success = this.counterManager.performSpecialTransformation(
+            const success = this.counterManager?.performSpecialTransformation(
                 targetX,
                 targetY,
                 inventory
-            );
+            ) ?? false;
             if (success) {
-                player.updateCarriedItem();
+                player?.updateCarriedItem();
                 return true;
             }
 
@@ -413,13 +417,13 @@ export class InteractionSystem {
 
         // Cas 2: Table pleine + Main vide = Essayer transformation simple
         if (hasItemOnTable && !hasItemInHand) {
-            const success = this.counterManager.performSpecialTransformation(
+            const success = this.counterManager?.performSpecialTransformation(
                 targetX,
                 targetY,
                 inventory
-            );
+            ) ?? false;
             if (success) {
-                player.updateCarriedItem();
+                player?.updateCarriedItem();
             }
             return true;
         }
@@ -437,23 +441,18 @@ export class InteractionSystem {
         player: PlayerManager,
         isoMap: { isCounter: (x: number, y: number) => boolean }
     ): boolean {
-        if (!isoMap.isCounter(targetX, targetY)) {
+        if (!isoMap?.isCounter(targetX, targetY)) {
             return false;
         }
 
-        const isTransformTable = this.mapManager.isTransformationTable(
-            targetX,
-            targetY
-        );
-
-        const inventory = player.getInventory();
-        const playerSprite = player.getPlayer();
+        const inventory = player?.getInventory();
+        const playerSprite = player?.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-        const hasItemOnCounter = this.counterManager.hasItemOnCounter(
+        const hasItemOnCounter = this.counterManager?.hasItemOnCounter(
             targetX,
             targetY
-        );
+        ) ?? false;
         const inventoryEmpty = inventory.isEmpty();
 
         // Cas 1: Ramasser un objet de la table
@@ -477,21 +476,21 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return false;
 
-        const itemType = this.counterManager.removeItemFromCounter(
+        const itemType = this.counterManager?.removeItemFromCounter(
             targetX,
             targetY
         );
 
         if (itemType) {
             inventory.addItem(itemType);
-            player.updateCarriedItem();
+            player?.updateCarriedItem();
 
             // Jouer le son de récupération réussie pour tous les items
             Logger.debug(`🎵 Récupération d'item depuis comptoir: ${itemType}`);
-            this.actionSoundManager.playRecupSuccess();
+            this.actionSoundManager?.playRecupSuccess();
 
             return true;
         }
@@ -507,13 +506,13 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return false;
 
         const itemType = inventory.removeItem();
         if (itemType) {
-            this.counterManager.placeItemOnCounter(targetX, targetY, itemType);
-            player.removeCarriedItem();
+            this.counterManager?.placeItemOnCounter(targetX, targetY, itemType);
+            player?.removeCarriedItem();
             return true;
         }
 
@@ -530,15 +529,15 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        if (!this.mapManager.isOven(targetX, targetY)) {
+        if (!this.mapManager?.isOven(targetX, targetY)) {
             return false;
         }
 
-        const inventory = player.getInventory();
-        const playerSprite = player.getPlayer();
+        const inventory = player?.getInventory();
+        const playerSprite = player?.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+        const hasItemInOven = this.ovenManager?.hasItemInOven(targetX, targetY) ?? false;
         const inventoryEmpty = inventory.isEmpty();
 
         // Cas 1: Ramasser un objet du four
@@ -564,18 +563,18 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        if (!this.mapManager.isCasserole(targetX, targetY)) {
+        if (!this.mapManager?.isCasserole(targetX, targetY)) {
             return false;
         }
 
-        const inventory = player.getInventory();
-        const playerSprite = player.getPlayer();
+        const inventory = player?.getInventory();
+        const playerSprite = player?.getPlayer();
         if (!inventory || !playerSprite) return false;
 
-        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(
+        const hasItemInCasserole = this.casseroleManager?.hasItemInCasserole(
             targetX,
             targetY
-        );
+        ) ?? false;
         const inventoryEmpty = inventory.isEmpty();
 
         // Cas 1: Ramasser un objet de la casserole
@@ -599,15 +598,15 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const itemType = this.casseroleManager.removeItemFromCasserole(
+        const itemType = this.casseroleManager?.removeItemFromCasserole(
             targetX,
             targetY
         );
         if (itemType) {
-            const inventory = player.getInventory();
+            const inventory = player?.getInventory();
             if (inventory) {
                 inventory.addItem(itemType);
-                player.updateCarriedItem();
+                player?.updateCarriedItem();
                 return true;
             }
         }
@@ -622,18 +621,18 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return false;
 
         const itemType = inventory.removeItem();
         if (itemType) {
-            const success = this.casseroleManager.placeItemInCasserole(
+            const success = this.casseroleManager?.placeItemInCasserole(
                 targetX,
                 targetY,
                 itemType
-            );
+            ) ?? false;
             if (success) {
-                player.removeCarriedItem();
+                player?.removeCarriedItem();
                 return true;
             } else {
                 // Remettre l'objet dans l'inventaire si ça a échoué
@@ -651,14 +650,14 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return false;
 
-        const itemType = this.ovenManager.removeItemFromOven(targetX, targetY);
+        const itemType = this.ovenManager?.removeItemFromOven(targetX, targetY);
 
         if (itemType) {
             inventory.addItem(itemType);
-            player.updateCarriedItem();
+            player?.updateCarriedItem();
             return true;
         }
 
@@ -673,13 +672,13 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const inventory = player.getInventory();
+        const inventory = player?.getInventory();
         if (!inventory) return false;
 
         const itemType = inventory.removeItem();
         if (itemType) {
-            this.ovenManager.placeItemInOven(targetX, targetY, itemType);
-            player.removeCarriedItem();
+            this.ovenManager?.placeItemInOven(targetX, targetY, itemType);
+            player?.removeCarriedItem();
             return true;
         }
 
@@ -694,17 +693,17 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        if (!this.mapManager.isOven(targetX, targetY)) {
+        if (!this.mapManager?.isOven(targetX, targetY)) {
             return false;
         }
 
-        const hasItemInOven = this.ovenManager.hasItemInOven(targetX, targetY);
+        const hasItemInOven = this.ovenManager?.hasItemInOven(targetX, targetY) ?? false;
 
         if (hasItemInOven) {
-            this.ovenManager.performCooking(
+            this.ovenManager?.performCooking(
                 targetX,
                 targetY,
-                player.getPlayerNumber()
+                player?.getPlayerNumber() ?? 1
             );
         }
 
@@ -719,28 +718,24 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        if (!this.mapManager.isCasserole(targetX, targetY)) {
+        if (!this.mapManager?.isCasserole(targetX, targetY)) {
             return false;
         }
 
-        const hasItemInCasserole = this.casseroleManager.hasItemInCasserole(
+        const hasItemInCasserole = this.casseroleManager?.hasItemInCasserole(
             targetX,
             targetY
-        );
+        ) ?? false;
 
         if (hasItemInCasserole) {
-            const success = this.casseroleManager.cookInCasserole(
+            this.casseroleManager?.cookInCasserole(
                 targetX,
                 targetY,
-                player.getPlayerNumber()
+                player?.getPlayerNumber() ?? 1
             );
-            if (success) {
-                return true;
-            } else {
-                return true;
-            }
+            return true;
         } else {
-            this.casseroleManager.showCookingMessage(
+            this.casseroleManager?.showCookingMessage(
                 "❌ Vide !",
                 targetX,
                 targetY
@@ -757,13 +752,15 @@ export class InteractionSystem {
         targetY: number,
         player: PlayerManager
     ): boolean {
-        const mapData = this.mapManager.getCurrentMapConfig().mapData;
-        return this.trashManager.handleTrashInteraction(
+        const mapConfig = this.mapManager?.getCurrentMapConfig();
+        if (!mapConfig?.mapData) return false;
+
+        return this.trashManager?.handleTrashInteraction(
             player,
             targetX,
             targetY,
-            mapData
-        );
+            mapConfig.mapData
+        ) ?? false;
     }
 
     /**
