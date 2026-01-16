@@ -7,6 +7,7 @@ import {
 } from "../config/craftingItems";
 import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 import { ActionSoundManager } from "../managers/ActionSoundManager";
+import { Logger } from "../utils/Logger";
 
 // Ré-exporter le type CraftDirection
 export type { CraftDirection };
@@ -83,7 +84,7 @@ export class CraftActions {
      * Définit l'ActionSoundManager
      */
     public setActionSoundManager(actionSoundManager: ActionSoundManager): void {
-        console.log(
+        Logger.debug(
             "🎵 CraftActions: ActionSoundManager défini",
             actionSoundManager
         );
@@ -100,7 +101,7 @@ export class CraftActions {
         // Vérifier si le joueur est face à un bloc de craft autorisé
         const craftingTileId = this.getCraftingTileInFront();
         if (craftingTileId === null) {
-            console.log(
+            Logger.debug(
                 `Player ${this.playerNumber}: Aucun bloc de craft valide devant le joueur`
             );
             return;
@@ -772,7 +773,7 @@ export class CraftActions {
     ): void {
         if (direction === expectedDirection) {
             // Bonne direction
-            console.log(
+            Logger.debug(
                 "🎵 CraftActions: Tentative de jouer good input, actionSoundManager:",
                 this.actionSoundManager
             );
@@ -784,7 +785,7 @@ export class CraftActions {
             });
         } else {
             // Mauvaise direction
-            console.log(
+            Logger.debug(
                 "🎵 CraftActions: Tentative de jouer failed input, actionSoundManager:",
                 this.actionSoundManager
             );
@@ -890,7 +891,7 @@ export class CraftActions {
      * Appelé quand la séquence est terminée avec succès
      */
     private onSequenceComplete(): void {
-        console.log(
+        Logger.debug(
             `Player ${this.playerNumber} completed craft sequence for tile ${this.craftSequence.tileTypeId}!`
         );
 
@@ -902,7 +903,7 @@ export class CraftActions {
                 this.craftSequence.directions
             )
         ) {
-            console.log(
+            Logger.debug(
                 `Player ${this.playerNumber}: Séquence de craft validée!`
             );
 
@@ -910,14 +911,14 @@ export class CraftActions {
             const success = this.performCrafting(this.craftSequence.tileTypeId);
 
             if (success) {
-                console.log(
+                Logger.debug(
                     `Player ${this.playerNumber}: Transformation réussie!`
                 );
 
                 // Reset les échecs pour les fours après succès
                 this.resetCraftFailures();
             } else {
-                console.log(
+                Logger.debug(
                     `Player ${this.playerNumber}: Échec de la transformation`
                 );
             }
@@ -925,7 +926,7 @@ export class CraftActions {
             // Arrêter le craft après succès
             this.stopCrafting();
         } else {
-            console.log(
+            Logger.debug(
                 `Player ${this.playerNumber}: Séquence de craft non valide`
             );
 

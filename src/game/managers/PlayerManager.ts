@@ -10,6 +10,7 @@ import {
 import { GameConfig } from "../config/GameConfig";
 import { IMapManager } from "../types/interfaces";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { Logger } from "../utils/Logger";
 import { ActionSoundManager } from "./ActionSoundManager";
 import { InventoryManager } from "./InventoryManager";
 
@@ -452,7 +453,7 @@ export class PlayerManager {
                     this.player.setFlipX(wasFlipped);
                 }
 
-                console.log(
+                Logger.debug(
                     `Skin changed to: ${newTextureKey}, hasSkates: ${this.hasSkates}`
                 );
             }
@@ -548,14 +549,14 @@ export class PlayerManager {
      * Définit la référence vers l'ActionSoundManager
      */
     setActionSoundManager(actionSoundManager: ActionSoundManager): void {
-        console.log(
+        Logger.debug(
             `🎵 PlayerManager ${this.playerNumber}: Configuration de l'ActionSoundManager`,
             actionSoundManager
         );
         this.actionSoundManager = actionSoundManager;
         // Si CraftActions existe déjà, lui passer l'ActionSoundManager
         if (this.craftActions) {
-            console.log(
+            Logger.debug(
                 `🎵 PlayerManager ${this.playerNumber}: Passage de l'ActionSoundManager à CraftActions`
             );
             this.craftActions.setActionSoundManager(actionSoundManager);
@@ -577,7 +578,7 @@ export class PlayerManager {
 
         // Si l'ActionSoundManager n'était pas encore défini, le passer maintenant
         if (this.actionSoundManager && this.craftActions) {
-            console.log(
+            Logger.debug(
                 `🎵 PlayerManager ${this.playerNumber}: Passage de l'ActionSoundManager à CraftActions après création`
             );
             this.craftActions.setActionSoundManager(this.actionSoundManager);
