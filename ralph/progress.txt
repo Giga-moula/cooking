@@ -61,3 +61,7 @@ Note: Ajout Set<unlockedRecipes>, applyUpgrade() pour RECIPE_UNLOCK, getActiveEf
 ## Story #15 - Create SoundUtils shared utility
 Fichiers: SoundUtils.ts
 Note: playSound(scene, key, volume, onComplete) avec try-catch, Logger.error, et sound.destroy() on complete.
+
+## Story #16 - Refactor ActionSoundManager to use SoundUtils
+Fichiers: ActionSoundManager.ts
+Note: playSoundInternal() utilise SoundUtils.playSound(). Tracking des sons actifs préservé via callback.

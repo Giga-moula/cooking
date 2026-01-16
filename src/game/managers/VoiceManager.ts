@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { DEFAULT_VOICE_CONFIGS, VoiceConfig } from "../config/VoiceConfig";
 import { Logger } from "../utils/Logger";
+import { playSound as playSoundUtil } from "../utils/SoundUtils";
 
 /**
  * Gestionnaire des voix des personnages
@@ -242,31 +243,19 @@ export class VoiceManager {
      * Joue un son avec gestion des conflits
      */
     private playSound(soundKey: string): void {
-        let sound = this.scene.sound.get(soundKey);
-        if (!sound) {
-            // Essayer de créer le son depuis le cache de chargement
-            sound = this.scene.sound.add(soundKey, {
-                volume: 0.7,
-            });
+        // Check if sound is already playing to avoid overlap
+        const existingSound = this.scene.sound.get(soundKey);
+        if (existingSound && existingSound.isPlaying) {
+            Logger.log(`🔊 Son déjà en cours: ${soundKey}`);
+            return;
         }
 
-        if (sound && !sound.isPlaying) {
-            Logger.log(`🔊 Lancement du son: ${soundKey}`);
-            try {
-                sound.play();
-                Logger.log(`✅ Son joué avec succès: ${soundKey}`);
-            } catch (error) {
-                Logger.error(
-                    `❌ Erreur lors de la lecture du son ${soundKey}:`,
-                    error
-                );
-            }
-        } else if (sound && sound.isPlaying) {
-            Logger.log(`🔊 Son déjà en cours: ${soundKey}`);
+        Logger.log(`🔊 Lancement du son: ${soundKey}`);
+        const sound = playSoundUtil(this.scene, soundKey, 0.7);
+        if (sound) {
+            Logger.log(`✅ Son joué avec succès: ${soundKey}`);
         } else {
             Logger.warn(`🔊 Impossible de jouer le son: ${soundKey}`);
-            const sounds = (this.scene.sound as any).sounds || {};
-            Logger.log("🔍 Sons disponibles:", Object.keys(sounds));
         }
     }
 

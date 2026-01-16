@@ -126,7 +126,7 @@
       "id": 16,
       "feature": "Sound System",
       "title": "Refactor ActionSoundManager to use SoundUtils",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/ActionSoundManager.ts, refactor playSound() method to use the new SoundUtils.playSound() utility from src/game/utils/SoundUtils.ts. Remove duplicate sound creation/error handling logic. Keep the public API (play methods) unchanged."
     },
