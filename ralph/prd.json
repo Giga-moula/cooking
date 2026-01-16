@@ -134,7 +134,7 @@
       "id": 17,
       "feature": "Sound System",
       "title": "Refactor VoiceManager to use SoundUtils",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/VoiceManager.ts, refactor sound playing logic to use SoundUtils.playSound() utility. Replace the internal playSound method (around line 243-268) with calls to SoundUtils. Maintain voice-specific logic (random selection, cooldowns) in VoiceManager."
     },

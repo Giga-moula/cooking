@@ -65,3 +65,7 @@ Note: playSound(scene, key, volume, onComplete) avec try-catch, Logger.error, et
 ## Story #16 - Refactor ActionSoundManager to use SoundUtils
 Fichiers: ActionSoundManager.ts
 Note: playSoundInternal() utilise SoundUtils.playSound(). Tracking des sons actifs préservé via callback.
+
+## Story #17 - Refactor VoiceManager to use SoundUtils
+Fichiers: VoiceManager.ts
+Note: playSound() simplifié avec SoundUtils.playSound(). Garde la logique "already playing" check avant d'appeler.
