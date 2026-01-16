@@ -86,7 +86,7 @@
       "id": 11,
       "feature": "Memory Leak Prevention",
       "title": "Add cleanup methods to remaining managers",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "Add cleanup() methods to managers that are missing them: UpgradeManager.ts, CurrencyManager.ts, RecipeManager.ts, ScoreManager.ts. Each cleanup method should reset internal state (maps, arrays, counters) to initial values and remove any event listeners."
     },

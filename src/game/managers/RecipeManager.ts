@@ -180,5 +180,13 @@ export class RecipeManager {
     public canCookInCasserole(ingredientId: string): boolean {
         return this.getCasseroleCooking(ingredientId) !== undefined;
     }
+
+    /**
+     * Nettoie le manager (reset complet)
+     */
+    public cleanup(): void {
+        this.ingredients.clear();
+        this.recipes.clear();
+    }
 }
 

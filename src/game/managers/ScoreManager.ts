@@ -129,5 +129,18 @@ export class ScoreManager {
     setScoreMultiplier(multiplier: number): void {
         this.scoreMultiplier = multiplier;
     }
+
+    /**
+     * Nettoie le manager (reset complet)
+     */
+    public cleanup(): void {
+        this.score = 0;
+        this.totalDeliveries = 0;
+        this.scoreMultiplier = 1.0;
+        if (this.scoreText) {
+            this.scoreText.destroy();
+            this.scoreText = undefined;
+        }
+    }
 }
 

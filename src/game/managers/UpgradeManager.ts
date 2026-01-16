@@ -205,4 +205,12 @@ export class UpgradeManager {
     public getTotalPurchased(): number {
         return this.purchasedUpgrades.size;
     }
+
+    /**
+     * Nettoie le manager (reset complet)
+     */
+    public cleanup(): void {
+        this.purchasedUpgrades.clear();
+        this.upgrades.clear();
+    }
 }

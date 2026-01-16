@@ -45,3 +45,7 @@ Note: Ajout Set<activeSounds> pour tracker sons actifs, cleanup() détruit tous 
 ## Story #10 - Add cleanup to VoiceManager
 Fichiers: VoiceManager.ts
 Note: cleanup() arrête déjà le timer, ajout stop() sur tous les sons actifs.
+
+## Story #11 - Add cleanup methods to remaining managers
+Fichiers: UpgradeManager.ts, CurrencyManager.ts, RecipeManager.ts, ScoreManager.ts
+Note: cleanup() ajouté à chaque: clear maps/sets, reset counters, destroy text objects.

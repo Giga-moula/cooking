@@ -226,4 +226,16 @@ export class CurrencyManager {
             this.coinsText.destroy();
         }
     }
+
+    /**
+     * Nettoie le manager (reset complet)
+     */
+    public cleanup(): void {
+        this.totalCoins = 0;
+        this.startCoins = 0;
+        if (this.coinsText) {
+            this.coinsText.destroy();
+            this.coinsText = undefined;
+        }
+    }
 }
