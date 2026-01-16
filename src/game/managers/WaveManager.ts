@@ -242,10 +242,14 @@ export class WaveManager {
      * Démarre une vague
      */
     public startWave(waveNumber: number = this.waveState.currentWave): void {
-        const waveConfig = this.waves.find((w) => w.waveNumber === waveNumber);
+        let waveConfig = this.waves.find((w) => w.waveNumber === waveNumber);
         if (!waveConfig) {
-            console.error(`Vague ${waveNumber} non trouvée`);
-            return;
+            console.error(`Vague ${waveNumber} non trouvée, fallback to wave 1`);
+            waveConfig = this.waves.find((w) => w.waveNumber === 1);
+            if (!waveConfig) {
+                console.error(`Wave 1 config also missing, cannot start wave`);
+                return;
+            }
         }
 
         // Arrêter le timer existant s'il y en a un
@@ -338,7 +342,11 @@ export class WaveManager {
         if (!this.currentWaveConfig) return;
 
         const recipeId = this.currentWaveConfig.specificRecipes[orderIndex];
-        if (!recipeId) return;
+        if (!recipeId) {
+            console.warn(`No recipeId at index ${orderIndex}, skipping`);
+            this.waveState.currentActiveOrders--;
+            return;
+        }
 
         // Trouver la recette qui produit le cookie-mix correspondant
         const allRecipes = this.recipeManager.getAllRecipes();
@@ -354,22 +362,25 @@ export class WaveManager {
             recipe = allRecipes.find((r) => r.result === cookieMixId);
         }
 
-        if (recipe) {
-            // Créer un objet recette avec le cookie cuit comme résultat mais les ingrédients du cookie-mix
-            const displayRecipe = {
-                ...recipe,
-                result: recipeId, // Afficher le cookie cuit
-                displayIngredients: [recipe.ingredient1, recipe.ingredient2], // Mais garder les ingrédients du cookie-mix
-            };
-
-            // Déterminer la durée selon le type de cookie
-            const duration = this.getOrderDuration(recipeId);
-
-            // Ajouter la commande progressivement avec la durée spécifique
-            this.orderDisplayManager.addNewOrder(displayRecipe, duration);
-        } else {
-            console.warn(`Recette non trouvée pour le plat: ${recipeId}`);
+        if (!recipe) {
+            console.warn(`Recette non trouvée pour le plat: ${recipeId}, skipping order`);
+            // Decrement currentActiveOrders since we incremented it before calling this
+            this.waveState.currentActiveOrders--;
+            return;
         }
+
+        // Créer un objet recette avec le cookie cuit comme résultat mais les ingrédients du cookie-mix
+        const displayRecipe = {
+            ...recipe,
+            result: recipeId, // Afficher le cookie cuit
+            displayIngredients: [recipe.ingredient1, recipe.ingredient2], // Mais garder les ingrédients du cookie-mix
+        };
+
+        // Déterminer la durée selon le type de cookie
+        const duration = this.getOrderDuration(recipeId);
+
+        // Ajouter la commande progressivement avec la durée spécifique
+        this.orderDisplayManager.addNewOrder(displayRecipe, duration);
     }
 
     /**
