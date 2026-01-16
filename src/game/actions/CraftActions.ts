@@ -7,6 +7,8 @@ import {
 } from "../config/craftingItems";
 import { INSTANT_CRAFT_RECIPES } from "../data/recipes";
 import { ActionSoundManager } from "../managers/ActionSoundManager";
+import { RecipeManager } from "../managers/RecipeManager";
+import { IPlayer, IMapManager, IInventoryManager } from "../types/interfaces";
 import { Logger } from "../utils/Logger";
 
 // Ré-exporter le type CraftDirection
@@ -22,9 +24,9 @@ export interface CraftSequence {
 
 export class CraftActions {
     private scene: Phaser.Scene;
-    private playerManager: any; // Référence au PlayerManager
+    private playerManager: IPlayer;
     private playerNumber: number;
-    private mapManager: any; // Référence au MapManager
+    private mapManager: IMapManager;
     private actionSoundManager: ActionSoundManager | null;
 
     // Éléments visuels
@@ -68,9 +70,9 @@ export class CraftActions {
 
     constructor(
         scene: Phaser.Scene,
-        playerManager: any,
+        playerManager: IPlayer,
         playerNumber: number,
-        mapManager: any,
+        mapManager: IMapManager,
         actionSoundManager: ActionSoundManager | null = null
     ) {
         this.scene = scene;
@@ -406,10 +408,10 @@ export class CraftActions {
      */
     private canMakeRecipeWithItem(
         itemOnTable: string,
-        playerInventory: any,
-        recipeManager: any
+        playerInventory: IInventoryManager | null,
+        recipeManager: RecipeManager | null
     ): boolean {
-        if (!playerInventory || !recipeManager.getAllRecipes) {
+        if (!playerInventory || !recipeManager) {
             return false;
         }
 
