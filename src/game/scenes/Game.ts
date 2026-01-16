@@ -23,6 +23,7 @@ import { TrashManager } from "../managers/TrashManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
 import { WaveManager } from "../managers/WaveManager";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { Logger } from "../utils/Logger";
 
 export default class Game extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -178,7 +179,7 @@ export default class Game extends Phaser.Scene {
         );
 
         // Configuration du MapManager pour les joueurs (sans ActionSoundManager pour l'instant)
-        console.log("🎵 Game: Configuration du MapManager pour les joueurs");
+        Logger.debug("🎵 Game: Configuration du MapManager pour les joueurs");
         this.player1.setMapManager(this.mapManager);
         this.player2.setMapManager(this.mapManager);
 
@@ -319,7 +320,7 @@ export default class Game extends Phaser.Scene {
             }
 
             // Connecter l'ActionSoundManager aux joueurs
-            console.log(
+            Logger.debug(
                 "🎵 Game: Configuration de l'ActionSoundManager pour les joueurs",
                 actionSoundManager
             );

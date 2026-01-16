@@ -22,7 +22,7 @@
       "id": 3,
       "feature": "Production Logging",
       "title": "Migrate CraftActions to Logger utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/actions/CraftActions.ts, replace all console.log statements (lines 86, 103, 775, 787, 893, 905, 913, 920, 928) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use Logger.debug() for debug info."
     },
@@ -30,7 +30,7 @@
       "id": 4,
       "feature": "Production Logging",
       "title": "Migrate PlayerManager to Logger utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/PlayerManager.ts, replace all console.log statements (lines 455, 551, 558, 580) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use appropriate Logger methods based on message type."
     },

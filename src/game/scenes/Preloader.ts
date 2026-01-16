@@ -4,6 +4,7 @@
 
 import Phaser from "phaser";
 /* START-USER-IMPORTS */
+import { Logger } from "../utils/Logger";
 /* END-USER-IMPORTS */
 
 export default class Preloader extends Phaser.Scene {
@@ -55,7 +56,7 @@ export default class Preloader extends Phaser.Scene {
     }
 
     preload() {
-        console.log("🚀 PRELOADER DÉMARRÉ - Chargement des assets...");
+        Logger.debug("🚀 PRELOADER DÉMARRÉ - Chargement des assets...");
 
         // Asset pack principal
         this.load.pack("preload", "assets/preload-asset-pack.json");
@@ -319,16 +320,16 @@ export default class Preloader extends Phaser.Scene {
         this.load.audio("goodInput4", "assets/actions-sounds/goodInput4.ogg");
 
         // Log pour debug
-        console.log("🎵 Chargement du son danielle-beurre...");
+        Logger.debug("🎵 Chargement du son danielle-beurre...");
 
         // Événements de chargement pour debug
         this.load.on("filecomplete-audio-danielle-beurre", () => {
-            console.log("✅ Son danielle-beurre chargé avec succès!");
+            Logger.debug("✅ Son danielle-beurre chargé avec succès!");
         });
 
         this.load.on("loaderror", (file: any) => {
             if (file.key === "danielle-beurre") {
-                console.error(
+                Logger.error(
                     "❌ Erreur de chargement du son danielle-beurre:",
                     file
                 );

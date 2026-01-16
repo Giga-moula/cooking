@@ -13,3 +13,11 @@ Note: 12 console.log/warn/error remplacés par Logger. Logger n'a pas de .debug(
 ## Story #2 - Migrate VoiceManager to Logger
 Fichiers: VoiceManager.ts
 Note: 28 console.log/warn/error remplacés par Logger.
+
+## Story #3 - Migrate CraftActions to Logger
+Fichiers: CraftActions.ts
+Note: 9 console.log remplacés par Logger.debug().
+
+## Story #4 - Migrate PlayerManager to Logger
+Fichiers: PlayerManager.ts
+Note: 4 console.log remplacés par Logger.debug().

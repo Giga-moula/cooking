@@ -22,6 +22,7 @@ import { TrashManager } from "../managers/TrashManager";
 import { TutorialMapManager } from "../managers/TutorialMapManager";
 import { UpgradeManager } from "../managers/UpgradeManager";
 import { WaveManager } from "../managers/WaveManager";
+import { Logger } from "../utils/Logger";
 
 export default class TutorialGame extends Phaser.Scene {
     private mapOffsetX: number = GameConfig.MAP_OFFSET_X;
@@ -177,7 +178,7 @@ export default class TutorialGame extends Phaser.Scene {
         );
 
         // Configuration du MapManager pour les joueurs (sans ActionSoundManager pour l'instant)
-        console.log(
+        Logger.debug(
             "🎵 TutorialGame: Configuration du MapManager pour les joueurs"
         );
         this.player1.setMapManager(this.mapManager);
@@ -284,7 +285,7 @@ export default class TutorialGame extends Phaser.Scene {
             }
 
             // Connecter l'ActionSoundManager aux joueurs
-            console.log(
+            Logger.debug(
                 "🎵 TutorialGame: Configuration de l'ActionSoundManager pour les joueurs",
                 actionSoundManager
             );
