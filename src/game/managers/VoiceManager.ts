@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { DEFAULT_VOICE_CONFIGS, VoiceConfig } from "../config/VoiceConfig";
+import { Logger } from "../utils/Logger";
 
 /**
  * Gestionnaire des voix des personnages
@@ -23,7 +24,7 @@ export class VoiceManager {
     initializeAfterLoad(): void {
         // Log des sons disponibles pour debug
         const sounds = (this.scene.sound as any).sounds || {};
-        console.log("🔍 Sons disponibles dans la scène:", Object.keys(sounds));
+        Logger.log("🔍 Sons disponibles dans la scène:", Object.keys(sounds));
     }
 
     /**
@@ -55,7 +56,7 @@ export class VoiceManager {
      * Joue une voix aléatoire parmi les voix marquées comme "random"
      */
     private playRandomVoice(): void {
-        console.log("🎲 Déclenchement d'une voix aléatoire...");
+        Logger.log("🎲 Déclenchement d'une voix aléatoire...");
 
         // Récupérer toutes les voix aléatoires (tous joueurs)
         const randomVoices: string[] = [];
@@ -66,7 +67,7 @@ export class VoiceManager {
         }
 
         if (randomVoices.length === 0) {
-            console.log("🎲 Aucune voix aléatoire trouvée");
+            Logger.log("🎲 Aucune voix aléatoire trouvée");
             return;
         }
 
@@ -75,7 +76,7 @@ export class VoiceManager {
         const selectedVoiceId = randomVoices[randomIndex];
         const selectedConfig = this.voiceConfigs.get(selectedVoiceId);
 
-        console.log(
+        Logger.log(
             `🎲 Voix aléatoire sélectionnée: ${selectedVoiceId} (Joueur ${selectedConfig?.playerNumber})`
         );
         this.tryPlayVoice(selectedVoiceId);
@@ -85,7 +86,7 @@ export class VoiceManager {
      * Joue une voix aléatoire basée sur l'ingrédient et le joueur
      */
     playVoiceForIngredient(ingredient: string, playerNumber: number): void {
-        console.log(
+        Logger.log(
             `🎤 Tentative de jouer une voix pour ${ingredient} (Joueur ${playerNumber})`
         );
 
@@ -95,7 +96,7 @@ export class VoiceManager {
                 config.ingredient === ingredient &&
                 config.playerNumber === playerNumber
             ) {
-                console.log(
+                Logger.log(
                     `🎤 Voix trouvée: ${voiceId} (probabilité: ${config.probability}%)`
                 );
                 this.tryPlayVoice(voiceId);
@@ -103,7 +104,7 @@ export class VoiceManager {
             }
         }
 
-        console.log(
+        Logger.log(
             `🎤 Aucune voix trouvée pour ${ingredient} (Joueur ${playerNumber})`
         );
     }
@@ -119,7 +120,7 @@ export class VoiceManager {
      * Joue une voix pour l'utilisation de la casserole
      */
     playVoiceForCasserole(playerNumber: number): void {
-        console.log(
+        Logger.log(
             `🎤 Tentative de jouer une voix pour casserole (Joueur ${playerNumber})`
         );
 
@@ -129,7 +130,7 @@ export class VoiceManager {
                 config.ingredient === "casserole" &&
                 config.playerNumber === playerNumber
             ) {
-                console.log(
+                Logger.log(
                     `🎤 Voix de casserole trouvée: ${voiceId} (probabilité: ${config.probability}%)`
                 );
                 this.tryPlayVoice(voiceId);
@@ -137,7 +138,7 @@ export class VoiceManager {
             }
         }
 
-        console.log(
+        Logger.log(
             `🎤 Aucune voix de casserole trouvée pour le Joueur ${playerNumber}`
         );
     }
@@ -146,7 +147,7 @@ export class VoiceManager {
      * Joue une voix pour l'utilisation du four
      */
     playVoiceForOven(playerNumber: number): void {
-        console.log(
+        Logger.log(
             `🎤 Tentative de jouer une voix pour four (Joueur ${playerNumber})`
         );
 
@@ -156,7 +157,7 @@ export class VoiceManager {
                 config.ingredient === "oven" &&
                 config.playerNumber === playerNumber
             ) {
-                console.log(
+                Logger.log(
                     `🎤 Voix de four trouvée: ${voiceId} (probabilité: ${config.probability}%)`
                 );
                 this.tryPlayVoice(voiceId);
@@ -164,7 +165,7 @@ export class VoiceManager {
             }
         }
 
-        console.log(
+        Logger.log(
             `🎤 Aucune voix de four trouvée pour le Joueur ${playerNumber}`
         );
     }
@@ -173,7 +174,7 @@ export class VoiceManager {
      * Joue une voix pour les transformations simples (1 ingrédient → 1 autre)
      */
     playVoiceForTransformation(playerNumber: number): void {
-        console.log(
+        Logger.log(
             `🎤 Tentative de jouer une voix pour transformation simple (Joueur ${playerNumber})`
         );
 
@@ -183,7 +184,7 @@ export class VoiceManager {
                 config.ingredient === "transform" &&
                 config.playerNumber === playerNumber
             ) {
-                console.log(
+                Logger.log(
                     `🎤 Voix de transformation trouvée: ${voiceId} (probabilité: ${config.probability}%)`
                 );
                 this.tryPlayVoice(voiceId);
@@ -191,7 +192,7 @@ export class VoiceManager {
             }
         }
 
-        console.log(
+        Logger.log(
             `🎤 Aucune voix de transformation simple trouvée pour le Joueur ${playerNumber}`
         );
     }
@@ -202,7 +203,7 @@ export class VoiceManager {
     private tryPlayVoice(voiceId: string): void {
         const config = this.voiceConfigs.get(voiceId);
         if (!config) {
-            console.warn(`Configuration de voix non trouvée: ${voiceId}`);
+            Logger.warn(`Configuration de voix non trouvée: ${voiceId}`);
             return;
         }
 
@@ -214,26 +215,26 @@ export class VoiceManager {
                 volume: 0.7,
             });
             if (!sound) {
-                console.warn(`Son non trouvé: ${config.soundKey}`);
+                Logger.warn(`Son non trouvé: ${config.soundKey}`);
                 const sounds = (this.scene.sound as any).sounds || {};
-                console.log("🔍 Sons disponibles:", Object.keys(sounds));
+                Logger.log("🔍 Sons disponibles:", Object.keys(sounds));
                 return;
             }
         }
 
         // Calculer si la voix doit être jouée selon la probabilité
         const randomValue = Math.random() * 100;
-        console.log(
+        Logger.log(
             `🎲 Valeur aléatoire: ${randomValue.toFixed(2)}% (seuil: ${
                 config.probability
             }%)`
         );
 
         if (randomValue <= config.probability) {
-            console.log(`🎵 Jouer le son: ${config.soundKey}`);
+            Logger.log(`🎵 Jouer le son: ${config.soundKey}`);
             this.playSound(config.soundKey);
         } else {
-            console.log(`🎵 Son non joué (probabilité insuffisante)`);
+            Logger.log(`🎵 Son non joué (probabilité insuffisante)`);
         }
     }
 
@@ -250,22 +251,22 @@ export class VoiceManager {
         }
 
         if (sound && !sound.isPlaying) {
-            console.log(`🔊 Lancement du son: ${soundKey}`);
+            Logger.log(`🔊 Lancement du son: ${soundKey}`);
             try {
                 sound.play();
-                console.log(`✅ Son joué avec succès: ${soundKey}`);
+                Logger.log(`✅ Son joué avec succès: ${soundKey}`);
             } catch (error) {
-                console.error(
+                Logger.error(
                     `❌ Erreur lors de la lecture du son ${soundKey}:`,
                     error
                 );
             }
         } else if (sound && sound.isPlaying) {
-            console.log(`🔊 Son déjà en cours: ${soundKey}`);
+            Logger.log(`🔊 Son déjà en cours: ${soundKey}`);
         } else {
-            console.warn(`🔊 Impossible de jouer le son: ${soundKey}`);
+            Logger.warn(`🔊 Impossible de jouer le son: ${soundKey}`);
             const sounds = (this.scene.sound as any).sounds || {};
-            console.log("🔍 Sons disponibles:", Object.keys(sounds));
+            Logger.log("🔍 Sons disponibles:", Object.keys(sounds));
         }
     }
 

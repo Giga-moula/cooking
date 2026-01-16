@@ -14,7 +14,7 @@
       "id": 2,
       "feature": "Production Logging",
       "title": "Migrate VoiceManager to Logger utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/VoiceManager.ts, replace all console.log statements (28 occurrences throughout the file) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use Logger.debug() for debug info, Logger.warn() for warnings, Logger.error() for errors."
     },
