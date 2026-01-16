@@ -73,3 +73,7 @@ Note: playSound() simplifié avec SoundUtils.playSound(). Garde la logique "alre
 ## Story #18 - Add proper types to CraftActions
 Fichiers: CraftActions.ts
 Note: Remplacé any par IPlayer, IMapManager, IInventoryManager, RecipeManager. Import interfaces.ts.
+
+## Story #19 - Add null safety to InteractionSystem
+Fichiers: InteractionSystem.ts
+Note: Ajout ?. et ?? sur managers, player accessors, target position. Early returns pour null values.
