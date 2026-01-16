@@ -1,0 +1,147 @@
+=== Iteration 7 ===
+Timestamp: 20260116_141513
+Tokens estimés: ~1079
+Stories restantes: 18
+
+=== Context Sent ===
+# Ralph - Agent Autonome (Phase 2: Exécution)
+
+Tu es Ralph, un agent de développement autonome et CONCIS.
+
+## RÈGLES DE CONCISION (CRITIQUES)
+
+- **Sois bref** : Pas de résumés, pas de reformulations
+- **Pas de reprint** : Ne réécris jamais le contenu des fichiers en entier
+- **Focus unique** : Une seule story à la fois
+- **Commits courts** : Messages de commit < 50 caractères
+- **Output minimal** : Dis ce que tu fais, pas ce que tu penses
+
+## Contexte fourni
+
+Tu reçois uniquement :
+- **PRD summary** : Les 15 premières lignes du PRD
+- **Current Story** : La story active (déjà approuvée par l'humain)
+- **Recent Progress** : Les 25 dernières lignes de ta mémoire
+- **Status** : Nombre de stories approuvées restantes
+
+## Workflow par itération
+
+### 1. Implémenter la story courante
+- Lis la task de la story
+- Implémente directement (pas d'exploration excessive)
+- Ajoute des tests seulement si explicitement demandé
+
+### 2. Commit et Push
+```bash
+git add .
+git commit -m "[Ralph] <action courte>"
+git push origin <branch>
+```
+
+### 3. Mettre à jour l'état
+Dans `ralph/prd.json` : mettre `"done": true` pour la story (garder `"approved": true`)
+Dans `ralph/progress.txt` : ajouter 2-3 lignes max :
+```
+## Story #X - <titre>
+Fichiers: file1.ts, file2.ts
+Note: <observation utile pour plus tard>
+```
+
+### 4. Signal de fin
+Si `Stories remaining: 0` → écris exactement : `COMPLETE`
+
+## Format de sortie attendu
+
+```
+Implementing Story #X: <titre>
+→ Modified: file1.ts, file2.ts
+→ Committed: [Ralph] <message>
+→ Pushed to <branch>
+Story #X done.
+```
+
+Ou si terminé :
+```
+COMPLETE
+```
+
+## Interdictions
+
+- Ne pas résumer le projet
+- Ne pas lister toutes les stories
+- Ne pas expliquer le contexte
+- Ne pas demander confirmation
+- Ne pas répéter les instructions
+- Ne pas toucher aux stories non approuvées
+
+---
+## Feature Context (PRD summary)
+# PRD - Product Requirements Document
+
+> Ce fichier décrit la vision de la feature que Ralph doit implémenter.
+
+## Feature
+
+<!-- Nom de la feature -->
+**Nom** : [Nom de la feature]
+
+## Vision
+
+<!-- Décris ce que tu veux accomplir en 2-3 phrases -->
+
+
+## Contexte
+
+---
+## Current Story to Implement
+[1;33m[2026-01-16 14:15:13][0m jq non installé - filtrage approved limité
+      "done": false,
+      "approved": true,
+      "prompt": "Add cleanup() methods to managers that are missing them: UpgradeManager.ts, CurrencyManager.ts, RecipeManager.ts, ScoreManager.ts. Each cleanup method should reset internal state (maps, arrays, counters) to initial values and remove any event listeners."
+    },
+    {
+      "id": 12,
+--
+      "done": false,
+      "approved": false,
+      "prompt": "In src/game/managers/UpgradeManager.ts, implement the MAX_ORDERS upgrade. In applyUpgrade(), when type is UpgradeType.MAX_ORDERS, store the new max orders value. In getActiveEffects(), populate the maxOrders field from the stored value instead of hardcoded 4. Update Game.ts applyUpgrades() to pass maxOrders to WaveManager."
+
+---
+## Recent Progress (last 25 lines)
+Note: 4 console.log remplacés par Logger.debug().
+
+## Story #5 - Migrate scene files to Logger
+Fichiers: Preloader.ts, Game.ts, TutorialGame.ts
+Note: 8 console.log/error remplacés par Logger.debug()/error().
+
+## Story #6 - Migrate remaining managers to Logger
+Fichiers: OvenManager.ts, CasseroleManager.ts, InteractionSystem.ts, OrderDisplayManager.ts, CommunicationManager.ts
+Note: 6 console.log/warn remplacés par Logger.debug()/warn().
+
+## Story #7 - Add cleanup to Game.ts shutdown
+Fichiers: Game.ts
+Note: 9 managers ajoutés au cleanup: communicationManager, counterManager, orderDisplayManager, mapManager, timerManager, waveManager, currencyManager, upgradeManager, allRecipesDisplayManager.
+
+## Story #8 - Add keyboard cleanup in Shop
+Fichiers: Shop.ts
+Note: Ajout propriétés keyZ/Q/S/D/E et handlers, shutdown() pour off('down').
+
+## Story #9 - Fix sound cleanup in ActionSoundManager
+Fichiers: ActionSoundManager.ts
+Note: Ajout Set<activeSounds> pour tracker sons actifs, cleanup() détruit tous les sons.
+
+## Story #10 - Add cleanup to VoiceManager
+Fichiers: VoiceManager.ts
+Note: cleanup() arrête déjà le timer, ajout stop() sur tous les sons actifs.
+
+---
+## Status
+Stories remaining: 18
+Branch: feat/roadmap
+
+=== Output ===
+Implementing Story #11: Add cleanup methods to remaining managers
+→ Modified: UpgradeManager.ts, CurrencyManager.ts, RecipeManager.ts, ScoreManager.ts
+→ Committed: [Ralph] Add cleanup to 4 managers
+→ Pushed to feat/roadmap
+Story #11 done.

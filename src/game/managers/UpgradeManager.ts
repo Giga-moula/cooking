@@ -87,6 +87,21 @@ export class UpgradeManager {
                 ovenSpeedMultiplier: 1 - level * 0.3,
             }),
         });
+
+        // MULTIPLICATEUR DE SCORE
+        this.registerUpgrade({
+            id: "score_1",
+            name: "POINTS BONUS !",
+            description: "+25% de score par livraison",
+            type: UpgradeType.SCORE_MULTIPLIER,
+            cost: 200,
+            icon: "⭐",
+            maxLevel: 3,
+            currentLevel: 0,
+            effect: (level: number) => ({
+                scoreMultiplier: 1 + level * 0.25,
+            }),
+        });
     }
 
     /**
