@@ -158,7 +158,7 @@
       "id": 20,
       "feature": "Type Safety",
       "title": "Add error recovery to WaveManager",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/WaveManager.ts, add error recovery for the console.error/warn cases. Line 247: if wave not found, fallback to wave 1 config. Line 371: if recipe missing, skip that order instead of continuing with undefined. Line 406: validate recipeId exists before using."
     },

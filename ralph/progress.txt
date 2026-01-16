@@ -77,3 +77,7 @@ Note: Remplacé any par IPlayer, IMapManager, IInventoryManager, RecipeManager. 
 ## Story #19 - Add null safety to InteractionSystem
 Fichiers: InteractionSystem.ts
 Note: Ajout ?. et ?? sur managers, player accessors, target position. Early returns pour null values.
+
+## Story #20 - Add error recovery to WaveManager
+Fichiers: WaveManager.ts
+Note: startWave() fallback to wave 1 if not found. spawnSingleOrder() skips invalid recipeId/recipe.
