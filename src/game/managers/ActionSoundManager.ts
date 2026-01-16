@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { Logger } from "../utils/Logger";
+import { playSound } from "../utils/SoundUtils";
 
 /**
  * Gestionnaire des sons d'actions
@@ -27,7 +28,7 @@ export class ActionSoundManager {
      */
     playDash(): void {
         Logger.log("🎵 Jouer son de dash");
-        this.playSound("dash");
+        this.playSoundInternal("dash");
     }
 
     /**
@@ -35,7 +36,7 @@ export class ActionSoundManager {
      */
     playFailedInput(): void {
         Logger.log("🎵 Jouer son d'échec d'input");
-        this.playSound("failedInput");
+        this.playSoundInternal("failedInput");
     }
 
     /**
@@ -59,7 +60,7 @@ export class ActionSoundManager {
                 this.currentInputIndex - 1
             })`
         );
-        this.playSound(selectedSound);
+        this.playSoundInternal(selectedSound);
     }
 
     /**
@@ -74,42 +75,19 @@ export class ActionSoundManager {
         }
 
         // Jouer le nouveau son
-        this.playSound(soundKey, volume);
+        this.playSoundInternal(soundKey, volume);
     }
 
     /**
      * Joue un son avec gestion des conflits
      */
-    private playSound(soundKey: string, volume: number = 0.7): void {
-        Logger.log(`🔊 Tentative de jouer le son: ${soundKey}`);
-
-        // Créer une nouvelle instance du son pour permettre la lecture simultanée
-        const sound = this.scene.sound.add(soundKey, {
-            volume: volume,
+    private playSoundInternal(soundKey: string, volume: number = 0.7): void {
+        const sound = playSound(this.scene, soundKey, volume, () => {
+            this.activeSounds.delete(sound!);
         });
 
         if (sound) {
-            Logger.log(`🔊 Lancement du son: ${soundKey} (volume: ${volume})`);
-            try {
-                this.activeSounds.add(sound);
-                sound.play();
-                Logger.log(`✅ Son joué avec succès: ${soundKey}`);
-
-                // Nettoyer le son après la lecture pour éviter l'accumulation
-                sound.on("complete", () => {
-                    this.activeSounds.delete(sound);
-                    sound.destroy();
-                });
-            } catch (error) {
-                Logger.error(
-                    `❌ Erreur lors de la lecture du son ${soundKey}:`,
-                    error
-                );
-            }
-        } else {
-            Logger.warn(`🔊 Impossible de créer le son: ${soundKey}`);
-            const sounds = (this.scene.sound as any).sounds || {};
-            Logger.log("🔍 Sons disponibles:", Object.keys(sounds));
+            this.activeSounds.add(sound);
         }
     }
 

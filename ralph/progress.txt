@@ -57,3 +57,7 @@ Note: Ajout upgrade score_1 (+25% par niveau, max 3). ScoreManager/Game.ts déj�
 ## Story #14 - Implement RECIPE_UNLOCK upgrade
 Fichiers: UpgradeManager.ts
 Note: Ajout Set<unlockedRecipes>, applyUpgrade() pour RECIPE_UNLOCK, getActiveEffects() retourne array. WaveManager utilise déjà specificRecipes pré-définies.
+
+## Story #15 - Create SoundUtils shared utility
+Fichiers: SoundUtils.ts
+Note: playSound(scene, key, volume, onComplete) avec try-catch, Logger.error, et sound.destroy() on complete.

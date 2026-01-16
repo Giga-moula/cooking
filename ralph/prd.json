@@ -118,7 +118,7 @@
       "id": 15,
       "feature": "Sound System",
       "title": "Create SoundUtils shared utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "Create src/game/utils/SoundUtils.ts with a playSound() function that encapsulates common sound playing logic. Parameters: scene, key, volume (default 1), onComplete callback. Include try-catch error handling, Logger for errors, and automatic sound.destroy() on completion. Export as named function."
     },
