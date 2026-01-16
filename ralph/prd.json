@@ -142,7 +142,7 @@
       "id": 18,
       "feature": "Type Safety",
       "title": "Add proper types to CraftActions constructor",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/actions/CraftActions.ts, replace 'any' type annotations with proper interfaces. Line 24 playerManager: any should be IPlayer or PlayerManager type. Line 26 mapManager: any should be IMapManager or MapManager type. Import the interfaces from src/game/types/interfaces.ts or the manager files."
     },

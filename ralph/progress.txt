@@ -69,3 +69,7 @@ Note: playSoundInternal() utilise SoundUtils.playSound(). Tracking des sons acti
 ## Story #17 - Refactor VoiceManager to use SoundUtils
 Fichiers: VoiceManager.ts
 Note: playSound() simplifié avec SoundUtils.playSound(). Garde la logique "already playing" check avant d'appeler.
+
+## Story #18 - Add proper types to CraftActions
+Fichiers: CraftActions.ts
+Note: Remplacé any par IPlayer, IMapManager, IInventoryManager, RecipeManager. Import interfaces.ts.
