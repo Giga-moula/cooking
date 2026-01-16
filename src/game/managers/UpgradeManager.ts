@@ -31,6 +31,7 @@ export interface Upgrade {
 export class UpgradeManager {
     private upgrades: Map<string, Upgrade> = new Map();
     private purchasedUpgrades: Set<string> = new Set();
+    private unlockedRecipes: Set<string> = new Set();
 
     constructor() {
         this.initializeUpgrades();
@@ -124,7 +125,23 @@ export class UpgradeManager {
 
         upgrade.currentLevel++;
         this.purchasedUpgrades.add(upgradeId);
+
+        // Appliquer l'upgrade
+        this.applyUpgrade(upgrade);
+
         return true;
+    }
+
+    /**
+     * Applique les effets d'un upgrade
+     */
+    private applyUpgrade(upgrade: Upgrade): void {
+        if (upgrade.type === UpgradeType.RECIPE_UNLOCK) {
+            const effect = upgrade.effect(upgrade.currentLevel);
+            if (effect.recipeId) {
+                this.unlockedRecipes.add(effect.recipeId);
+            }
+        }
     }
 
     /**
@@ -174,6 +191,9 @@ export class UpgradeManager {
             skinChange: null, // Ajout pour le changement de skin
         };
 
+        // Ajouter les recettes débloquées
+        effects.unlockedRecipes = Array.from(this.unlockedRecipes);
+
         this.purchasedUpgrades.forEach((upgradeId) => {
             const upgrade = this.upgrades.get(upgradeId);
             if (upgrade && upgrade.currentLevel > 0) {
@@ -181,9 +201,7 @@ export class UpgradeManager {
 
                 // Fusionner les effets
                 Object.keys(effect).forEach((key) => {
-                    if (key === "unlockedRecipe") {
-                        effects.unlockedRecipes.push(effect[key]);
-                    } else if (key === "skinChange") {
+                    if (key === "skinChange") {
                         effects.skinChange = effect[key]; // Le dernier skin change l'emporte
                     } else if (
                         key.includes("Multiplier") &&
@@ -226,6 +244,7 @@ export class UpgradeManager {
      */
     public cleanup(): void {
         this.purchasedUpgrades.clear();
+        this.unlockedRecipes.clear();
         this.upgrades.clear();
     }
 }

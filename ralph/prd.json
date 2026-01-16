@@ -102,7 +102,7 @@
       "id": 13,
       "feature": "Complete Upgrade System",
       "title": "Implement SCORE_MULTIPLIER upgrade type",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/UpgradeManager.ts, implement SCORE_MULTIPLIER upgrade. Add a scoreMultiplier field to track cumulative multiplier (default 1.0). In applyUpgrade(), when type is SCORE_MULTIPLIER, increase scoreMultiplier. In getActiveEffects(), include scoreMultiplier. Update ScoreManager to apply multiplier when adding score."
     },
@@ -110,7 +110,7 @@
       "id": 14,
       "feature": "Complete Upgrade System",
       "title": "Implement RECIPE_UNLOCK upgrade type",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/UpgradeManager.ts, implement RECIPE_UNLOCK upgrade. Add a Set<string> for unlockedRecipes. In applyUpgrade(), when type is RECIPE_UNLOCK, add the recipeId from upgrade data to the set. In getActiveEffects(), populate unlockedRecipes array. Update WaveManager to check unlocked recipes when generating orders."
     },
