@@ -29,3 +29,19 @@ Note: 8 console.log/error remplacés par Logger.debug()/error().
 ## Story #6 - Migrate remaining managers to Logger
 Fichiers: OvenManager.ts, CasseroleManager.ts, InteractionSystem.ts, OrderDisplayManager.ts, CommunicationManager.ts
 Note: 6 console.log/warn remplacés par Logger.debug()/warn().
+
+## Story #7 - Add cleanup to Game.ts shutdown
+Fichiers: Game.ts
+Note: 9 managers ajoutés au cleanup: communicationManager, counterManager, orderDisplayManager, mapManager, timerManager, waveManager, currencyManager, upgradeManager, allRecipesDisplayManager.
+
+## Story #8 - Add keyboard cleanup in Shop
+Fichiers: Shop.ts
+Note: Ajout propriétés keyZ/Q/S/D/E et handlers, shutdown() pour off('down').
+
+## Story #9 - Fix sound cleanup in ActionSoundManager
+Fichiers: ActionSoundManager.ts
+Note: Ajout Set<activeSounds> pour tracker sons actifs, cleanup() détruit tous les sons.
+
+## Story #10 - Add cleanup to VoiceManager
+Fichiers: VoiceManager.ts
+Note: cleanup() arrête déjà le timer, ajout stop() sur tous les sons actifs.

@@ -309,6 +309,13 @@ export class VoiceManager {
             this.randomVoiceTimer.destroy();
             this.randomVoiceTimer = undefined;
         }
+        // Stop all voice sounds
+        for (const config of this.voiceConfigs.values()) {
+            const sound = this.scene.sound.get(config.soundKey);
+            if (sound && sound.isPlaying) {
+                sound.stop();
+            }
+        }
     }
 }
 

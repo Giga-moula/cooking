@@ -54,7 +54,7 @@
       "id": 7,
       "feature": "Memory Leak Prevention",
       "title": "Add cleanup to Game.ts shutdown method",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/scenes/Game.ts, extend the shutdown() method (around line 804) to call cleanup/destroy on all managers. Currently only 4 managers are cleaned. Add cleanup calls for: communicationManager, counterManager, orderDisplayManager, mapManager, timerManager, waveManager, currencyManager, upgradeManager, allRecipesDisplayManager. Check if each manager exists before calling cleanup."
     },
@@ -62,7 +62,7 @@
       "id": 8,
       "feature": "Memory Leak Prevention",
       "title": "Add keyboard listener cleanup in Shop scene",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/scenes/Shop.ts, add a shutdown() method that removes keyboard event listeners. Around line 478-482, keyboard listeners are added with keyZ.on('down', ...) etc. Store handler references and call .off('down', handler) in shutdown() for each key: keyZ, keyQ, keyS, keyD."
     },
@@ -70,7 +70,7 @@
       "id": 9,
       "feature": "Memory Leak Prevention",
       "title": "Fix sound cleanup in ActionSoundManager",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/ActionSoundManager.ts, modify the playSound() method (around line 88-108) to ensure sounds are destroyed after completion. In the 'complete' event handler, call sound.destroy() after the callback. Add a Set to track active sounds and destroy all in a cleanup() method."
     },
@@ -78,7 +78,7 @@
       "id": 10,
       "feature": "Memory Leak Prevention",
       "title": "Add cleanup method to VoiceManager",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "In src/game/managers/VoiceManager.ts, ensure the cleanup() method properly handles the randomVoiceTimer (line 12). Clear the timer with clearTimeout/clearInterval. Stop any currently playing sounds. Add a cleanup() method if missing that stops all voice sounds and clears timers."
     },

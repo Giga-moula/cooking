@@ -8,6 +8,7 @@ import { Logger } from "../utils/Logger";
 export class ActionSoundManager {
     private scene: Phaser.Scene;
     private currentInputIndex: number = 0;
+    private activeSounds: Set<Phaser.Sound.BaseSound> = new Set();
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -90,11 +91,13 @@ export class ActionSoundManager {
         if (sound) {
             Logger.log(`🔊 Lancement du son: ${soundKey} (volume: ${volume})`);
             try {
+                this.activeSounds.add(sound);
                 sound.play();
                 Logger.log(`✅ Son joué avec succès: ${soundKey}`);
 
                 // Nettoyer le son après la lecture pour éviter l'accumulation
                 sound.on("complete", () => {
+                    this.activeSounds.delete(sound);
                     sound.destroy();
                 });
             } catch (error) {
@@ -122,7 +125,11 @@ export class ActionSoundManager {
      * Nettoie les ressources du ActionSoundManager
      */
     cleanup(): void {
-        // Pas de timers à nettoyer pour l'instant
+        for (const sound of this.activeSounds) {
+            sound.stop();
+            sound.destroy();
+        }
+        this.activeSounds.clear();
     }
 }
 
