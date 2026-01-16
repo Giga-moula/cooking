@@ -38,7 +38,7 @@
       "id": 5,
       "feature": "Production Logging",
       "title": "Migrate scene files to Logger utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "Migrate console.log to Logger in these scene files: Preloader.ts (lines 58, 322, 326, 331), Game.ts (lines 181, 322), TutorialGame.ts (lines 180, 287). Import Logger from src/game/utils/Logger.ts in each file. Use Logger.debug() for loading info, Logger.error() for errors."
     },
@@ -46,7 +46,7 @@
       "id": 6,
       "feature": "Production Logging",
       "title": "Migrate remaining managers to Logger utility",
-      "done": false,
+      "done": true,
       "approved": true,
       "prompt": "Migrate console.log to Logger in these files: OvenManager.ts (line 124), CasseroleManager.ts (line 99), InteractionSystem.ts (lines 270, 493), OrderDisplayManager.ts (line 110), CommunicationManager.ts (line 180). Import Logger and use appropriate log levels."
     },

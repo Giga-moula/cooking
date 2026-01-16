@@ -267,7 +267,7 @@ export class InteractionSystem {
                 );
 
                 // Jouer le son de récupération réussie
-                console.log(
+                Logger.debug(
                     `🎵 Récupération d'ingrédient depuis caisse: ${ingredientType}`
                 );
                 this.actionSoundManager.playRecupSuccess();
@@ -490,7 +490,7 @@ export class InteractionSystem {
             player.updateCarriedItem();
 
             // Jouer le son de récupération réussie pour tous les items
-            console.log(`🎵 Récupération d'item depuis comptoir: ${itemType}`);
+            Logger.debug(`🎵 Récupération d'item depuis comptoir: ${itemType}`);
             this.actionSoundManager.playRecupSuccess();
 
             return true;

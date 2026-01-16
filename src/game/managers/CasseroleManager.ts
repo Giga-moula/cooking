@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { PARTICLE_CONSTANTS, TIME_CONSTANTS } from "../config/Constants";
 import { IsometricUtils } from "../utils/IsometricUtils";
+import { Logger } from "../utils/Logger";
 import { BaseCookingManager } from "./BaseCookingManager";
 import { RecipeManager } from "./RecipeManager";
 import { VoiceManager } from "./VoiceManager";
@@ -96,7 +97,7 @@ export class CasseroleManager extends BaseCookingManager {
             this.voiceManager &&
             (currentItem === "butter" || currentItem === "sugar")
         ) {
-            console.log(
+            Logger.debug(
                 `🍳 Cuisson de ${currentItem} dans la casserole - déclencher voix (Joueur ${playerNumber})`
             );
             this.voiceManager.playVoiceForCasserole(playerNumber);

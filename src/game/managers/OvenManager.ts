@@ -121,7 +121,7 @@ export class OvenManager extends BaseCookingManager {
 
         // Déclencher une voix pour l'utilisation du four
         if (this.voiceManager) {
-            console.log(
+            Logger.debug(
                 `🔥 Cuisson de ${currentItem} dans le four - déclencher voix (Joueur ${playerNumber})`
             );
             this.voiceManager.playVoiceForOven(playerNumber);

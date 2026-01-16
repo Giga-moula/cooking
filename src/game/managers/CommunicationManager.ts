@@ -3,6 +3,7 @@
  */
 
 import Phaser from "phaser";
+import { Logger } from "../utils/Logger";
 import { ActionSoundManager } from "./ActionSoundManager";
 import { MapManager } from "./MapManager";
 import { PlayerManager } from "./PlayerManager";
@@ -177,7 +178,7 @@ export class CommunicationManager {
 
         // Jouer le son de récupération réussie
         if (this.actionSoundManager) {
-            console.log(
+            Logger.debug(
                 `🎵 Récupération d'ingrédient depuis communication: ${ingredientType}`
             );
             this.actionSoundManager.playRecupSuccess();

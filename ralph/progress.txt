@@ -21,3 +21,11 @@ Note: 9 console.log remplacés par Logger.debug().
 ## Story #4 - Migrate PlayerManager to Logger
 Fichiers: PlayerManager.ts
 Note: 4 console.log remplacés par Logger.debug().
+
+## Story #5 - Migrate scene files to Logger
+Fichiers: Preloader.ts, Game.ts, TutorialGame.ts
+Note: 8 console.log/error remplacés par Logger.debug()/error().
+
+## Story #6 - Migrate remaining managers to Logger
+Fichiers: OvenManager.ts, CasseroleManager.ts, InteractionSystem.ts, OrderDisplayManager.ts, CommunicationManager.ts
+Note: 6 console.log/warn remplacés par Logger.debug()/warn().

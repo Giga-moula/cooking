@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { Logger } from "../utils/Logger";
 import { RecipeBox } from "./RecipeBox";
 import { RecipeManager } from "./RecipeManager";
 
@@ -107,7 +108,7 @@ export class OrderDisplayManager {
         if (this.onOrderCompleted && dishId) {
             this.onOrderCompleted(dishId);
         } else {
-            console.warn(
+            Logger.warn(
                 `⚠️ Callback non appelé - onOrderCompleted: ${!!this
                     .onOrderCompleted}, dishId: ${dishId}`
             );
