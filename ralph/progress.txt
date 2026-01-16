@@ -1,0 +1,11 @@
+# Ralph Progress Log
+
+Ce fichier contient la mémoire persistante de Ralph entre les itérations.
+
+---
+
+## Session démarrée
+
+## Story #1 - Migrate ActionSoundManager to Logger
+Fichiers: ActionSoundManager.ts
+Note: 12 console.log/warn/error remplacés par Logger. Logger n'a pas de .debug(), utilise .log() à la place.

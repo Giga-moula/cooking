@@ -1,0 +1,230 @@
+{
+  "feature": "Project Roadmap",
+  "branch": "feat/roadmap",
+  "stories": [
+    {
+      "id": 1,
+      "feature": "Production Logging",
+      "title": "Migrate ActionSoundManager to Logger utility",
+      "done": true,
+      "approved": true,
+      "prompt": "In src/game/managers/ActionSoundManager.ts, replace all console.log statements (lines 19, 27, 35, 55, 70, 82, 90, 93, 100, 106, 108, 117) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top of the file. Use Logger.debug() for debug info and Logger.error() for errors."
+    },
+    {
+      "id": 2,
+      "feature": "Production Logging",
+      "title": "Migrate VoiceManager to Logger utility",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/VoiceManager.ts, replace all console.log statements (28 occurrences throughout the file) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use Logger.debug() for debug info, Logger.warn() for warnings, Logger.error() for errors."
+    },
+    {
+      "id": 3,
+      "feature": "Production Logging",
+      "title": "Migrate CraftActions to Logger utility",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/actions/CraftActions.ts, replace all console.log statements (lines 86, 103, 775, 787, 893, 905, 913, 920, 928) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use Logger.debug() for debug info."
+    },
+    {
+      "id": 4,
+      "feature": "Production Logging",
+      "title": "Migrate PlayerManager to Logger utility",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/PlayerManager.ts, replace all console.log statements (lines 455, 551, 558, 580) with Logger utility from src/game/utils/Logger.ts. Import Logger at the top. Use appropriate Logger methods based on message type."
+    },
+    {
+      "id": 5,
+      "feature": "Production Logging",
+      "title": "Migrate scene files to Logger utility",
+      "done": false,
+      "approved": true,
+      "prompt": "Migrate console.log to Logger in these scene files: Preloader.ts (lines 58, 322, 326, 331), Game.ts (lines 181, 322), TutorialGame.ts (lines 180, 287). Import Logger from src/game/utils/Logger.ts in each file. Use Logger.debug() for loading info, Logger.error() for errors."
+    },
+    {
+      "id": 6,
+      "feature": "Production Logging",
+      "title": "Migrate remaining managers to Logger utility",
+      "done": false,
+      "approved": true,
+      "prompt": "Migrate console.log to Logger in these files: OvenManager.ts (line 124), CasseroleManager.ts (line 99), InteractionSystem.ts (lines 270, 493), OrderDisplayManager.ts (line 110), CommunicationManager.ts (line 180). Import Logger and use appropriate log levels."
+    },
+    {
+      "id": 7,
+      "feature": "Memory Leak Prevention",
+      "title": "Add cleanup to Game.ts shutdown method",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Game.ts, extend the shutdown() method (around line 804) to call cleanup/destroy on all managers. Currently only 4 managers are cleaned. Add cleanup calls for: communicationManager, counterManager, orderDisplayManager, mapManager, timerManager, waveManager, currencyManager, upgradeManager, allRecipesDisplayManager. Check if each manager exists before calling cleanup."
+    },
+    {
+      "id": 8,
+      "feature": "Memory Leak Prevention",
+      "title": "Add keyboard listener cleanup in Shop scene",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Shop.ts, add a shutdown() method that removes keyboard event listeners. Around line 478-482, keyboard listeners are added with keyZ.on('down', ...) etc. Store handler references and call .off('down', handler) in shutdown() for each key: keyZ, keyQ, keyS, keyD."
+    },
+    {
+      "id": 9,
+      "feature": "Memory Leak Prevention",
+      "title": "Fix sound cleanup in ActionSoundManager",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/ActionSoundManager.ts, modify the playSound() method (around line 88-108) to ensure sounds are destroyed after completion. In the 'complete' event handler, call sound.destroy() after the callback. Add a Set to track active sounds and destroy all in a cleanup() method."
+    },
+    {
+      "id": 10,
+      "feature": "Memory Leak Prevention",
+      "title": "Add cleanup method to VoiceManager",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/VoiceManager.ts, ensure the cleanup() method properly handles the randomVoiceTimer (line 12). Clear the timer with clearTimeout/clearInterval. Stop any currently playing sounds. Add a cleanup() method if missing that stops all voice sounds and clears timers."
+    },
+    {
+      "id": 11,
+      "feature": "Memory Leak Prevention",
+      "title": "Add cleanup methods to remaining managers",
+      "done": false,
+      "approved": true,
+      "prompt": "Add cleanup() methods to managers that are missing them: UpgradeManager.ts, CurrencyManager.ts, RecipeManager.ts, ScoreManager.ts. Each cleanup method should reset internal state (maps, arrays, counters) to initial values and remove any event listeners."
+    },
+    {
+      "id": 12,
+      "feature": "Complete Upgrade System",
+      "title": "Implement MAX_ORDERS upgrade type",
+      "done": false,
+      "approved": false,
+      "prompt": "In src/game/managers/UpgradeManager.ts, implement the MAX_ORDERS upgrade. In applyUpgrade(), when type is UpgradeType.MAX_ORDERS, store the new max orders value. In getActiveEffects(), populate the maxOrders field from the stored value instead of hardcoded 4. Update Game.ts applyUpgrades() to pass maxOrders to WaveManager."
+    },
+    {
+      "id": 13,
+      "feature": "Complete Upgrade System",
+      "title": "Implement SCORE_MULTIPLIER upgrade type",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/UpgradeManager.ts, implement SCORE_MULTIPLIER upgrade. Add a scoreMultiplier field to track cumulative multiplier (default 1.0). In applyUpgrade(), when type is SCORE_MULTIPLIER, increase scoreMultiplier. In getActiveEffects(), include scoreMultiplier. Update ScoreManager to apply multiplier when adding score."
+    },
+    {
+      "id": 14,
+      "feature": "Complete Upgrade System",
+      "title": "Implement RECIPE_UNLOCK upgrade type",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/UpgradeManager.ts, implement RECIPE_UNLOCK upgrade. Add a Set<string> for unlockedRecipes. In applyUpgrade(), when type is RECIPE_UNLOCK, add the recipeId from upgrade data to the set. In getActiveEffects(), populate unlockedRecipes array. Update WaveManager to check unlocked recipes when generating orders."
+    },
+    {
+      "id": 15,
+      "feature": "Sound System",
+      "title": "Create SoundUtils shared utility",
+      "done": false,
+      "approved": true,
+      "prompt": "Create src/game/utils/SoundUtils.ts with a playSound() function that encapsulates common sound playing logic. Parameters: scene, key, volume (default 1), onComplete callback. Include try-catch error handling, Logger for errors, and automatic sound.destroy() on completion. Export as named function."
+    },
+    {
+      "id": 16,
+      "feature": "Sound System",
+      "title": "Refactor ActionSoundManager to use SoundUtils",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/ActionSoundManager.ts, refactor playSound() method to use the new SoundUtils.playSound() utility from src/game/utils/SoundUtils.ts. Remove duplicate sound creation/error handling logic. Keep the public API (play methods) unchanged."
+    },
+    {
+      "id": 17,
+      "feature": "Sound System",
+      "title": "Refactor VoiceManager to use SoundUtils",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/VoiceManager.ts, refactor sound playing logic to use SoundUtils.playSound() utility. Replace the internal playSound method (around line 243-268) with calls to SoundUtils. Maintain voice-specific logic (random selection, cooldowns) in VoiceManager."
+    },
+    {
+      "id": 18,
+      "feature": "Type Safety",
+      "title": "Add proper types to CraftActions constructor",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/actions/CraftActions.ts, replace 'any' type annotations with proper interfaces. Line 24 playerManager: any should be IPlayer or PlayerManager type. Line 26 mapManager: any should be IMapManager or MapManager type. Import the interfaces from src/game/types/interfaces.ts or the manager files."
+    },
+    {
+      "id": 19,
+      "feature": "Type Safety",
+      "title": "Add null safety to InteractionSystem critical paths",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/InteractionSystem.ts, add null safety checks to the most critical interaction paths. Use optional chaining (?.) and nullish coalescing (??) where accessing potentially undefined properties. Focus on the handleInteraction method's nested conditions. Add early returns for null values."
+    },
+    {
+      "id": 20,
+      "feature": "Type Safety",
+      "title": "Add error recovery to WaveManager",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/WaveManager.ts, add error recovery for the console.error/warn cases. Line 247: if wave not found, fallback to wave 1 config. Line 371: if recipe missing, skip that order instead of continuing with undefined. Line 406: validate recipeId exists before using."
+    },
+    {
+      "id": 21,
+      "feature": "Accessibility",
+      "title": "Add keyboard control hints to Shop scene",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Shop.ts, add visible text showing keyboard controls. Create a text element in the create() method that displays 'Z/S: Navigate | D: Buy | Q: Exit'. Position it at the bottom of the upgrade panel. Use a semi-transparent background for readability."
+    },
+    {
+      "id": 22,
+      "feature": "Accessibility",
+      "title": "Add text fallbacks to LivesManager hearts",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/LivesManager.ts, add a text display alongside the heart icons showing the numeric lives count (e.g., 'x3'). Create a Phaser Text object positioned after the hearts container. Update this text whenever lives change."
+    },
+    {
+      "id": 23,
+      "feature": "Accessibility",
+      "title": "Add text label to TimerManager display",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/TimerManager.ts, add a 'Time:' text label before the timer display for clarity. This helps users understand the timer without relying on the emoji. Create a separate text element positioned to the left of the timer value."
+    },
+    {
+      "id": 24,
+      "feature": "Performance",
+      "title": "Add memoization to RecipeManager findRecipe",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/RecipeManager.ts, add memoization to the findRecipe() method using a Map cache. Create a private cache Map<string, Recipe|null>. Generate cache key by sorting ingredient IDs alphabetically and joining with '-'. Check cache before computing, store result after. Add a clearCache() method called in cleanup."
+    },
+    {
+      "id": 25,
+      "feature": "Performance",
+      "title": "Throttle OvenManager timer updates",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/managers/OvenManager.ts, optimize the update() method to reduce per-frame operations. Add a lastUpdateTime tracker and only update timer text displays every 100ms instead of every frame. Store the interval threshold as a constant. The progress bar can still update every frame."
+    },
+    {
+      "id": 26,
+      "feature": "Tutorial",
+      "title": "Add Shop tutorial screen",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Tutorial.ts, add a new tutorial screen explaining the Shop/upgrade system. Add it to the screens array (around line 51-89). Include: 'Between waves, visit the shop to buy upgrades', 'Upgrades improve speed, oven efficiency, and more', 'Earn coins by completing orders'. Use similar styling to existing screens."
+    },
+    {
+      "id": 27,
+      "feature": "Tutorial",
+      "title": "Add Dash mechanic tutorial screen",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Tutorial.ts, add a tutorial screen explaining the dash/sprint mechanic. Add to the screens array explaining: how to activate dash, the speed boost effect, and cooldown. Reference the actual keybinds from ControlsManager for each player."
+    },
+    {
+      "id": 28,
+      "feature": "Tutorial",
+      "title": "Add Communication counter tutorial screen",
+      "done": false,
+      "approved": true,
+      "prompt": "In src/game/scenes/Tutorial.ts, add a tutorial screen explaining communication counters. Explain: players can place items on shared counters, the other player can pick them up, this enables teamwork for complex recipes. Position this screen after the basic movement/interaction screens."
+    }
+  ]
+}
