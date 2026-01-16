@@ -861,6 +861,35 @@ export default class Game extends Phaser.Scene {
         if (this.interactionSystem) {
             this.interactionSystem.cleanup();
         }
+
+        // Cleanup all other managers
+        if (this.communicationManager) {
+            this.communicationManager.cleanup();
+        }
+        if (this.counterManager) {
+            this.counterManager.cleanup();
+        }
+        if (this.orderDisplayManager) {
+            this.orderDisplayManager.cleanup();
+        }
+        if (this.mapManager) {
+            this.mapManager.cleanup();
+        }
+        if (this.timerManager) {
+            this.timerManager.cleanup();
+        }
+        if (this.waveManager) {
+            this.waveManager.cleanup();
+        }
+        if (this.currencyManager) {
+            this.currencyManager.cleanup();
+        }
+        if (this.upgradeManager) {
+            this.upgradeManager.cleanup();
+        }
+        if (this.allRecipesDisplayManager) {
+            this.allRecipesDisplayManager.cleanup();
+        }
     }
 
     /* END-USER-CODE */

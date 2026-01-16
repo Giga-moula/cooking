@@ -24,6 +24,18 @@ export default class Shop extends Phaser.Scene {
     private selectionIndicator?: Phaser.GameObjects.Graphics;
     private upgradesPerRow: number = 3;
 
+    // Keyboard keys for cleanup
+    private keyZ?: Phaser.Input.Keyboard.Key;
+    private keyQ?: Phaser.Input.Keyboard.Key;
+    private keyS?: Phaser.Input.Keyboard.Key;
+    private keyD?: Phaser.Input.Keyboard.Key;
+    private keyE?: Phaser.Input.Keyboard.Key;
+    private keyZHandler?: () => void;
+    private keyQHandler?: () => void;
+    private keySHandler?: () => void;
+    private keyDHandler?: () => void;
+    private keyEHandler?: () => void;
+
     constructor() {
         super("Shop");
     }
@@ -475,36 +487,33 @@ export default class Shop extends Phaser.Scene {
      */
     private setupKeyboardControls(): void {
         // Touches de navigation
-        const keyZ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
-        const keyQ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
-        const keyS = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-        const keyD = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-        const keyE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+        this.keyZ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+        this.keyQ = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+        this.keyS = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+        this.keyD = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        this.keyE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+        // Store handlers for cleanup
+        this.keyZHandler = () => this.moveSelection(0, -1);
+        this.keySHandler = () => this.moveSelection(0, 1);
+        this.keyQHandler = () => this.moveSelection(-1, 0);
+        this.keyDHandler = () => this.moveSelection(1, 0);
+        this.keyEHandler = () => this.selectCurrentItem();
 
         // Haut (Z)
-        keyZ?.on('down', () => {
-            this.moveSelection(0, -1);
-        });
+        this.keyZ?.on('down', this.keyZHandler);
 
         // Bas (S)
-        keyS?.on('down', () => {
-            this.moveSelection(0, 1);
-        });
+        this.keyS?.on('down', this.keySHandler);
 
         // Gauche (Q)
-        keyQ?.on('down', () => {
-            this.moveSelection(-1, 0);
-        });
+        this.keyQ?.on('down', this.keyQHandler);
 
         // Droite (D)
-        keyD?.on('down', () => {
-            this.moveSelection(1, 0);
-        });
+        this.keyD?.on('down', this.keyDHandler);
 
         // Sélection (E)
-        keyE?.on('down', () => {
-            this.selectCurrentItem();
-        });
+        this.keyE?.on('down', this.keyEHandler);
     }
 
     /**
@@ -618,6 +627,27 @@ export default class Shop extends Phaser.Scene {
                     10
                 );
             }
+        }
+    }
+
+    /**
+     * Cleanup keyboard listeners when scene shuts down
+     */
+    shutdown(): void {
+        if (this.keyZ && this.keyZHandler) {
+            this.keyZ.off('down', this.keyZHandler);
+        }
+        if (this.keyS && this.keySHandler) {
+            this.keyS.off('down', this.keySHandler);
+        }
+        if (this.keyQ && this.keyQHandler) {
+            this.keyQ.off('down', this.keyQHandler);
+        }
+        if (this.keyD && this.keyDHandler) {
+            this.keyD.off('down', this.keyDHandler);
+        }
+        if (this.keyE && this.keyEHandler) {
+            this.keyE.off('down', this.keyEHandler);
         }
     }
 }
